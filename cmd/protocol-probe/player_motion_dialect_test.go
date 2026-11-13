@@ -9,7 +9,7 @@ import (
 // TestPlayerMotionPropsMatchActiveTable 运动属性族双方言闸（§14.3）：
 // baseMotion/qinggongMotion 全部条目的索引与值线型必须与当前方言表的
 // 玩家域行一致。2026-11-10 真机：qinggongMotionProperties 26 处
-// f(655,"DriftSpeed") 式 fork 字面量在官服方言下整体错位——玩家 0x0D
+// f(655,"DriftSpeed") 式 fork 字面量在外服私服方言下整体错位——玩家 0x0D
 // 166 属性行在 CurNeiGong(655) 处按 string 读 f32 流即失步，客户端
 // 丢弃/截断玩家档案（武学面板与 NPC 可见性连坐）。
 func TestPlayerMotionPropsMatchActiveTable(t *testing.T) {

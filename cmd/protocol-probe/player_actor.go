@@ -19,23 +19,23 @@ import (
 )
 
 // 玩家对象 id 方案（2026-11-12 晚修订，docs/id-system-analysis.md §5/§6
-// 背景）：玩家 = (0x1105C0E3, 0x03DEFBAE)——登陆-all.pcapng 官服玩家
+// 背景）：玩家 = (0x1105C0E3, 0x03DEFBAE)——登陆-all.pcapng 外服私服玩家
 // 原对。此前 fork 对 (0x11000001, 0x7A5C0B) 只被验过「可进游戏」；
 // 但本服 NPC obj 分配带 = 0x11000002..0x1100xxxx，玩家 0x11000001 恰好
-// 夹在 NPC 序列开头——官服玩家 id 永远离 NPC 带（NPC=0x0700/0x1100 低
+// 夹在 NPC 序列开头——外服私服玩家 id 永远离 NPC 带（NPC=0x0700/0x1100 低
 // 段，玩家=0x0703xxxx/0x1105xxxx 高段）。冲锋自走四轮真机（簇/钟/踢帧
 // 逐字节全对）零武装后，按用户假设切换官方式段外大计数器对验证
 // 「移动/接近子系统按 id 带校验自体化身」：id 在 NPC 带内 → 登录/渲染
 // 正常但接近子系统拒绝武装。此前三连败重读：51357=(0x11000001,1) 败
-// owner=1 撞 NPC 专属位；49925=(0x07000001,618) 败在玩家 id 又落官服
+// owner=1 撞 NPC 专属位；49925=(0x07000001,618) 败在玩家 id 又落外服私服
 // NPC 低段 0x0700xxxx——同为「玩家 id 进 NPC 带」问题。
-// 会话变量而非 const：留 per-role 演进口；默认对即官服原对。
+// 会话变量而非 const：留 per-role 演进口；默认对即外服私服原对。
 var (
 	playerObjectID uint32 = 0x1105C0E3
 	playerOwnerID  uint32 = 0x03DEFBAE
 )
 
-// setPlayerWireIdentity 角色装载时定玩家 (obj, owner)：当前照抄官服
+// setPlayerWireIdentity 角色装载时定玩家 (obj, owner)：当前照抄外服私服
 // 登陆对；roleID 参数保留为将来 per-role 分配的接入口，暂不参与取值。
 func setPlayerWireIdentity(roleID uint32) {
 	playerObjectID = 0x1105C0E3
@@ -88,7 +88,7 @@ const (
 	glideBuffStaticData uint32 = 218
 
 	// 右键格挡 BuffInParry（Java PlayerActor 同源）：StaticData 4558=
-	// 0x11CE。官服无时长（a.pcapng 槽 4 CSV 到期段恒 0），按下/松开由
+	// 0x11CE。外服私服无时长（a.pcapng 槽 4 CSV 到期段恒 0），按下/松开由
 	// writeOfficialParryTokenAck 的事件对与槽串登记，不挂限时租约。
 	parryBuffStaticData uint32 = 4558
 
@@ -102,7 +102,7 @@ const (
 
 	// SP 是当前现代客户端的怒气资源。基础满池值对齐 fork 抓包实证
 	// (49840 帧 #16 登录全量批 MaxSP=80);有效上限 = 基础 80 + 当前
-	// 运行内功的档位加成(playerProgress.rageCap)。wire 上按官服口径
+	// 运行内功的档位加成(playerProgress.rageCap)。wire 上按外服私服口径
 	// 只随 MaxSP(580) 下发折算后的最终值(rageCapWireValue),MaxSPAdd
 	// (583) 从不出帧。所有 GM 及战斗获取路径都经由这些辅助函数,客户端
 	// 属性永远不会成为该资源的权威。
@@ -152,7 +152,7 @@ var (
 	propMPUpSpeedAdd             = clientdata.MustPlayerProperty("MPUpSpeedAdd").Index          // MPUpSpeedAdd（fork=620）
 	propCurSkillTarget           = clientdata.MustPlayerProperty("CurSkillTarget").Index        // CurSkillTarget Object（fork=627）
 	propModifySkillLockTime      = clientdata.MustPlayerProperty("ModifySkillLockTime").Index   // ModifySkillLockTime（fork=221）
-	propSkillCanUse              = clientdata.MustPlayerProperty("CanUse").Index                // CanUse Byte(官服怒气灰化心跳簇同索引)（fork=2236）
+	propSkillCanUse              = clientdata.MustPlayerProperty("CanUse").Index                // CanUse Byte(外服私服怒气灰化心跳簇同索引)（fork=2236）
 	propSkillCurTargetCount      = clientdata.MustPlayerProperty("CurTargetCount").Index        // CurTargetCount（fork=577）
 	propForce                    = clientdata.MustPlayerProperty("Force").Index                 // Force String(玩家域)（fork=194）
 	propNewSchool                = clientdata.MustPlayerProperty("NewSchool").Index             // NewSchool String（fork=190）
@@ -270,15 +270,15 @@ type playerActor struct {
 	// resumeSettleSkip：冲锋落地重入受理链时的一次性跳过标记
 	//（pending.settled 时置位——CD/MP 已在 c61 时点结算）。
 	resumeSettleSkip bool
-	// cooldown_rec 双槽覆写簿记（官服方言，official_frames.go）：每玩家
+	// cooldown_rec 双槽覆写簿记（外服私服方言，official_frames.go）：每玩家
 	// 固定个人/公共两槽，col0/col3 变化才重写、col1/col2 每次覆写，
 	// 过期行由下次受理/执行惰性 0x12 清扫（f/g/b 实证）。
 	cdPersonalRowBook cooldownRowBook
 	cdPublicRowBook   cooldownRowBook
-	// rushStatePingAt：官服状态四连（586/645/646/750）上次下发时刻——
-	// 官服全程 ~3s 周期重发，冲锋接近段按此节流补发（锁 p.mu）。
+	// rushStatePingAt：外服私服状态四连（586/645/646/750）上次下发时刻——
+	// 外服私服全程 ~3s 周期重发，冲锋接近段按此节流补发（锁 p.mu）。
 	rushStatePingAt time.Time
-	// moveEchoWalking 官服移动回显状态机（技能.pcapng §一）：state7↔4
+	// moveEchoWalking 外服私服移动回显状态机（技能.pcapng §一）：state7↔4
 	// 走停迁移沿发状态四连，同态重发（追怪改向/在途重报）不重发
 	//（锁 p.mu）。
 	moveEchoWalking bool
@@ -419,7 +419,7 @@ func newPlayerActor(name string, silver int32) *playerActor {
 		faction:  defaultRoleFaction,
 		// 默认移动/奔跑速度 5：与 Java 参考服对齐（2026-11-02 由 25 下调，
 		// 25 过快）；GM 面板「移动参数」可运行时改。
-		// 速度族官服值（登陆-all 登录物理档案实证：MoveSpeed=RunSpeed=3.9；
+		// 速度族外服私服值（登陆-all 登录物理档案实证：MoveSpeed=RunSpeed=3.9；
 		// 旧 5.0 系 fork 测试值——2026-11-12 P0a 修正）。
 		motion:            playerMotion{moveSpeed: 3.9, runSpeed: 3.9, gravity: 9.8},
 		buffs:             make(map[uint16]activePlayerBuff),
@@ -1233,8 +1233,8 @@ func (p *playerActor) stateProperties() []clientdata.IndexedProperty {
 		// 八字节编码(真机抓包实证)。
 		{Index: clientdata.MustPlayerProperty("CapitalType1").Index, Name: "CapitalType1", Value: clientdata.Int64Value(int64(p.silver))},
 	}
-	// BufferListStr(fork-only@143)：官服表无此名（buff 条官方走
-	// BufferInfo CSV 槽+m169，§14.5），官服方言停发整帧。
+	// BufferListStr(fork-only@143)：外服私服表无此名（buff 条官方走
+	// BufferInfo CSV 槽+m169，§14.5），外服私服方言停发整帧。
 	if bufferList, ok := clientdata.PlayerProperty("BufferListStr"); ok {
 		properties = append(properties, clientdata.IndexedProperty{
 			Index: bufferList.Index, Name: bufferList.Name,
@@ -1531,7 +1531,7 @@ func (p *playerActor) snapshotName() string {
 	return p.name
 }
 
-// engageParryBuff 按下格挡：仅翻状态位。BuffInParry 官服无时长（a.pcapng
+// engageParryBuff 按下格挡：仅翻状态位。BuffInParry 外服私服无时长（a.pcapng
 // 槽 4 CSV 到期段恒 0），登记/摘除全走 writeOfficialParryTokenAck 的
 // m169 事件对与 BufferInfo4 槽串——不再挂 fork 方言的槽 11 限时租约
 // （24h/1601 纪元），避免全量面板推送时客户端把 0x11CE 重复登记进
@@ -1622,7 +1622,7 @@ func (p *playerActor) vitalUpdate() ([]byte, error) {
 }
 
 // combatVitalsFrame 战斗 tick 专用的小面板（纯数值 vitals，n≈10）：
-// 官服战斗中从不重推全量面板——全量含 State="stand"/LogicState/
+// 外服私服战斗中从不重推全量面板——全量含 State="stand"/LogicState/
 // CurSkillID/CurSkillTarget/PauseSkill，会把冲锋受理簇刚设的接近态
 // 洗掉（53051 会话实证：簇后 1s 内全量面板到达 → 客户端退出自动接近、
 // 220 冻结刷）。战斗血量官方通道是 0x2D/c1=7/SP 单帧（broadcastNPCAttacks
@@ -1654,7 +1654,7 @@ func (p *playerActor) rageCap() int32 {
 }
 
 // rageCapWireValue 计算最终随 MaxSP(580) 下发的怒气上限值:基础 80 +
-// 运行内功档位加成折算合一(基础值保持 80 不变)。官服口径(docs/
+// 运行内功档位加成折算合一(基础值保持 80 不变)。外服私服口径(docs/
 // official 三份时间线 2026-11-09 复核):官方全程只下发 MaxSP(登录
 // 4.7s MaxSP=50 ×2),MaxSPAdd(583) 零下发——加成在服务器侧折进
 // MaxSP 一次给出。客户端怒气球分母 = MaxSP + MaxSPAdd,583 不出帧
@@ -1701,12 +1701,12 @@ func (p *playerActor) sitcrossTick() sim.SitcrossSettlement {
 }
 
 // sitcrossRecoveryFrames 生成打坐回复一跳的官方形态帧簇（FsGame
-// 官服抓包 00:11:50.408–00:12:00.882 九跳逐帧实证）：逐层 n=1
+// 外服私服抓包 00:11:50.408–00:12:00.882 九跳逐帧实证）：逐层 n=1
 // 单属性帧（HitHPRatio→HitHP→HPRatio→HP，MP 同形），HP/MP 层
 // 随后各补自己的 msg24 飘字——c1=16 治疗绿字、c1=18 回蓝飘字
 // （49.4.14.150:7074 实时实证，HP/MP 分帧各飘各的）。
 // 坐姿期间的周期帧绝不能改走带 LogicState 的全量 vitalUpdate：
-// 官服坐姿周期帧从不携带 LogicState，重推状态帧会让客户端重入
+// 外服私服坐姿周期帧从不携带 LogicState，重推状态帧会让客户端重入
 // 坐姿动画。
 func (p *playerActor) sitcrossRecoveryFrames(settlement sim.SitcrossSettlement) ([][]byte, error) {
 	p.mu.Lock()
@@ -1912,7 +1912,7 @@ func (p *playerActor) currentSkillClearUpdate() ([]byte, error) {
 		{Index: propCurSkillCanNoLimit, Name: "CurSkillCanNoLimit", Value: clientdata.ByteValue(0)},
 		{Index: propCantBeSkillLocked, Name: "CantBeSkillLocked", Value: clientdata.ByteValue(0)},
 		{Index: propCantBeSkillMustLocked, Name: "CantBeSkillMustLocked", Value: clientdata.ByteValue(0)},
-		// 官服收尾簇（f 46.175）成对清 CantMove/CantParry——落地簇 msg19 后
+		// 外服私服收尾簇（f 46.175）成对清 CantMove/CantParry——落地簇 msg19 后
 		// 置位的两帧若不随收招清除，会悬挂到下一招把人物冻住（63073 前科）。
 		{Index: propRushCantMove, Name: "CantMove", Value: clientdata.ByteValue(0)},
 		{Index: propCantParry, Name: "CantParry", Value: clientdata.Int32Value(0)},
@@ -2059,7 +2059,7 @@ func (p *playerActor) addObjectAs(objectID, ownerID uint32, location role.Positi
 	addByte(clientdata.MustPlayerProperty("Sex").Index, visual.sex)       // fork=182
 	addString(clientdata.MustPlayerProperty("Photo").Index, visual.photo) // fork=184
 	addByte(clientdata.MustPlayerProperty("Camp").Index, 0)               // Camp（fork=174，官方线型 Byte）
-	// Race(fork-only@4)：官服表缺席，按名门控——官服方言跳过。
+	// Race(fork-only@4)：外服私服表缺席，按名门控——外服私服方言跳过。
 	if race, ok := clientdata.SceneProperty("Race"); ok {
 		addInt(race.Index, 0)
 	}
@@ -2080,8 +2080,8 @@ func (p *playerActor) addObjectAs(objectID, ownerID uint32, location role.Positi
 	if p.keybind.neigongBind != "" {
 		addString(neiGongBindPropertyIndex, p.keybind.neigongBind)
 	}
-	// PosiX/Y/Z/Orient(fork-only 9-12)：官服 2433 表无此名（坐标走 0x0D
-	// 固定头），官服方言下按名缺席即整组跳过。
+	// PosiX/Y/Z/Orient(fork-only 9-12)：外服私服 2433 表无此名（坐标走 0x0D
+	// 固定头），外服私服方言下按名缺席即整组跳过。
 	if posiX, ok := clientdata.SceneProperty("PosiX"); ok {
 		addFloat(posiX.Index, location.X)
 	}
@@ -2101,17 +2101,17 @@ func (p *playerActor) addObjectAs(objectID, ownerID uint32, location role.Positi
 	addString(clientdata.MustPlayerProperty("Shoes").Index, visual.shoes)         // fork=395
 	addString(clientdata.MustPlayerProperty("ActionSet").Index, visual.actionSet) // fork=406
 	addString(clientdata.MustPlayerProperty("State").Index, "stand")              // fork=183
-	// FloatingState(fork-only@20)：官服表缺席，按名门控——官服方言跳过。
+	// FloatingState(fork-only@20)：外服私服表缺席，按名门控——外服私服方言跳过。
 	if floating, ok := clientdata.SceneProperty("FloatingState"); ok {
 		addInt(floating.Index, 0)
 	}
 	addByte(clientdata.MustPlayerProperty("LogicState").Index, state.LogicState) // fork=463
 	addFloat(clientdata.MustPlayerProperty("JumpSpeed").Index, 8.0)              // JumpSpeed（fork=681）
 	addFloat(clientdata.MustPlayerProperty("MoveSpeed").Index, motion.moveSpeed) // fork=384
-	addFloat(clientdata.MustPlayerProperty("WalkSpeed").Index, 1.28)             // WalkSpeed 官服值 1.28（旧 7.5 系与 DriftSpeed 混淆，2026-11-12 P0a）
+	addFloat(clientdata.MustPlayerProperty("WalkSpeed").Index, 1.28)             // WalkSpeed 外服私服值 1.28（旧 7.5 系与 DriftSpeed 混淆，2026-11-12 P0a）
 	addFloat(clientdata.MustPlayerProperty("RunSpeed").Index, motion.runSpeed)   // fork=386
 	addInt(clientdata.MustPlayerProperty("SpeedRatio").Index, state.SpeedRatio)  // fork=390
-	// CantJump(fork-only@27)：官服表缺席，按名门控——官服方言跳过。
+	// CantJump(fork-only@27)：外服私服表缺席，按名门控——外服私服方言跳过。
 	if cantJump, ok := clientdata.SceneProperty("CantJump"); ok {
 		addByte(cantJump.Index, 0)
 	}
@@ -2137,7 +2137,7 @@ func (p *playerActor) addObjectAs(objectID, ownerID uint32, location role.Positi
 	// CurSkillEffectID/CurSkillLevel:官方表无此名,不再下发。
 	addObject(propCurSkillTarget, p.currentSkillTarget)
 	addInt(propModifySkillLockTime, 200) // 官方口径 200（Java #2014 exe；旧 5000 为本地占位）
-	// BufferListStr(fork-only@143)：官服方言停发（§14.5）。
+	// BufferListStr(fork-only@143)：外服私服方言停发（§14.5）。
 	if bufferList, ok := clientdata.PlayerProperty("BufferListStr"); ok {
 		addString(bufferList.Index, p.bufferListStringLocked(now))
 	}
@@ -2166,7 +2166,7 @@ func (p *playerActor) addObjectAs(objectID, ownerID uint32, location role.Positi
 	count++
 	msg = appendObjectProperty(msg, uint16(clientdata.MustPlayerProperty("LastObject").Index), 0, 0) // LastObject（fork=414）
 	count++
-	// 官服位物理档案（2026-11-10）：官服进场给玩家自己发 0x28 详情帧
+	// 外服私服位物理档案（2026-11-10）：外服私服进场给玩家自己发 0x28 详情帧
 	//（3187B，obj=玩家）——其中 CollideRadius 是客户端寻路引擎的玩家
 	// 碰撞体输入。0x28 通道未通前，物理属性经已验证的 0x0D 通道补发
 	//（与 NPC 的 officialNPCProperties 同集）。
@@ -2201,7 +2201,7 @@ func sendPlayerAddObject(conn sceneMessageConnection, player *playerActor, locat
 // sendPlayerLocationAndVitals 发 0x1F 重定位 + 常规 vitals 大批 0x10。
 // 官方方言下没有独立的登录怒气帧:SP(467) 随 stateProperties 大批下发,
 // MaxSP(580,折算最终值) 只由 loginVitalUpdate 在这批全量档携带一次
-// (官服抓包全程零下发 583,加成折进 580;新服 exe 反汇编零引用
+// (外服私服抓包全程零下发 583,加成折进 580;新服 exe 反汇编零引用
 // 580/583,客户端疑似按本地口径呈现怒气球)。
 func sendPlayerLocationAndVitals(conn sceneMessageConnection, player *playerActor, location role.Position) error {
 	if err := conn.WriteFrame(serverLocation(playerObjectID, playerOwnerID, worldTransform(location))); err != nil {
@@ -2214,7 +2214,7 @@ func sendPlayerLocationAndVitals(conn sceneMessageConnection, player *playerActo
 	return conn.WriteFrame(vitals)
 }
 
-// physicsLoginFrameSpec 官服登录「玩家物理档案」单属性帧规格：登陆-all
+// physicsLoginFrameSpec 外服私服登录「玩家物理档案」单属性帧规格：登陆-all
 // .pcapng t=10.87（玩家 obj 0x1105c0e3/0x3defbae）逐帧提取。isInt 对应
 // 0x09 表 type3(Int32)，其余 type5(Float32)——两套表（fork/2433）34 名
 // 全在位且线型一致（2026-11-12 核对）。
@@ -2225,10 +2225,10 @@ type physicsLoginFrameSpec struct {
 	isInt bool
 }
 
-// physicsLoginFrameSpecs 官服序 = A 段（ParryRes/HeartSpeed/Rush 族/速度
-// 族 16 条）→ B 段（Climb→MaxGJ 18 条）。官服两段之间夹建视图/m386/
-// AnnotateCombineRec，这里连发、段内相对序与官服一致。JumpSpeed 官服
-// 5.5（0x0D 档 fork 旧值 8.0 由本流覆盖回官值）；Add 族官服登录流不发。
+// physicsLoginFrameSpecs 外服私服序 = A 段（ParryRes/HeartSpeed/Rush 族/速度
+// 族 16 条）→ B 段（Climb→MaxGJ 18 条）。外服私服两段之间夹建视图/m386/
+// AnnotateCombineRec，这里连发、段内相对序与外服私服一致。JumpSpeed 外服私服
+// 5.5（0x0D 档 fork 旧值 8.0 由本流覆盖回官值）；Add 族外服私服登录流不发。
 var physicsLoginFrameSpecs = []physicsLoginFrameSpec{
 	{"PhyParryDamRes", 50, 0, false},
 	{"MagicParryDamRes", 50, 0, false},
@@ -2266,10 +2266,10 @@ var physicsLoginFrameSpecs = []physicsLoginFrameSpec{
 	{"MaxGJQingGongPoint", 0, 150, true},
 }
 
-// sendPlayerPhysicsLoginStream 官服登录玩家物理档案的 0x10 单属性流
-//（docs/冲锋自走触发链官服定版与差集.md P2）：官服在 0x09/0x0A 表后、
+// sendPlayerPhysicsLoginStream 外服私服登录玩家物理档案的 0x10 单属性流
+//（docs/冲锋自走触发链外服私服定版与差集.md P2）：外服私服在 0x09/0x0A 表后、
 // 建视图前给玩家自己逐帧连发 34 条单属性 0x10。这些值我们虽已在 0x0D
-// 建对象大档携带，但官服形态是逐帧变更事件——若客户端引擎的接近/冲锋
+// 建对象大档携带，但外服私服形态是逐帧变更事件——若客户端引擎的接近/冲锋
 // 子系统在属性更新沿上武装（默认→5.0），一次性大档不触发同一路径。
 // 登录一次（sendPlayerSpawn 之后），场景重入不重发。
 func sendPlayerPhysicsLoginStream(conn sceneMessageConnection, player *playerActor) error {

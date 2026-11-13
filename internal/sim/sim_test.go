@@ -118,14 +118,14 @@ func TestVitalsRestoreWhileSitOnlyChangesLivingSitcrossActor(t *testing.T) {
 		t.Fatalf("recovery state=%+v", v)
 	}
 	// 回复追平受击血条的那一跳：HitHP 低于回复后的 HP 时被抬升，
-	// 官服该跳双 Ratio+双值四帧（00:11:54.833）。
+	// 外服私服该跳双 Ratio+双值四帧（00:11:54.833）。
 	v.HitHP = 700
 	settlement = v.RestoreWhileSit(50, 0)
 	if !settlement.HitHPChanged || v.HitHP != 870 {
 		t.Fatalf("hitHP catch-up settlement=%+v state=%+v", settlement, v)
 	}
-	// 触顶跳按官服末跳口径拆 (实际, 溢出)：只剩 130 缺口，回复 200
-	// 落 130/70（官服补满末跳 162+1478=名义 1640 同式）。
+	// 触顶跳按外服私服末跳口径拆 (实际, 溢出)：只剩 130 缺口，回复 200
+	// 落 130/70（外服私服补满末跳 162+1478=名义 1640 同式）。
 	settlement = v.RestoreWhileSit(200, 0)
 	if settlement.HPApplied != 130 || settlement.HPWasted != 70 || !settlement.HitHPChanged {
 		t.Fatalf("capped settlement=%+v", settlement)

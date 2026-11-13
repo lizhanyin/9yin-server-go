@@ -1,7 +1,7 @@
 // npc_staticprop.go：NPC 实力包表（share/npc/staticprop.ini）装载与守方
 // 战斗数值推导（2026-11-08 NPC 属性块迁移批次）。
 //
-// 背景：官方 base block 0..98 是场景面板块，不含防御/封劲/闪避——官服
+// 背景：官方 base block 0..98 是场景面板块，不含防御/封劲/闪避——外服私服
 // NPC 战斗数值按"实力包"（模板列 PowerNo@60）在服务端推导后写入视图块
 // （PhyDef@584/StiDef@586/JujDef@587/NegDef@588/MasDef@589/Dodge@562/
 // VaDef@573）。staticprop.ini 是该推导的成长基数表（745 节，Go/Java/
@@ -113,7 +113,7 @@ type npcCombatStats struct {
 	evasion                                int32 // 闪避值
 	// resilience（封劲）暂不推导：玩家侧暴击值未成长（默认 16），接入
 	// NPC 封劲（StaBase×Level≈30）会把暴击率清零——待装备/宝物批把玩家
-	// 暴击值抬到官服量级（数百+）后一并接通。
+	// 暴击值抬到外服私服量级（数百+）后一并接通。
 }
 
 // deriveNPCCombatStats 按「Base × Level」推导守方数值（规则集中此处，

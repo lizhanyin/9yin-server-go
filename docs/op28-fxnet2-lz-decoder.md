@@ -59,7 +59,7 @@ d7 01 (HPRatio=471) =100; e4 01 (HitHPRatio=484) 64 00 00 00
    - 干净串定律 [u16 idx][u8 outlen][01 00][GBK+NUL] 已知可行（官方 108/218 帧自带干净形）；
    - 绝不重放 `80 02`/`a2 80` 族字节；
    - 下一步工具：按 0x1000-0x1260 反汇编写解码模拟器 → 跑 218 官方帧提取全部压缩段明文 → 重编码进生成器。
-4. 同理警示：**任何**携带压缩串的消息都有此雷（0x0A/0x10/0x18 若官服方言也用压缩串）。
+4. 同理警示：**任何**携带压缩串的消息都有此雷（0x0A/0x10/0x18 若外服私服方言也用压缩串）。
 
 ## 模拟器轮（同日续）——模型校准定版
 
@@ -113,7 +113,7 @@ bit 1=匹配:   u16: idx=(v>>4)&0xfff, nib=v&0xf; nib≠0→len=nib+2 消耗2B; 
 
 - `cmd/protocol-probe/npc_detail_v3.go`：mode=0x46 明文方言程序化构造
   （零 LZ/零字典依赖）。字段集 `officialNPCEntityProperties`：官方 0x46 帧
-  字段序，Level/BossLevel/NpcType/RotatePara/State 取 schema 真值，其余官服
+  字段序，Level/BossLevel/NpcType/RotatePara/State 取 schema 真值，其余外服私服
   常量；串值 [len u32][GBK+NUL]，列宽按 0x09 表线型。
 - 调用点 scene_lifecycle.go：`NINEYIN_NPC_DETAIL_0X28=1` 走 v3，物化(0x0D)
   之后下发（时序不变）。

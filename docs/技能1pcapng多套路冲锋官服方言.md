@@ -1,11 +1,11 @@
-# 技能1.pcapng 多套路冲锋官服方言（c61 授予协议定版，2026-11-13）
+# 技能1.pcapng 多套路冲锋外服私服方言（c61 授予协议定版，2026-11-13）
 
-> 数据：`F:\Game\Online\9yin\9yin-server-go\artifacts\技能1.pcapng`（49.4.14.150:7074 官服，
+> 数据：`F:\Game\Online\9yin\9yin-server-go\artifacts\技能1.pcapng`（49.4.14.150:7074 外服私服，
 > 1031s/8116 事件/25 次施法；技能2.pcapng 为同连接续段，事件重复无新内容）。
 > 套路覆盖：jh_hyjf02（6 米剑）、hs_hsjf02（3 米剑）、jz_xytf02/07（+`_sky` 空中变体，腿法空手）、
 > hs_kfkj02（华山·灭剑如虹）、jh_mzjf02/03（剑）、hs_kfkj05 / jz_xytf01(_sky)（范围技）。
 > 工具：`tools/rush_gap/`（本文绝对秒数以 pcap_frames 全流锚为准）＋tmp/rush1/cast_context.py。
-> 本文修正《冲锋自走触发链官服定版与差集》P0 系列两处关键结论，见 §6。
+> 本文修正《冲锋自走触发链外服私服定版与差集》P0 系列两处关键结论，见 §6。
 
 ---
 
@@ -27,7 +27,7 @@
 （本流 220→c61 反应延迟 24~132ms），@642.633 的 1ms 间隔物理上排除回显。
 → c61 是服务端下发的冲刺指令，客户端执行（进入 state4 疾跑、途中 212 落地）。
 
-### 1.2 授予触发：m220 进技能冲刺窗，官服 +30~90ms 应答
+### 1.2 授予触发：m220 进技能冲刺窗，外服私服 +30~90ms 应答
 
 全流 41 条 m220（五值 `[x,y,z,orient]` 统一、无请求标志位）与 16 次 c61 的配对：
 
@@ -36,7 +36,7 @@
 - **窗外 220 → 零应答**：mzjf02 220@794.734（13.8m，超窗）无 c61，客户端继续走；
   hyjf02 220@6.1m/7.3m（#0/#1）无 c61 → 客户端走入直收（212@5.7/5.6）。
 - **在途重按不需再受理**：#15 接近进行中重按 xytf07_sky（220@675.919 先于 211@675.950），
-  官服零受理簇、直接 220 授予 c61@675.981 + m707[**2**]。
+  外服私服零受理簇、直接 220 授予 c61@675.981 + m707[**2**]。
 
 观测窗口（220 上报时距目标，per-skill）：
 
@@ -134,7 +134,7 @@ CurSkillID(+CurIsAirSkill) → MPRatio/MP → m20 范围施放标记[技能基�
 - **受理后即时重按**（#24，243ms）：`CurSkillID="" → m26 → PauseSkill="" →` 再发完整受理簇
   （清旧 pending 再受理，共 7 帧）。
 - **接近在途重按**（#15）：零簇，直接 220→c61 授予 + m707[2]。
-  → P0e「rearm 每次 211 都回 12 帧大簇」与官服两路径均不符。
+  → P0e「rearm 每次 211 都回 12 帧大簇」与外服私服两路径均不符。
 
 ### 2.5 m707 子码表（本包全集）
 
@@ -178,12 +178,12 @@ CurSkillID(+CurIsAirSkill) → MPRatio/MP → m20 范围施放标记[技能基�
 
 ## 六、对 P0/P2 系列结论的修正与行动项
 
-1. **P0「官服接近段零帧」作废**：官服在 220 进窗时发 c61+CantMove/CantParry+MP+CD 行
+1. **P0「外服私服接近段零帧」作废**：外服私服在 220 进窗时发 c61+CantMove/CantParry+MP+CD 行
    （技能.pcapng 32.642 案例恰是窗外 walk-in 路径，零帧成立仅限该桶）。
 2. **P0c「客户端零消费 m24」归因重开**：我们/Java 发的 `[dest=NPC位, 2, qg_fastruning_s_2h_01]`
-   对 hyjf02 类剑系技能 anim+flag 双错（官服=fastrun/1），且时机错（受理期发 vs 220 进窗发）。
+   对 hyjf02 类剑系技能 anim+flag 双错（外服私服=fastrun/1），且时机错（受理期发 vs 220 进窗发）。
    fork 客户端是否消费 c61 应用正确方言重测：**m220 且距目标进窗 → c61[落点前 1.7m, flag, anim]**。
-3. **P0a 撤 scheduleRushApproachDash 方向正确**（受理期自动发确非官服），复活时改为 220 触发闸。
+3. **P0a 撤 scheduleRushApproachDash 方向正确**（受理期自动发确非外服私服），复活时改为 220 触发闸。
 4. anim/flag 分流表：剑系 `1/qg_fastrun_2h_01`、空手系 `2/qg_fastruning_s_0h_01`、
    灭剑如虹类 `2/qg_fastruning_s_2h_01`（跨系例外存在，先按套路武器映射）。
 5. 落码清单（独立小项）：直收簇 CantParry=2、m284、范围技 m20+超时清 CurSkillID、
@@ -193,7 +193,7 @@ CurSkillID(+CurIsAirSkill) → MPRatio/MP → m20 范围施放标记[技能基�
 
 `cmd/protocol-probe/rush_cast.go`：
 
-- **撤 stage 期 m24**（P0c/P0e 的受理簇第 4 帧 stage-dash 档2——Java 方言误植，官服受理簇零 m24）；
+- **撤 stage 期 m24**（P0c/P0e 的受理簇第 4 帧 stage-dash 档2——Java 方言误植，外服私服受理簇零 m24）；
   受理簇回到 8 帧（CurSkillID→CurSkillTarget→m25→m707→四连），rearm 11 帧。
 - **`officialRushDashDialects` per-skill 授予方言表**：§1.2 观测窗 + §1.3 A 类 flag/anim；
   未列技能回落 G 类（skill_lock_data LockGRushAction）+ 默认窗 (GRushRange, +Add]。
@@ -205,12 +205,12 @@ mzjf02 13m 零帧）；簇帧数断言 9→8 同步 ×6。build.bat 全绿，dep
 
 ### 七.1 补码（2026-11-13 上午，字节级值差对拍后）
 
-远距按压受理簇三方字节对照（官服技能1 5 样本 vs 本服 62374/55133 tap）定版两处：
+远距按压受理簇三方字节对照（外服私服技能1 5 样本 vs 本服 62374/55133 tap）定版两处：
 
-- **首受理簇补 `PauseSkill(220)=skill`**（m25 后、m707 前）：官服 5/5 登录锚定首按全带；
+- **首受理簇补 `PauseSkill(220)=skill`**（m25 后、m707 前）：外服私服 5/5 登录锚定首按全带；
   此前代码仅 rearm 发。受理簇 8→9 帧。msg25+PauseSkill 成对是客户端技能暂存/接近
   状态机的输入对——本服远距按压不自走的首要值差嫌疑。
-- **CurSkillTarget 维持真值**（§2.1 勘误）：官服字节全带真目标，非 None；代码本就
+- **CurSkillTarget 维持真值**（§2.1 勘误）：外服私服字节全带真目标，非 None；代码本就
   发真值，无需改。CurIsAirSkill(625)=4 仅兵器系（kfkj/mzjf）观测到，剑系不发，
   暂不落码（映射未定案）。
 
@@ -220,7 +220,7 @@ mzjf02 13m 零帧）；簇帧数断言 9→8 同步 ×6。build.bat 全绿，dep
 1. 剑系（hyjf02/myjf02）：远处按压 → 走近 → 日志 `rush within dash window ... in (7.5, 8.5]`
    → 客户端是否执行冲刺（m15 state4/212）——**fork 客户端消费 c61 的首次正方言测试**。
 2. 空手系（GM 发逍遥腿法 xytf02/07）：窗 (5,7]/(8,11]，c61=flag2+qg_fastruning_s_0h_01。
-3. 若仍不冲刺：官服方言三要素（时机/flag/anim）已对齐，则 c61 消费问题在客户端协议模式侧
+3. 若仍不冲刺：外服私服方言三要素（时机/flag/anim）已对齐，则 c61 消费问题在客户端协议模式侧
    （与自走缺失同根），转动态调试线。
 
 ## 复跑

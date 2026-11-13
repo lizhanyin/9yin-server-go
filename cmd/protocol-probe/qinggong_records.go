@@ -298,7 +298,7 @@ func serverRecordAddWordRow(objectID, ownerID uint32, recordIndex uint16, row, v
 }
 
 // serverRecordAddWordRows 把整段 u16 行打包进一帧 0x11（源行号 0 起、
-// 行数=len）。官服 data_record 方言：c.pcapng #256 九阴志事件状态为
+// 行数=len）。外服私服 data_record 方言：c.pcapng #256 九阴志事件状态为
 // 11 00 <obj> <owner> 78 00 0000 3a00 <u16×58> 单帧铺满，而非逐行帧。
 func serverRecordAddWordRows(objectID, ownerID uint32, recordIndex uint16, values []uint16) []byte {
 	msg := make([]byte, 16, 16+2*len(values))
@@ -322,7 +322,7 @@ type recordCell struct {
 	doubleValue *float64
 	text        *string
 	// objectCell：int64Value 低 32 位对象号 / 高 32 位 owner（rec114 col0
-	// 等 obj 型列，官服 0x13 逐格与 0x11 行加共用 recordCell 载体）。
+	// 等 obj 型列，外服私服 0x13 逐格与 0x11 行加共用 recordCell 载体）。
 	objectCell bool
 }
 
@@ -669,7 +669,7 @@ func grantFunctionUnlock(conn sceneMessageConnection) error {
 	// 实验E（value-row 方言）：Type=8/Func27 的 IsTaskCompleted 疑为
 	// FindRecordRow("Task_Completed", col0, taskID)——按值查行而非
 	// 位图。洪水 0xFFFFFFFF 与整行饱和均不认（值≠任务号）与该语义
-	// 一致；官服老号走 Func85 日期豁免所以从未发过 row=1346。在位图
+	// 一致；外服私服老号走 Func85 日期豁免所以从未发过 row=1346。在位图
 	// 行之后追加「值=任务号」行覆盖全部门任务。
 	if gateValueRows {
 		for _, gateID := range funcGateTaskIDs {

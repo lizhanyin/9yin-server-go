@@ -357,7 +357,7 @@ func TestPushJingMaiFramesReplaysViewRecordsAndProps(t *testing.T) {
 		t.Fatalf("push: %v", err)
 	}
 	frames := conn.Frames()
-	// 1 容器 + 2 已学行 + 1 plug_record 伴随行（2026-11-10 官服补齐）+
+	// 1 容器 + 2 已学行 + 1 plug_record 伴随行（2026-11-10 外服私服补齐）+
 	// 1 active_jingmai_rec 记录行 + 1 面板帧 = 6（授予块顺序：
 	// View45 → plug_record → active_jingmai_rec → 玩家属性帧）。
 	if len(frames) != 6 {

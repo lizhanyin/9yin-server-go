@@ -148,6 +148,6 @@ ctx 字段见 [../scripts/README.md](../scripts/README.md)）：
   声望（数据已勘察，落在本层之上的结算模块）。
 - **难度数值缩放**：难度档目前只随实例记录，未参与 NPC 属性推导。
 - **AdventureDoor 准入**：副本入口门协议未还原（door_data.ini 无 clone 条目），
-  本期只能 GM 进本；官服进副本播报 `m1 c1=3` 同样待逆向。
+  本期只能 GM 进本；外服私服进副本播报 `m1 c1=3` 同样待逆向。
 - **多人/组队**：byOwner 单人归属；sceneRun 成员模型天然支持多人，补"加入
   他人实例"的 join 语义即可。

@@ -19,7 +19,7 @@ func utf16Encode(s string) []byte {
 	return out
 }
 
-// m294 官服形态应答（技能.pcapng 帧级复核，2026-11-12 P0a）：
+// m294 外服私服形态应答（技能.pcapng 帧级复核，2026-11-12 P0a）：
 // [294, client_ms 回显(i64), reqid(i64=应答时刻 FILETIME ms),
 //  unix 秒(i64), uptime 天(f64 全场常量)]。
 func TestOfficialTimeSyncReplyFrameShape(t *testing.T) {
@@ -44,7 +44,7 @@ func TestOfficialTimeSyncReplyFrameShape(t *testing.T) {
 	if echo := binary.LittleEndian.Uint64(frame[9:]); echo != 72290612 {
 		t.Fatalf("client_ms echo=%d want=72290612", echo)
 	}
-	// 第三值：reqid = 应答时刻 FILETIME 毫秒（tag3 i64；官服样本口径，
+	// 第三值：reqid = 应答时刻 FILETIME 毫秒（tag3 i64；外服私服样本口径，
 	// 与 CD 行 col1/col2 同纪元）
 	off := 17
 	if frame[off] != 3 {
@@ -61,7 +61,7 @@ func TestOfficialTimeSyncReplyFrameShape(t *testing.T) {
 	if unix := binary.LittleEndian.Uint64(frame[off+1:]); unix != uint64(now.Unix()) {
 		t.Fatalf("unix=%d want=%d", unix, now.Unix())
 	}
-	// 第五值：uptime 天（tag5 f64 官服全场常量）
+	// 第五值：uptime 天（tag5 f64 外服私服全场常量）
 	off += 9
 	if frame[off] != 5 {
 		t.Fatalf("uptime tag=%d want=5 (f64)", frame[off])
@@ -95,7 +95,7 @@ func TestWriteOfficialLoginInfoFrames(t *testing.T) {
 	if !bytes.Contains(frames[2], []byte("lizy86")) {
 		t.Fatalf("m655 missing account narrow string: % X", frames[2])
 	}
-	// 服务器名官服=tag7 宽串（UTF-16LE，c.pcapng 实证）——窄串 UTF-8 会被
+	// 服务器名外服私服=tag7 宽串（UTF-16LE，c.pcapng 实证）——窄串 UTF-8 会被
 	// 客户端按本地码页解读成乱码。
 	if !bytes.Contains(frames[2], utf16Encode("侠骨丹心")) {
 		t.Fatalf("m655 missing wide server name: % X", frames[2])
@@ -121,7 +121,7 @@ func TestWriteOfficialReadyInfoFrames(t *testing.T) {
 			t.Fatalf("frame%d msg id=%d want=%d", i, id, want)
 		}
 	}
-	// m607 官服方言：账号 tag6 窄串 + 角色名 tag7 宽串。
+	// m607 外服私服方言：账号 tag6 窄串 + 角色名 tag7 宽串。
 	if !bytes.Contains(frames[0], []byte("lizy86")) {
 		t.Fatalf("m607 missing account narrow string: % X", frames[0])
 	}
@@ -162,7 +162,7 @@ func TestActivityCustomMsgKnown(t *testing.T) {
 }
 
 // m327 应答：以登录链同款 0x11 加行帧重放 Task_Accepted（record 29）。
-// 官服方言为 0x13 写格 ×9（行已在客户端时的幂等覆写）；本服复用
+// 外服私服方言为 0x13 写格 ×9（行已在客户端时的幂等覆写）；本服复用
 // grantFunctionUnlock 已真机验证的加行形态，语义等价（对照文档 §十一）。
 func TestRepushAcceptedTaskFrames(t *testing.T) {
 	conn := &captureMessageConnection{}
@@ -199,7 +199,7 @@ func TestPushCombatAttributeDelta(t *testing.T) {
 	}
 
 	// 五维变化：Str 及其级联项（MeleePowerAdd/PhyVaAdd/MaxHPAdd 等
-	// 以 str 为源头的派生值，官服同理会全部重推）各自单属性帧。
+	// 以 str 为源头的派生值，外服私服同理会全部重推）各自单属性帧。
 	player.mu.Lock()
 	player.progress.attributes.str += 7
 	player.mu.Unlock()

@@ -553,7 +553,7 @@ func jingMaiViewRowFrame(row jingMaiProgressRow, def jingMaiDef, slot uint16) ([
 }
 
 // recordPlugRec plug_record(419) 官方 447 schema 列型 [7,3,7]（窄串,
-// i32, 窄串）——激活经脉的插栓登记（官服 c.pcapng 4.7s：View45 激活行
+// i32, 窄串）——激活经脉的插栓登记（外服私服 c.pcapng 4.7s：View45 激活行
 // 每行伴随一条，对象域 obj=45(视图) owner=行号）。op14 事务伴随帧本服
 // 全局缺失（对照文档 §11.2-A），此处仅补记录行。
 const recordPlugRec uint16 = 419
@@ -596,7 +596,7 @@ func pushJingMaiPlugRecords(link sceneMessageConnection, player *playerActor, ca
 }
 
 // jingMaiPlugRecFrame 激活经脉的 plug_record 伴随行（obj=45 owner=slot，
-// 列值按官服语义推断：[configID, 等级, 空]——官服行内容值未解出样本，
+// 列值按外服私服语义推断：[configID, 等级, 空]——外服私服行内容值未解出样本，
 // 待真机校准）。
 func jingMaiPlugRecFrame(def jingMaiDef, row jingMaiProgressRow, slot uint16) ([]byte, error) {
 	return serverRecordAddCells(uint32(viewportJingMai), uint32(slot), recordPlugRec, []recordCell{
@@ -982,7 +982,7 @@ func pushJingMaiFrames(link sceneMessageConnection, player *playerActor, catalog
 		player.activateJingMai(cur)
 		activated = append(activated, cur)
 	}
-	// 官服 4.7s 补齐：激活经脉每行伴随 plug_record#419（c.pcapng View45
+	// 外服私服 4.7s 补齐：激活经脉每行伴随 plug_record#419（c.pcapng View45
 	// 激活行逐行成对实证，此前零下发——对照文档 §11.1-14）。
 	if plugErr := pushJingMaiPlugRecords(link, player, catalog, activated); plugErr != nil {
 		return plugErr

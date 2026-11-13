@@ -598,9 +598,9 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 	// SwitchManager 批量开关（0x1E 414 "sync"）连接级只发一次：引擎开关
 	// 树不随场景代际清空，0x0C 重入不重放（Java switchSyncPushed 同口径）。
 	switchSyncPushed := false
-	// 官服就绪位信息帧（m607/m52/m586 + 战斗属性全量，c.pcapng 4.8s
+	// 外服私服就绪位信息帧（m607/m52/m586 + 战斗属性全量，c.pcapng 4.8s
 	// ClientReady 簇同位）连接级只发一次；0x0C 重入随对象清空由
-	// stable re-entry 分支按官服口径选择性重推（战斗属性挂玩家对象）。
+	// stable re-entry 分支按外服私服口径选择性重推（战斗属性挂玩家对象）。
 	officialReadyInfoPushed := false
 	currentRoleID := func() role.RoleID {
 		if selected != nil {
@@ -637,7 +637,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			return nil
 		}
 		if !bingluHasProgress(player.bingluSnapshot()) {
-			return nil // 零进度 0 帧（官服对拍口径）
+			return nil // 零进度 0 帧（外服私服对拍口径）
 		}
 		return pushBingluFrames(link, player)
 	}
@@ -1523,7 +1523,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			gmSession.setAction(fmt.Sprintf("已发送探针 msgId=%d subType=%d", command.MsgId, command.SubType))
 			log.Printf("%s: GM custom probe msgId=%d subType=%d", conn.RemoteAddr(), command.MsgId, command.SubType)
 		case "tersure_wash_open":
-			// 宝物洗炼界面开窗（NPC 对话链同方言；官服经火浣台 NPC 触发）。
+			// 宝物洗炼界面开窗（NPC 对话链同方言；外服私服经火浣台 NPC 触发）。
 			open, openErr := tersureWashOpenFrame(command.ItemConfig)
 			if openErr == nil {
 				openErr = link.WriteFrame(open)
@@ -2149,7 +2149,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 				// 升级改阴阳太极桶/书 Add 分量（vitalUpdate 大批不覆盖
-				// 战斗面板列）：官服增量模型，只推变化项单属性帧。
+				// 战斗面板列）：外服私服增量模型，只推变化项单属性帧。
 				if tickErr == nil {
 					pushCombatAttributeDelta(link, player, combatPanelBefore, conn.RemoteAddr().String())
 				}
@@ -2160,7 +2160,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			if tickErr == nil && sitcrossSettlement.Changed() {
 				// 打坐回复走官方形态帧簇：逐层 n=1 单属性帧 + msg24
 				// c1=16 治疗飘字（UI 的 +回复量 绿字来源）。绝不能并入
-				// 下面的全量 vitalUpdate——官服坐姿周期帧从不带
+				// 下面的全量 vitalUpdate——外服私服坐姿周期帧从不带
 				// LogicState，整帧重推会让客户端重入坐姿动画。
 				var frames [][]byte
 				frames, tickErr = player.sitcrossRecoveryFrames(sitcrossSettlement)
@@ -2186,7 +2186,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				// 数值 vitals 小帧（n=8）——vitalUpdate 全量面板含 State="stand"
 				// /LogicState/CurSkillID/PauseSkill，会把冲锋受理簇的接近态洗掉
 				//（64785/61392 会话实证：轻功点回复 advanced 每周期触发全量推送，
-				// 簇后 ~70 帧再现 152 属性面板 → 客户端不自走）。官服轻功回复只发
+				// 簇后 ~70 帧再现 152 属性面板 → 客户端不自走）。外服私服轻功回复只发
 				// n=1 QingGongPoint 单帧、战斗数值走 0x2D/SP 小帧。
 				var state []byte
 				state, tickErr = player.combatVitalsFrame()
@@ -2488,12 +2488,12 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// 即使其能量属性（QingGongPoint/MaxQingGongPoint）
 			// 已经存在。
 			//
-			// 2026-11-10 官服对齐（对照文档 §四-3）：官服登录只发一帧
+			// 2026-11-10 外服私服对齐（对照文档 §四-3）：外服私服登录只发一帧
 			// S2C 0x0A（10429B / 446 schema，c.pcapng 0.097s 实证），且
 			// 客户端取其帧头 16B 作为后续 C2S 0x0A 活动信封头回显。旧实现
-			// 「447 表 + 10429 镜像」双发与官服形态不符——合并为单帧直发
-			// 官服镜像（镜像帧即官服原始字节，零结构风险）；编码侧 0x11/
-			// 0x13 行仍按 447 schema 生成，登录链引用的 recId ≤446 与官服
+			// 「447 表 + 10429 镜像」双发与外服私服形态不符——合并为单帧直发
+			// 外服私服镜像（镜像帧即外服私服原始字节，零结构风险）；编码侧 0x11/
+			// 0x13 行仍按 447 schema 生成，登录链引用的 recId ≤446 与外服私服
 			// 表完全兼容（第 447 项为 fork 自有记录，登录链零引用）。
 			// NINEYIN_HOME_RECORDS_MIRROR=0 时回退旧 447 表单发（对账用）。
 			if homeRecordsMirrorEnabled() && len(officialHomeRecordsFrame) > 0 {
@@ -2514,7 +2514,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				}
 				log.Printf("%s: sent property table (%d entries) and fallback record table (%d entries)", conn.RemoteAddr(), binary.LittleEndian.Uint16(propertyTable[1:]), binary.LittleEndian.Uint16(recordTable[1:]))
 			}
-			// 官服 0.1s 位登录信息帧簇（m366 客户端 IP 回显 / m623 /
+			// 外服私服 0.1s 位登录信息帧簇（m366 客户端 IP 回显 / m623 /
 			// m655 服务器标识，c.pcapng 0.097-0.099s 同位：0x0A 之后、
 			// 建视图之前；official_login_align.go）。
 			writeOfficialLoginInfoFrames(link, conn.RemoteAddr().String(), officialAccountLabel(loginAccountName), activeRole.Name, uint32(activeRole.ID))
@@ -2547,8 +2547,8 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				return
 			}
 			log.Printf("%s: sent PlayerEntry opcode=0x0B object=%#x owner=%d scene=%s resource=%s", conn.RemoteAddr(), playerObjectID, playerOwnerID, activeRole.Location.Scene.Config, activeRole.Location.Scene.Resource)
-			// S2C 0x0A 官服记录表帧已在 0x09 属性表之后单帧下发
-			//（2026-11-10 合并：原此位镜像帧上移，与官服 0.097s 时序一致）。
+			// S2C 0x0A 外服私服记录表帧已在 0x09 属性表之后单帧下发
+			//（2026-11-10 合并：原此位镜像帧上移，与外服私服 0.097s 时序一致）。
 			// msg229 130 场景 NPC 点位表（已停用，scene_npc_map.go）。
 			writeSceneNPCMapFrames(link, world, conn.RemoteAddr().String())
 
@@ -2583,21 +2583,21 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				return
 			}
 			log.Printf("%s: sent player 0x0D + 0x1F + authoritative vital 0x10", conn.RemoteAddr())
-			// 官服登录物理档案 0x10 单属性流（34 条，冲锋自走 P2）：0x0D
-			// 大档之后逐帧补发——官服形态即逐帧变更事件，引擎接近子系统
+			// 外服私服登录物理档案 0x10 单属性流（34 条，冲锋自走 P2）：0x0D
+			// 大档之后逐帧补发——外服私服形态即逐帧变更事件，引擎接近子系统
 			// 若在更新沿上武装则只有这条路能触发（大档不触发同路径）。
 			if err := sendPlayerPhysicsLoginStream(link, player); err != nil {
 				log.Printf("%s: write player physics login stream (skip): %v", conn.RemoteAddr(), err)
 			}
-			// 玩家档案 0x28 全量帧（官服登录簇方言，docs/官服玩家档案
+			// 玩家档案 0x28 全量帧（外服私服登录簇方言，docs/外服私服玩家档案
 			// 0x28全量帧.md）：NINEYIN_PLAYER_PROFILE_0X28=1 门控。时序=
-			// 物化（0x0D）之后、面板身份/视图行爆发之前——官服 #132 档案
+			// 物化（0x0D）之后、面板身份/视图行爆发之前——外服私服 #132 档案
 			// 帧先于玩家 0x14/0x11 视图行，NPC 0x28 教训=先物化后详情。
 			// mode=0x46 纯 memcpy 明文（与 NPC 0x28 v3 同族）：基础字段
-			// + 技能行 v2（官服 k#1978 模板 17 列，数据与 View40 同源）。
+			// + 技能行 v2（外服私服 k#1978 模板 17 列，数据与 View40 同源）。
 			if playerProfile0x28Enabled() {
 				// 技能行数据与 grantStarterProgress/View40 同源（merge 集
-				// + 等级档合并），档案帧先行、View40 行后到——官服同位。
+				// + 等级档合并），档案帧先行、View40 行后到——外服私服同位。
 				learnedRows := applyStoredSkillLevels(player, currentRoleID(), skillLevelStoreOf(), mergeLearnedSkills(dbLearnedSkills))
 				profileFrame, fieldCount := playerProfile0x28Frame(playerObjectID, playerOwnerID, activeRole.Location.Position, learnedRows)
 				if err := link.WriteFrame(profileFrame); err != nil {
@@ -2626,7 +2626,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				return
 			}
 			log.Printf("%s: granted function unlock rows in choose chain (before ClientReady)", conn.RemoteAddr())
-			// 开图位图 + 当前场景迷雾行（官服 0.128s 阶段C 记录簇同位；
+			// 开图位图 + 当前场景迷雾行（外服私服 0.128s 阶段C 记录簇同位；
 			// 地图点击寻路/世界地图城市标签的数据源，缺则图层为空）。
 			if mapErr := grantMapRecords(link, activeRole.Location.Scene.Resource); mapErr != nil {
 				log.Printf("%s: grant map records: %v", conn.RemoteAddr(), mapErr)
@@ -2646,7 +2646,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 					log.Printf("%s: pushed inventory equips=%d bagItems=%d role=%d", conn.RemoteAddr(), len(equips), len(bagItems), activeRole.ID)
 				}
-				// 娃娃/宝物随机属性 record 整推（官服 0x11 flag=1 方言）：
+				// 娃娃/宝物随机属性 record 整推（外服私服 0x11 flag=1 方言）：
 				// 纸娃娃槽位行（view1）与背包行（对应页）各按 uid 取快照。
 				pushLoginRandomProps(link, randomPropsStore, ctx, activeRole.ID, equips, bagItems)
 			}
@@ -2812,7 +2812,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			}
 			explicitSceneReady = true
 			log.Printf("%s: observed explicit stage_main ClientReady (0x09)", conn.RemoteAddr())
-			// AutoTrace=1（官服 4.81s ClientReady 簇，m144 后 m52 前）：
+			// AutoTrace=1（外服私服 4.81s ClientReady 簇，m144 后 m52 前）：
 			// 自动寻路开关——大地图点击寻路的引擎闸门，登录缺发则点击
 			// 无反应（msg266 都不发起）。
 			if player != nil && !autoTracePushed {
@@ -2900,16 +2900,16 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				log.Printf("%s: granted View=43 inner-power and View=40 花无缺七招 after explicit ClientReady", conn.RemoteAddr())
 			}
 			if player != nil && !officialReadyInfoPushed {
-				// 官服 4.8s 位就绪信息帧簇（c.pcapng 4.80-4.84s：技能视图簇
+				// 外服私服 4.8s 位就绪信息帧簇（c.pcapng 4.80-4.84s：技能视图簇
 				// 之后、View46 之前）：m607 账号+角色名 → m52 服务器时间 →
 				// m586 [5] 登录状态簇首 → 战斗属性全量 0x10 逐项单帧
-				//（official_login_align.go；官服另有的背包视图行在本服位于
+				//（official_login_align.go；外服私服另有的背包视图行在本服位于
 				// 选角链，时序差异已在对照文档 §十一 注记）。
 				officialReadyInfoPushed = true
 				writeOfficialReadyInfoFrames(link, conn.RemoteAddr().String(), officialAccountLabel(loginAccountName), player.name, time.Now())
 				writeOfficialLoginBuffFrames(link, player, conn.RemoteAddr().String())
 				// 限时 buff 就绪重放（m169 九值时间形态，v7=到期unix毫秒；
-				// 官服登录期 buf_baosd_02 语义的带时间对应物）。
+				// 外服私服登录期 buf_baosd_02 语义的带时间对应物）。
 				if timedFrames, terr := player.timedBuffLoginReplayFrames(time.Now()); terr != nil {
 					log.Printf("%s: replay timed buffs: %v", conn.RemoteAddr(), terr)
 				} else {
@@ -2935,7 +2935,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			}
 			if player != nil {
 				// 兵录（binglu_rank_rec 178 密集 12 行 + MaxBingLuLevel；
-				// 零进度 0 帧——官服对拍口径，pushBinglu 内部闸）。
+				// 零进度 0 帧——外服私服对拍口径，pushBinglu 内部闸）。
 				if err := pushBinglu(); err != nil {
 					log.Printf("%s: push binglu rows: %v", conn.RemoteAddr(), err)
 				}
@@ -3213,10 +3213,10 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// 活动/移动包保持原有的生命周期行为。
 			if custom, ok, _ := parseClientActivityCustomMessage(plain); ok && len(custom.Values) > 0 && custom.Values[0].Type == 2 {
 				if !activityCustomMsgKnown(custom.Values[0].Int32) {
-					// 2026-11-10 排障补齐（对照文档 §五-C）：官服登录期客户端
+					// 2026-11-10 排障补齐（对照文档 §五-C）：外服私服登录期客户端
 					// 大量 UI/设置上报走 0x0A 信封（lua64 已定名 27 个，§五-A2），
 					// 旧白名单外完全静默——连「客户端发过」都不可见。现在逐条
-					// 留痕；不应答（官服对其中多数亦无逐条回帧，语义明确的
+					// 留痕；不应答（外服私服对其中多数亦无逐条回帧，语义明确的
 					// 应答族见 §五-A 待办）。
 					log.Printf("%s: unhandled activity custom msg_id=%d args=%d", conn.RemoteAddr(), custom.Values[0].Int32, len(custom.Values)-1)
 					continue
@@ -3228,7 +3228,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				log.Printf("%s: client activity CustomSend opcode=0x0A msg_id=%d args=[%s]", conn.RemoteAddr(), custom.Values[0].Int32, strings.Join(arguments, ", "))
 				switch custom.Values[0].Int32 {
 				case clientCustomMsgDelay:
-					// m924 → m294 官服形态应答（技能.pcapng 全程 1Hz 逐对实证：
+					// m924 → m294 外服私服形态应答（技能.pcapng 全程 1Hz 逐对实证：
 					// [client_ms 回显, reqid(应答时刻 FILETIME ms), unix 秒,
 					// uptime 天(常量)]）。P0a 时钟收敛后这是全场唯一 m294 源。
 					if len(custom.Values) >= 2 {
@@ -3245,9 +3245,9 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				case clientCustomTaskMsg:
 					// m327 任务消息（CLIENT_CUSTOMMSG_TASK_MSG，lua64 定名）：
-					// 子命令 6=已接任务列表同步，官服回 0x13 Task_Accepted
+					// 子命令 6=已接任务列表同步，外服私服回 0x13 Task_Accepted
 					// 位图写格 ×9 两轮幂等重推——等价物 = 已授予接受任务行
-					// 重放（幂等；其余子命令官服无应答观测）。
+					// 重放（幂等；其余子命令外服私服无应答观测）。
 					if repushErr := repushAcceptedTaskFrames(link, conn.RemoteAddr().String()); repushErr != nil {
 						log.Printf("%s: repush accepted tasks for msg327: %v", conn.RemoteAddr(), repushErr)
 					}
@@ -3336,7 +3336,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 						log.Printf("%s: handle rush movement upload: %v", conn.RemoteAddr(), handleErr)
 					}
 				case clientCustomRushHitConfirm, clientCustomCorpseQuery, clientCustomMapNavigate:
-					// 官服静默消费（f ⑦ / g 战后实证）：msg915 命中确认上报
+					// 外服私服静默消费（f ⑦ / g 战后实证）：msg915 命中确认上报
 					// [1,obj,x,y,z,朝向] 与 msg990 尸体拾取查询均无 S2C 回应；
 					// msg266 地图寻路标记（技能.pcapng：起跑前 ~73ms 一次，
 					// 两次地图移动双证，S2C 零回应——位置由随后的 msg15 收编）。
@@ -3935,18 +3935,18 @@ func countNPCsWithin(catalog []npcSpawn, position role.Position, radius float32)
 	return count
 }
 
-// npcOwnerID 从对象号派生稳定唯一的 owner（官服客户端语义=创建者
-// roleID 段，官服抓包 NPC owner 恒非 1：0x58ed26/0x56a654/0x150 等；
-// fork 生态「owner=1=NPC 专属位」方言对官服客户端无效——owner=1 会被
+// npcOwnerID 从对象号派生稳定唯一的 owner（外服私服客户端语义=创建者
+// roleID 段，外服私服抓包 NPC owner 恒非 1：0x58ed26/0x56a654/0x150 等；
+// fork 生态「owner=1=NPC 专属位」方言对外服私服客户端无效——owner=1 会被
 // 解析为「1 号玩家的化身」，锁定走 PvP 分支、自动接近不启动，
-// 2026-11-10 官服客户端不自走排查定论）。取 0x0066xxxx 段：同 obj 同
+// 2026-11-10 外服私服客户端不自走排查定论）。取 0x0066xxxx 段：同 obj 同
 // owner（重连/重生稳定）、避开 0/1/玩家 0x7A5C0B/对象 0x1100 前缀段。
 func npcOwnerID(objectID uint32) uint32 {
 	return 0x00660000 | (objectID & 0xFFFF)
 }
 
 // npcOfficialSparseEnabled 控制 NPC 渲染二分实验：=1 时 NPC 0x0D 仅发
-// 官服位 16-prop 集（NINEYIN_NPC_OFFICIAL_SPARSE，默认关）。
+// 外服私服位 16-prop 集（NINEYIN_NPC_OFFICIAL_SPARSE，默认关）。
 func npcOfficialSparseEnabled() bool {
 	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_OFFICIAL_SPARSE")) == "1"
 }
@@ -3969,7 +3969,7 @@ func npcAddObject(objectID uint32, npc npcSpawn, probeIndex int) ([]byte, error)
 		return nil, err
 	}
 	// NPC 渲染二分实验（§14.3 真机第五轮）：NINEYIN_NPC_OFFICIAL_SPARSE=1
-	// 时只发官服 #1777 同款 16-prop 集（砍 schema 行与重复项）。官服模式
+	// 时只发外服私服 #1777 同款 16-prop 集（砍 schema 行与重复项）。外服私服模式
 	// 下 134/134 NPC 0x0D 走查零失败但客户端不渲染——本开关二分
 	// 「schema 多余行压制渲染」vs「渲染需 0x28 详情记录」两假说。
 	if npcOfficialSparseEnabled() {
@@ -3978,10 +3978,10 @@ func npcAddObject(objectID uint32, npc npcSpawn, probeIndex int) ([]byte, error)
 	for _, property := range properties {
 		msg = appendNPCProperty(msg, property)
 	}
-	// 官服位属性增补（c.pcapng 0x0D 251B 帧逐属性走查定版，2026-11-10）：
-	// 官服客户端的 NPC 物化依赖官服位行集（本服表含 fork/官服双位）。
+	// 外服私服位属性增补（c.pcapng 0x0D 251B 帧逐属性走查定版，2026-11-10）：
+	// 外服私服客户端的 NPC 物化依赖外服私服位行集（本服表含 fork/外服私服双位）。
 	// CollideRadius(179) 是客户端寻路避障的关键输入——此前 fork 位集
-	// 不含任何官服位属性。值优先取 schema（模型名/等级），其余为官服
+	// 不含任何外服私服位属性。值优先取 schema（模型名/等级），其余为外服私服
 	// 常量（ActionSpeed=1.0/BornAction=stand/WeaponMode=hand1_1/三比例=100）。
 	official := officialNPCProperties(npc)
 	for _, property := range official {
@@ -3991,17 +3991,17 @@ func npcAddObject(objectID uint32, npc npcSpawn, probeIndex int) ([]byte, error)
 	return msg, nil
 }
 
-// officialNPCProperties 官服位 NPC 物化属性集（c.pcapng #1777/#1789 两帧
+// officialNPCProperties 外服私服位 NPC 物化属性集（c.pcapng #1777/#1789 两帧
 // 0x0D 251B ×16 属性逐项定版，2026-11-10）：CollideRadius/State/Type/
 // Resource/ConfigID/Photo/NpcType/ActionSpeed/Level/BossLevel/IDCard/
 // BornAction/WeaponMode/HPRatio/ParryRatio/HitHPRatio。索引一律按名经
-// PlayerProperty（末现=官服位）解析——官服 2433 表与本服 2370 表同名行
+// PlayerProperty（末现=外服私服位）解析——外服私服 2433 表与本服 2370 表同名行
 // 存在 +2/+7 分段漂移（§四-2/§四-5 同源），硬编码索引换表即错位。
 // 模型名缺省时跳过 Resource/ConfigID/Photo 行（零值模型串会污染客户端
-// 表现）；NpcType 由 fork schema 场景位（@34）已携带，不重复发官服位。
+// 表现）；NpcType 由 fork schema 场景位（@34）已携带，不重复发外服私服位。
 //
-// CollideRadius 分族方言（npc.pcapng 2026-11-11 官服 0x0D 定版）：战斗/
-// 交互 NPC 恒发且排官服位块首行，值按体型的 0.5~1.0——优先 schema 真值
+// CollideRadius 分族方言（npc.pcapng 2026-11-11 外服私服 0x0D 定版）：战斗/
+// 交互 NPC 恒发且排外服私服位块首行，值按体型的 0.5~1.0——优先 schema 真值
 // （目录表列或兼容层缺省 0.905），界外回落 0.9 基线；宝箱族（NpcType=161，
 // BoxNpc*）与采集族（NpcType=153，GatherClone*）不发碰撞体，交互半径
 // 改走尾行 OpenRange=2.0 / GatherRange=3.0。
@@ -4046,13 +4046,13 @@ func officialNPCProperties(npc npcSpawn) []clientdata.IndexedProperty {
 	}
 	props = append(props,
 		clientdata.IndexedProperty{Index: state.Index, Name: state.Name, Value: clientdata.StringValue("stand")},
-		// 官服 #1777 Type=4（NPC 对象类别常量）。
+		// 外服私服 #1777 Type=4（NPC 对象类别常量）。
 		officialNPCIntProp(propType, 4),
 	)
 	if material, ok := npc.resolved.Properties["Material"]; ok && material.Value.Text != "" {
 		resourceValue := "npc\\world" + material.Value.Text
 		props = append(props,
-			// 官服 #1777：Resource="npc\worldnpc197"、Photo="icon\func"
+			// 外服私服 #1777：Resource="npc\worldnpc197"、Photo="icon\func"
 			// +Resource+".png"——图标路径由资源路径拼接派生。
 			clientdata.IndexedProperty{Index: resource.Index, Name: resource.Name, Value: clientdata.StringValue(resourceValue)},
 			clientdata.IndexedProperty{Index: configID.Index, Name: configID.Name, Value: clientdata.StringValue(material.Value.Text)},
@@ -4060,7 +4060,7 @@ func officialNPCProperties(npc npcSpawn) []clientdata.IndexedProperty {
 		)
 	} else if r, ok := npc.resolved.Properties["Resource"]; ok && r.Value.Text != "" {
 		// schema 只有 Resource（无 Material 列）时：Resource 直用 schema 值、
-		// ConfigID 取 schema ConfigID、Photo 照官服规则拼接——官服 16-prop
+		// ConfigID 取 schema ConfigID、Photo 照外服私服规则拼接——外服私服 16-prop
 		// 方言下三行必发（sparse 二分模式尤其）。
 		configValue := r.Value.Text
 		if c, ok := npc.resolved.Properties["ConfigID"]; ok && c.Value.Text != "" {
@@ -4076,14 +4076,14 @@ func officialNPCProperties(npc npcSpawn) []clientdata.IndexedProperty {
 	if levelProp, ok := npc.resolved.Properties["Level"]; ok && levelProp.Value.I32 > 0 && levelProp.Value.I32 < 256 {
 		props = append(props, officialNPCIntProp(level, levelProp.Value.I32))
 	}
-	// 官服 #1777 BossLevel=1（普通怪基线）；schema 有真值时优先。
+	// 外服私服 #1777 BossLevel=1（普通怪基线）；schema 有真值时优先。
 	bossLevelValue := int32(1)
 	if boss, ok := npc.resolved.Properties["BossLevel"]; ok && boss.Value.I32 > 0 && boss.Value.I32 < 256 {
 		bossLevelValue = boss.Value.I32
 	}
 	props = append(props,
 		officialNPCIntProp(bossLevel, bossLevelValue),
-		// 官服 #1777 IDCard="null,null,null,null,null"（五槽空身份卡）。
+		// 外服私服 #1777 IDCard="null,null,null,null,null"（五槽空身份卡）。
 		clientdata.IndexedProperty{Index: idCard.Index, Name: idCard.Name, Value: clientdata.StringValue("null,null,null,null,null")},
 		clientdata.IndexedProperty{Index: bornAction.Index, Name: bornAction.Name, Value: clientdata.StringValue("stand")},
 		clientdata.IndexedProperty{Index: weaponMode.Index, Name: weaponMode.Name, Value: clientdata.StringValue("hand1_1")},
@@ -4101,7 +4101,7 @@ func officialNPCProperties(npc npcSpawn) []clientdata.IndexedProperty {
 	return props
 }
 
-// officialNPCIntProp 按表线型分派整数值（fork/官服表同名行线型一致，
+// officialNPCIntProp 按表线型分派整数值（fork/外服私服表同名行线型一致，
 // 但换表防错位仍以 entry.Type 为准编码）。
 func officialNPCIntProp(entry clientdata.PropertyEntry, value int32) clientdata.IndexedProperty {
 	switch entry.Type {
@@ -4224,8 +4224,8 @@ func sceneObjectObjectProperty(objectID, ownerID, propertyIndex, targetID, targe
 
 // officialPropertyTableFrame 逐行透传当前生效的 0x09 属性表
 // （clientdata.ActivePropertyTableMode：fork=2370 项现网方言 /
-// official2433=官服 2433 项真表，NINEYIN_PROPERTY_TABLE 门控，
-// docs/官服登录帧对照与缺口清单.md §14.3 换表工程）。
+// official2433=外服私服 2433 项真表，NINEYIN_PROPERTY_TABLE 门控，
+// docs/外服私服登录帧对照与缺口清单.md §14.3 换表工程）。
 // 帧体 = [0x09][u16 count](name\0 u8 type)*;客户端按位置绑定索引,
 // 因此表内容必须与帧索引方言逐字节一致,不做任何删改。
 // fork 表来源:F 盘新版服务端 exe 抓包提取(tools/export_official_table.py),

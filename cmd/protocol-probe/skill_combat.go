@@ -112,7 +112,7 @@ type combatSkillDefinition struct {
 	// P2 波动/分摊系数等），legacy ratio 路径保留为回退。hitCount 是 varprop
 	// HitCount 列（hurtCount() 的第二优先级计数来源）。
 	// hitFrameMs 是 zhaoshi trigger_custom_N 编译出的多段判定时刻
-	// （30fps 换算毫秒）：trigger_hitbreak 帧位优先（2026-11-11 官服
+	// （30fps 换算毫秒）：trigger_hitbreak 帧位优先（2026-11-11 外服私服
 	// pcapng 定版，段内相对帧+前序段全时长累加），无 hitbreak 回落
 	// trigger_effect _hurt/核心前缀帧（段相对同口径），空表=单段即时
 	// 结算。levelupRelevance（wuji_* 前缀=武技族，出招链带 169 段）与
@@ -339,7 +339,7 @@ func (definition combatSkillDefinition) totalActionDuration() time.Duration {
 func skillCooldownFrames(definition combatSkillDefinition, now time.Time) (personal, public []byte, err error) {
 	// 纪元口径：native-menu 反编译同方言（skillCooldownFrameWithDuration，
 	// UnixMilli）真机转圈亲证——客户端 CD 倒计时只消费 col2-col1 时长，
-	// 绝对纪元不参与。官服逐格方言用 1601(FILETIME) 纪元毫秒（g 14.660
+	// 绝对纪元不参与。外服私服逐格方言用 1601(FILETIME) 纪元毫秒（g 14.660
 	// col1=UnixMilli+11644473600000 逐位吻合），待该方言启用时同口径。
 	start := now.UnixMilli()
 	// 官方 cooldown_rec 第 4 列 team 是 u16（0xFFFF 个人行 /
@@ -865,7 +865,7 @@ func skillRowCanUseFrame(row uint16, canUse bool) ([]byte, error) {
 	})
 }
 
-// skillRowCurTargetCountFrame 即 View40 技能行 CurTargetCount 帧（官服
+// skillRowCurTargetCountFrame 即 View40 技能行 CurTargetCount 帧（外服私服
 // 伤害段簇首击前=命中数、击杀后=0，f 43.432/44.926 实证；isView=1）。
 func skillRowCurTargetCountFrame(row uint16, count int32) ([]byte, error) {
 	return sceneObjectProperties(uint32(viewportSkill), uint32(row), 1, []clientdata.IndexedProperty{
@@ -912,7 +912,7 @@ func (s *sceneLifecycle) resolveSkillDamageTargets(definition combatSkillDefinit
 }
 
 // refreshTargetsPerTick 范围型（以施法者为中心的圆/扇/矩形）逐段重索敌
-//（用户口径：技能期间进入范围的敌人也要吃伤害——官服剑阵跟随移动的
+//（用户口径：技能期间进入范围的敌人也要吃伤害——外服私服剑阵跟随移动的
 // 语义）；锁定单体/目标区域保持出招快照。
 func (definition combatSkillDefinition) refreshTargetsPerTick() bool {
 	switch definition.targetMode {
@@ -1077,18 +1077,18 @@ func skillHitTimes(definition combatSkillDefinition) []time.Duration {
 
 // writeSkillSettleFrames 写一批命中的全套帧（Java emitPerTargetSequence
 // 同序）：逐目标 [0x10 NPC 面板 → 0x13 → msg24(17) → 0x2D → msg18 →
-// 官服伤害段簇（f 43.432~44.539 / g 22.337~56.468 定版）：
+// 外服私服伤害段簇（f 43.432~44.539 / g 22.337~56.468 定版）：
 // 首段 View40 行 CurTargetCount=命中数 → 每击 [FP → SP → 0x13 rec114
 // 行0列1(u16,+500/击) → c1=17 → (第2击起 c1=10 段序) → msg205] →
 // NPC 血量 0x2D 多属性（HPRatio/HitHPRatio）→ 击杀簇 [0x12 del rec114
 // 行0 → c1=29 击退] → 击杀后 CurTargetCount=0。
-// 旧方言的每击 msg18/0x2D(28/112) 已删（官服 0 次出现）。
+// 旧方言的每击 msg18/0x2D(28/112) 已删（外服私服 0 次出现）。
 func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, definition combatSkillDefinition, player *playerActor, hits []skillSettleHit, tickIndex int, remote string) (totalLoot int32, err error) {
 	if len(hits) == 0 {
 		return 0, nil
 	}
 	playerName := player.snapshotName()
-	// 首段：View40 技能行 CurTargetCount（官服 g/f 首击前恒发）。
+	// 首段：View40 技能行 CurTargetCount（外服私服 g/f 首击前恒发）。
 	if tickIndex == 0 {
 		if row := player.skillViewRow(definition.id); row > 0 {
 			if frame, ferr := skillRowCurTargetCountFrame(row, int32(len(hits))); ferr == nil {
@@ -1100,7 +1100,7 @@ func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, 
 	}
 	hitOrdinal := int32(tickIndex + 1)
 	for _, hit := range hits {
-		// 每击 +2 怒：FP/SP 双帧（官服恒同值成对）。
+		// 每击 +2 怒：FP/SP 双帧（外服私服恒同值成对）。
 		sp, spFrame, spErr := player.addSP(ragGainCleanHit)
 		if spErr != nil {
 			return totalLoot, spErr
@@ -1115,7 +1115,7 @@ func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, 
 				return totalLoot, err
 			}
 		}
-		// 0x13 rec114 行0列1 官服形态（u16 +500/击累计）。
+		// 0x13 rec114 行0列1 外服私服形态（u16 +500/击累计）。
 		if err := link.WriteFrame(fightRelationHitCellFrame(hitOrdinal)); err != nil {
 			return totalLoot, err
 		}
@@ -1136,7 +1136,7 @@ func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, 
 				world.run.relayCombatFrame(hit.ref.id, frame, world, "skill hit")
 			}
 		}
-		// NPC 血量 0x2D 多属性帧（官服形态；替代旧 0x10 面板整帧）。
+		// NPC 血量 0x2D 多属性帧（外服私服形态；替代旧 0x10 面板整帧）。
 		if hpFrame, ferr := multiPropUpdateFrame(hit.ref.id, hit.ref.ownerID, []clientdata.IndexedProperty{
 			{Index: propHPRatio, Name: "HPRatio", Value: clientdata.Int32Value(hit.outcome.hpRatio)},
 			{Index: propHitHPRatio, Name: "HitHPRatio", Value: clientdata.Int32Value(hit.outcome.hpRatio)},
@@ -1154,7 +1154,7 @@ func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, 
 			}
 		}
 		if hit.outcome.killed {
-			// 击杀簇（官服序）：fight_relation 撤销 → c1=29 击退；
+			// 击杀簇（外服私服序）：fight_relation 撤销 → c1=29 击退；
 			// 死亡面板/尸体拾取走既有 relayNPCKillFrame 链。
 			if err := link.WriteFrame(fightRelationRowDeleteFrame()); err != nil {
 				return totalLoot, err
@@ -1168,7 +1168,7 @@ func writeSkillSettleFrames(link sceneMessageConnection, world *sceneLifecycle, 
 			world.relayNPCKillFrame(hit.ref.id, hit.outcome.frame, playerName)
 		}
 	}
-	// 击杀后 View40 行 CurTargetCount=0（官服 44.926 实证）。
+	// 击杀后 View40 行 CurTargetCount=0（外服私服 44.926 实证）。
 	killed := false
 	for _, hit := range hits {
 		if hit.outcome.killed {
@@ -1383,7 +1383,7 @@ func handleSkillCustom(link sceneMessageConnection, player *playerActor, world *
 	// 同位）：riding_* 不在 zhaoshi 编译目录（无动作时间线），落在
 	// parseUseSkillCustom 恒 false——旧闸位在其后实际从未到达（骑乘技能
 	// 全被当 unlearned 吞掉）。dismount 族转下马；步行发骑乘技/骑乘发非
-	// 白名单技忽略；其余骑乘技能发官服受理簇（mount_skills.go）。
+	// 白名单技忽略；其余骑乘技能发外服私服受理簇（mount_skills.go）。
 	// riding_start（骑术精通）= 召唤技，不在 RideSkillID 白名单：步行按
 	// 选中上马（soleOwned 同 handleRideCustom 口径）；骑乘中忽略。
 	if mount != nil && player != nil {
@@ -1453,7 +1453,7 @@ func handleSkillCustom(link sceneMessageConnection, player *playerActor, world *
 	// 冲锋族按压闸（2026-11-11）：锁定目标的冲锋分支（直收/暂存）提前
 	// return，永远到不了 beginSkillUse 的 CD/GCD 闸——commitRushDashCosts
 	// 只起 CD 不查，冷却中按压会照常受理→走近→照常出招（贴脸即无视 CD
-	// 连发）。官服「受理自由」（f 十连按全受理）的样本全部无 CD 在途，
+	// 连发）。外服私服「受理自由」（f 十连按全受理）的样本全部无 CD 在途，
 	// 不能外推到冷却期；此处按 beginSkillUse 同语义先过锁招/个人 CD/
 	// 公共 GCD 三闸，MP/SP/轻功仍留在执行提交点（「CD/MP 在执行时点结」
 	// 模型不变）。
@@ -1465,7 +1465,7 @@ func handleSkillCustom(link sceneMessageConnection, player *playerActor, world *
 	}
 	// 攻击距离闸（Java 八轮拍板「按技能真实射程控制释放距离」）：施法者
 	// 坐标取 211 自带上报（宽容解析，缺省原点同 Java）；距离=施法者→目标。
-	// 冲锋族距离模型（官服 b/e.pcapng 重解码 + f.pcapng 十连按修正
+	// 冲锋族距离模型（外服私服 b/e.pcapng 重解码 + f.pcapng 十连按修正
 	// 2026-11-08）：面板射程（castRange/TargetShapePara2）不是可攻击距离；
 	// 身前近距（≤rushStageNearCastMeters）直接施法，更远一律走暂存冲锋链
 	//（受理簇→客户端自动接近→6.5m 内 c61 冲刺→212 落地出伤害）。
@@ -1518,7 +1518,7 @@ func handleSkillCustom(link sceneMessageConnection, player *playerActor, world *
 	now := time.Now()
 	target := uint64(targetID) | uint64(targetOwnerID)<<32
 	// 冲锋落地重入（pending.settled）：CD/MP 已在 c61 时点结算，跳过
-	// 闸/扣费/CD 行（官服落地簇无 CD 行；个人 CD 会拒掉自己的续招）。
+	// 闸/扣费/CD 行（外服私服落地簇无 CD 行；个人 CD 会拒掉自己的续招）。
 	settledResume := player.resumeSettleSkipSnapshot()
 	// 顶掉补删（Java §D8 对拍）：GCD 不硬闸，连招会把上一招的收尾定时器
 	// 顶掉；新招受理时上一招仍挂着的，立即补发它的 0x12+清除帧——
@@ -1557,7 +1557,7 @@ func handleSkillCustom(link sceneMessageConnection, player *playerActor, world *
 		writeChannelAcceptStateFrames(link, definition, targetID, targetOwnerID, now, remote)
 	}
 	if !settledResume {
-		// CD 行官服方言（0x11 空行+0x13 逐格+槽位覆写）+ 受理时惰性清扫
+		// CD 行外服私服方言（0x11 空行+0x13 逐格+槽位覆写）+ 受理时惰性清扫
 		// 过期行（f 6.224 kfkj01 官方普通出招同构）。
 		for _, sweep := range player.sweepExpiredCooldownRows(now) {
 			if err := link.WriteFrame(sweep); err != nil {

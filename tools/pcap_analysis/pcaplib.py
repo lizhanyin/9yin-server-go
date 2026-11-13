@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""九阴官服 pcapng 解析库：pcapng → TCP 流(带时间戳) → XOR+EE 帧解码。
+"""九阴外服私服 pcapng 解析库：pcapng → TCP 流(带时间戳) → XOR+EE 帧解码。
 
 帧格式（capture_deep.py 同源）：
   线上字节：明文帧逐字节 XOR(KEY=CC 3B 6D FA, i%4) 后 0xEE 转义（EE→EE 00，帧尾 EE EE）。

@@ -248,7 +248,7 @@ func useSkillBook(h *itemSession, item bagRow, script string) {
 	if !h.consumeBagItemCount(item, 1) {
 		log.Printf("use skill book %s: consume failed (row missing/changed)", item.configID)
 	}
-	// 战斗面板增量（技能桶/直升书 Add 变化项，官服单属性帧形态）。
+	// 战斗面板增量（技能桶/直升书 Add 变化项，外服私服单属性帧形态）。
 	pushCombatAttributeDelta(h.link, h.player, combatBefore, h.remote)
 	log.Printf("%s: use skill book %s: wuxue=%v neigong=%v qinggong=%v skipped=%v",
 		h.remote, item.configID, newWuxue, newNeigong, newQingGong, skipped)

@@ -2,11 +2,11 @@ package clientdata
 
 import "testing"
 
-// TestHybridPropertyTable 混合表（fork 头块 0..173 + 官服共享域 174..2432）
+// TestHybridPropertyTable 混合表（fork 头块 0..173 + 外服私服共享域 174..2432）
 // 结构与名字解析闸：
 //  1. 行数=2433、行号严格位置绑定（idx==表位）；
 //  2. 头块=fork 场景域（Type@0/Photo@2/ConfigID@7/Resource@8/PosiX@9-12）；
-//  3. 共享域=官服行号（Type@181/Resource@1448/ConfigID@1447 为玩家域末现）；
+//  3. 共享域=外服私服行号（Type@181/Resource@1448/ConfigID@1447 为玩家域末现）；
 //  4. 场景域首现回落头块（Type→0、Level→6）——NPC 0x0D 头行通道恢复。
 func TestHybridPropertyTable(t *testing.T) {
 	SwapPropertyTableForTest(t, "hybrid2433")
@@ -25,7 +25,7 @@ func TestHybridPropertyTable(t *testing.T) {
 			t.Fatalf("头块 %d=%s want %s", idx, got, name)
 		}
 	}
-	// 共享域按官服行号（官服方言同号）
+	// 共享域按外服私服行号（外服私服方言同号）
 	for _, name := range []string{"Type", "Resource", "ConfigID", "Photo", "Level", "HPRatio"} {
 		hybrid, ok := PlayerProperty(name)
 		if !ok {
@@ -33,7 +33,7 @@ func TestHybridPropertyTable(t *testing.T) {
 		}
 		official, _ := lookupOfficial2433(t, name)
 		if hybrid.Index != official {
-			t.Fatalf("玩家域 %s=%d want 官服 %d", name, hybrid.Index, official)
+			t.Fatalf("玩家域 %s=%d want 外服私服 %d", name, hybrid.Index, official)
 		}
 	}
 	// 场景域首现落头块

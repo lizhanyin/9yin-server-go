@@ -16,9 +16,9 @@ import (
 	"golang.org/x/text/transform"
 )
 
-// 大地图开图/迷雾/自动寻路三帧（官服 c.pcapng 2026-11-10 原始字节定版）。
+// 大地图开图/迷雾/自动寻路三帧（外服私服 c.pcapng 2026-11-10 原始字节定版）。
 //
-// 官服在两处下发，缺一不可（本服此前全缺——大地图图层为空、点击无反应，
+// 外服私服在两处下发，缺一不可（本服此前全缺——大地图图层为空、点击无反应，
 // msg266 都不发起）：
 //
 //   - 0.128s（阶段C 记录簇，选角链 0x0D 后、ClientReady 前）：
@@ -32,19 +32,19 @@ import (
 //     寻路闸门。
 //
 // 记录帧布局与 serverRecordAddCells 同构（0x11 | obj u32 | owner u32 |
-// rec u16 | 起始行 u16 | 行数 u16 | 行数据×N）；OpenMapRec 单列 int32 官服
+// rec u16 | 起始行 u16 | 行数 u16 | 行数据×N）；OpenMapRec 单列 int32 外服私服
 // 一帧 24 行连发（len=112），不拆单行帧。
 const (
 	recordOpenMap uint16 = 51 // OpenMapRec
 	recordMapMask uint16 = 56 // MapMaskRec
 
-	// openMapRecRows 官服位图行数（24×32=768 个场景索引空间）。
+	// openMapRecRows 外服私服位图行数（24×32=768 个场景索引空间）。
 	openMapRecRows = 24
 )
 
-// officialOpenMapBits 官服 c.pcapng 0.128s 实测开图位图（24 行原值）。
+// officialOpenMapBits 外服私服 c.pcapng 0.128s 实测开图位图（24 行原值）。
 // 行 11 = 0x8000f0c3 含 bit14 = 索引 366 = scene22，与同簇 MapMaskRec
-// 行 col0=366 互证。作为基线样本下发（官服方言字节级一致），再叠加
+// 行 col0=366 互证。作为基线样本下发（外服私服方言字节级一致），再叠加
 // 当前场景位保证所在地必开。
 var officialOpenMapBits = [openMapRecRows]uint32{
 	0x7a03fffe, 0xe1812a28, 0x040000f6, 0x0001fe10,
@@ -66,7 +66,7 @@ var (
 
 // sceneGlobalIndex 取场景 resource（如 "scene22"/"city02"）在客户端
 // ini\scenes.ini 的全局段号——OpenMapRec 位图与 MapMaskRec col0 共用
-// 这套编号。表缺失/未收录返回 false（调用方降级：只发官服样本位图）。
+// 这套编号。表缺失/未收录返回 false（调用方降级：只发外服私服样本位图）。
 func sceneGlobalIndex(resource string) (uint32, bool) {
 	sceneIndexOnce.Do(loadSceneIndexTable)
 	if sceneIndexByRes == nil {
@@ -145,7 +145,7 @@ func sceneResourceOfBase(base string) string {
 
 // ---- 帧构造 ----
 
-// openMapRecFrame 官服同形 OpenMapRec 帧：0x11 + 24 行 int32 位图一帧连发。
+// openMapRecFrame 外服私服同形 OpenMapRec 帧：0x11 + 24 行 int32 位图一帧连发。
 func openMapRecFrame(bits [openMapRecRows]uint32) []byte {
 	msg := make([]byte, 16, 16+openMapRecRows*4)
 	msg[0] = 0x11
@@ -170,7 +170,7 @@ func mapMaskRecFrame(sceneIndex uint32, resource string) ([]byte, error) {
 	})
 }
 
-// grantMapRecords 选角链（0x0D 后、ClientReady 前，官服 0.128s 同位）下发
+// grantMapRecords 选角链（0x0D 后、ClientReady 前，外服私服 0.128s 同位）下发
 // 开图位图 + 当前场景迷雾行。0x0C 切图清玩家对象后由 stable re-entry 分支
 // 以新场景 resource 重推。
 func grantMapRecords(conn sceneMessageConnection, resource string) error {
@@ -190,7 +190,7 @@ func grantMapRecords(conn sceneMessageConnection, resource string) error {
 	return nil
 }
 
-// overlaySceneBit 把全局场景索引对应位点亮（官服位图叠加当前场景位）。
+// overlaySceneBit 把全局场景索引对应位点亮（外服私服位图叠加当前场景位）。
 func overlaySceneBit(bits *[openMapRecRows]uint32, index uint32) {
 	row, bit := int(index)/32, uint(index%32)
 	if row < openMapRecRows {
@@ -208,7 +208,7 @@ func mustMapMaskFrame(sceneIndex uint32, resource string) []byte {
 	return frame
 }
 
-// pushAutoTrace ClientReady 簇单属性帧：AutoTrace=1（官服 4.81s，m144 后
+// pushAutoTrace ClientReady 簇单属性帧：AutoTrace=1（外服私服 4.81s，m144 后
 // m52 前；属性挂玩家对象，0x0C 清对象后随 re-entry 重推）。
 func pushAutoTrace(conn sceneMessageConnection) error {
 	entry, ok := clientdata.PlayerProperty("AutoTrace")

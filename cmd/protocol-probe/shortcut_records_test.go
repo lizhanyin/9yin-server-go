@@ -185,8 +185,8 @@ func TestSitcrossUsesCapturedStartArgumentAndNormalPropertyUpdate(t *testing.T) 
 	if got := player.stateSnapshot().LogicState; got != entity.LogicStateSitcross {
 		t.Fatalf("LogicState=%d, want sitcross=%d", got, entity.LogicStateSitcross)
 	}
-	// 官服进出簇形态：0x10 属性帧 + msg24 c1=40 "dazuo_old" 动作
-	// 飘字同拍成对（FsGame 官服抓包全量成对实证）。
+	// 外服私服进出簇形态：0x10 属性帧 + msg24 c1=40 "dazuo_old" 动作
+	// 飘字同拍成对（FsGame 外服私服抓包全量成对实证）。
 	frames := conn.Frames()
 	if len(frames) != 2 || frames[0][0] != 0x10 {
 		t.Fatalf("expected 0x10 property + dazuo_old action, got %d frames", len(frames))
@@ -280,8 +280,8 @@ func assertSitcrossActionFrame(t *testing.T, frame []byte, wantAction int32) {
 	}
 }
 
-// TestSitcrossRecoveryFramesMatchOfficialShape 锚定官服打坐回复
-// 帧簇形态（FsGame 官服抓包 00:11:50.408–00:12:00.882）：
+// TestSitcrossRecoveryFramesMatchOfficialShape 锚定外服私服打坐回复
+// 帧簇形态（FsGame 外服私服抓包 00:11:50.408–00:12:00.882）：
 // 逐层 n=1 单属性帧 + msg24 c1=16 治疗飘字，全簇绝不含
 // LogicState（带状态的整帧重推会让客户端重入坐姿动画）。
 func TestSitcrossRecoveryFramesMatchOfficialShape(t *testing.T) {
@@ -295,7 +295,7 @@ func TestSitcrossRecoveryFramesMatchOfficialShape(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build recovery frames: %v", err)
 	}
-	// 官服实证帧序（49.4.14.150:7074 实时 + FsGame timeline）：
+	// 外服私服实证帧序（49.4.14.150:7074 实时 + FsGame timeline）：
 	// [HitHP 对] HPRatio/HP + c1=16 飘字 + MPRatio/MP + c1=18 飘字。
 	if len(frames) != 6 {
 		t.Fatalf("frame count = %d, want 6", len(frames))
@@ -326,7 +326,7 @@ func TestSitcrossRecoveryFramesMatchOfficialShape(t *testing.T) {
 	if len(values) != 10 || values[2].Int32 != 18 || values[3].Int32 != settlement.MPApplied || values[4].Int32 != settlement.MPWasted {
 		t.Fatalf("MP float = %+v, want c1=18 %d/%d", values, settlement.MPApplied, settlement.MPWasted)
 	}
-	// 触顶跳：先回满，再留 37 缺口（< 单跳回复量），官服末跳
+	// 触顶跳：先回满，再留 37 缺口（< 单跳回复量），外服私服末跳
 	// (实际, 溢出) 拆分形态（162+1478=名义 1640 同式）。扣血会把
 	// LogicState 切到 Fighting，须重进打坐态再结算。
 	for state := player.stateSnapshot(); state.HP < state.MaxHP || state.MP < state.MaxMP; state = player.stateSnapshot() {

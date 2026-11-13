@@ -111,7 +111,7 @@ NPC 攻击（每 2.2s，6m 内）：`337(NPC) → 20(NPC→玩家, jn_mon053_02)
 
 | 项 | 内容 |
 |---|---|
-| 数据源 | `share/npc/staticprop.ini`（745 节＝实力包 PowerNo，含 [-1] 兜底）：五维/HP/MP/五系防/PI·AI 防 17 个成长基数（HPBase 可为浮点如 1.775）。Go/Java/客户端 Lua 此前均未消费；官方 base block 0..98 是场景面板块、不含防御——官服按实力包在服务端推导（视图块 PhyDef@584/Dodge@562/VaDef@573），抓包无攻击怪防御样本 |
+| 数据源 | `share/npc/staticprop.ini`（745 节＝实力包 PowerNo，含 [-1] 兜底）：五维/HP/MP/五系防/PI·AI 防 17 个成长基数（HPBase 可为浮点如 1.775）。Go/Java/客户端 Lua 此前均未消费；官方 base block 0..98 是场景面板块、不含防御——外服私服按实力包在服务端推导（视图块 PhyDef@584/Dodge@562/VaDef@573），抓包无攻击怪防御样本 |
 | 推导规则 | `属性 = Base × Level`（**推断**，无官方参照；锚＝§七 白狼封劲 20–40 ≈ StaBase1×L30）——集中在 `deriveNPCCombatStats` 一处可调。装于 registerNPCLocked（读模板列 Level@6/PowerNo@60，均场景域字段自动绑定），存 sceneEntity.combatStats |
 | 接线 | rollSkillHit 增 ref/world 参：`defenderStatsOf` 按伤害系选防（Phy→外防、Sti/Juj/Neg/Mas→分系）+ Evasion→missChance；两调用点（多段段内逐目标、单段循环）传 ref |
 | 风险控制 | **Resilience（封劲）暂不推导**：玩家侧暴击值未成长（默认 16），接 NPC 封劲（≈30）会把暴击率清零——待装备/宝物批抬玩家暴击值后接通。Defense 受对数曲线 ~900 下限天然无害；Evasion（DexBase×Level）vs 命中 50 影响微弱 |

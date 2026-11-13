@@ -40,10 +40,10 @@ func serverMoving(objectID, ownerID uint32, state MotionState) []byte {
 }
 
 // serverLinkPairFrame 官方对象-主人绑定帧（op 0x31 ServerLinkPair）：
-// [op][u16 n][n×(obj u32, owner u32)]。官服与 0x28/0x0D 物化伴生（jn
+// [op][u16 n][n×(obj u32, owner u32)]。外服私服与 0x28/0x0D 物化伴生（jn
 // 179 条与 0x28 279 条交错；npc.pcapng n=4 批量=0x0E 对象段×0x0A5 玩家
-// owner 段），喂养客户端实体-主人表；2026-11-11 官服差集发现本服零
-// 下发，物化路径伴发单对。批量形态官服用于登录爆发段，暂不实现。
+// owner 段），喂养客户端实体-主人表；2026-11-11 外服私服差集发现本服零
+// 下发，物化路径伴发单对。批量形态外服私服用于登录爆发段，暂不实现。
 func serverLinkPairFrame(objectID, ownerID uint32) []byte {
 	frame := make([]byte, 0, 11)
 	frame = append(frame, 0x31)

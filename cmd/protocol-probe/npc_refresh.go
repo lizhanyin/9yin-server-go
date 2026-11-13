@@ -278,7 +278,7 @@ func (r *sceneRun) flushRefreshFrames(out *refreshTickOutcome) {
 	}
 }
 
-// recordNPCDeathLocked 在击杀点登记尸体记录，并按官服双形态掉落方言
+// recordNPCDeathLocked 在击杀点登记尸体记录，并按外服私服双形态掉落方言
 // 分叉：AIEditorPackID 登记了死亡生箱事件 → 独立宝箱实体
 // （spawnBoxNPCEntityLocked）；否则 DropID roll 非空 → 掉落挂尸体
 // （attachLootToCorpseLocked，CanPick/PickMember 驱动客户端冒光）；

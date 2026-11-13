@@ -16,7 +16,7 @@ package main
 //     soleOwnedMount 同口径），无坐骑拒绝。
 //   - 211 出招链骑乘技能闸（mountSkillGate）：骑乘技能白名单 = 全目录
 //     RideSkillID 合集；dismount 技能转下马；步行发骑乘技能忽略；
-//     骑乘中非白名单技能忽略；白名单放行走官服受理簇（mount_skills.go）。
+//     骑乘中非白名单技能忽略；白名单放行走外服私服受理簇（mount_skills.go）。
 //     riding_start（骑术精通，starter 五件套）= 召唤技：步行按选中上马
 //     （2026-11-12 真机 23:19 会话实证客户端主技能栏会连发它的 211）。
 //   - S2C 回执：239 上马 [pack, pack]（双 int 序基双覆盖，真机勘误）/
@@ -472,7 +472,7 @@ const (
 //   - 步行发骑乘技能 → 拒绝（"ride skill while not riding (ignored)"）；
 //   - 骑乘中发非白名单技能 → 拒绝（"ride skill not in mount skills"）；
 //   - 骑乘中发 dismount 技能 → 下马不出招；
-//   - 其余放行（放行后由 emitRideSkillCast 发官服受理簇，mount_skills.go）。
+//   - 其余放行（放行后由 emitRideSkillCast 发外服私服受理簇，mount_skills.go）。
 func mountSkillGate(m *mountSession, skillID string) mountSkillGateResult {
 	if m == nil || m.player == nil || skillID == "" {
 		return mountSkillPass

@@ -1,10 +1,10 @@
 package main
 
-// 骑乘技能受理簇（官服 official_players 抓包定版，2026-11-11）。
+// 骑乘技能受理簇（外服私服 official_players 抓包定版，2026-11-11）。
 //
 // 马背技能栏（客户端 form_main_shortcut_ride，引擎 239 槽 server_start_ride
 // 打开）按键走标准 C2S 211 USE_SKILL 通路，技能 ID 即 RideSkillID（疾奔
-// riding_jiben / 冲刺 riding_chongci / 解除坐骑 riding_dismount 等）。官服
+// riding_jiben / 冲刺 riding_chongci / 解除坐骑 riding_dismount 等）。外服私服
 // 观战抓包（official_players out2 timeline）三次 jiben + 一次 chongci 实证
 // 服务端只回「受理簇」，无 msg20/284/CD 行/buff 帧：
 //
@@ -16,10 +16,10 @@ package main
 // msg24 54 帧的 HitEffect 取自四表链 skill_new → skill_static →
 // skill_normal_varprop(Flow) → flow_config[Flow].HitEffect（chongci flow
 // 439 = att_bossclone002_shouji01，抓包逐位一致；jiben flow 1216 无
-// HitEffect → 官服三验均无 54 帧）。速度提升与技能栏 CD 显示由客户端本地
+// HitEffect → 外服私服三验均无 54 帧）。速度提升与技能栏 CD 显示由客户端本地
 // 结算（骑乘移动客户端权威；槽栏 grid:SetCoolType(CoolDownCategory) 本地
 // 起表），服务端不补帧——effects_data 的 buf_riding_chongci 1000ms 是 INI
-// 约定推导（生成文件），抓包无 m169/槽帧实证，照官服方言不发。
+// 约定推导（生成文件），抓包无 m169/槽帧实证，照外服私服方言不发。
 
 import (
 	"log"
@@ -97,7 +97,7 @@ func rideSkillDialectFor(skillID string) rideSkillDialect {
 	return rideSkillTables()[skillID]
 }
 
-// rideSkillHitEffectFrame 即 msg24 骑乘命中动作帧（官服 chongci 实证）：
+// rideSkillHitEffectFrame 即 msg24 骑乘命中动作帧（外服私服 chongci 实证）：
 // [24, obj(自己), 54, 窄串"hit", 窄串 HitEffect, obj(自己)]。
 func rideSkillHitEffectFrame(effect string) ([]byte, error) {
 	return serverCustomIntMessage(24,
@@ -111,7 +111,7 @@ func rideSkillHitEffectFrame(effect string) ([]byte, error) {
 
 // writeRideSkillCastCluster 官方骑乘技能受理簇（四帧序：置目标 → 可选
 // 54 命中帧 → 205 广播 → 清目标；簇内两属性帧仅过线，不动 playerActor
-// 持久目标位——官服同拍置清，快照无痕）。
+// 持久目标位——外服私服同拍置清，快照无痕）。
 func writeRideSkillCastCluster(link sceneMessageConnection, skillID string, dialect rideSkillDialect) error {
 	write := func(frame []byte, err error) error {
 		if err != nil {

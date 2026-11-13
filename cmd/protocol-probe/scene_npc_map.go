@@ -7,7 +7,7 @@ import (
 
 // writeSceneNPCMapFrames 下发 msg229 130 场景 NPC 点位表（大地图图层）。
 //
-// 官服方言（c.pcapng 登录爆发段 62 帧逐值统计，2026-11-10）：
+// 外服私服方言（c.pcapng 登录爆发段 62 帧逐值统计，2026-11-10）：
 //
 //	[229, 130, obj, "npc\配置名", x, y, z, orient,
 //	 缩放串(54/62 为空), 703|701(各半), 图标类(12 多数), 0, 0,
@@ -54,7 +54,7 @@ func writeSceneNPCMapFrames(conn sceneMessageConnection, world *sceneLifecycle, 
 	world.run.mu.Unlock()
 
 	sent := 0
-	// 官服事务序（c.pcapng 71 帧序列压缩定版）：[144,145,154] 前导 →
+	// 外服私服事务序（c.pcapng 71 帧序列压缩定版）：[144,145,154] 前导 →
 	// 130×N → [144,145,154] 收尾 → 再一组 [144,145,154]。144/145/154
 	// 是表事务定界符——裸发 130 客户端不提交（06:59 会话 3016 帧实证：
 	// 发了但大地图仍空）。

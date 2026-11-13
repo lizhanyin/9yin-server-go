@@ -1,7 +1,7 @@
 package main
 
 // 宝物洗炼 688 主链测试：
-//   - 纯逻辑：0x12 视图寻址清行帧、TempTersureRec 行型（官服 schema #402
+//   - 纯逻辑：0x12 视图寻址清行帧、TempTersureRec 行型（外服私服 schema #402
 //     8 列）、开窗帧（线名=lua on_custom_show_tersure + 字符串功能号）、
 //     计费表（[taolu]→[special_cost] 火浣台 / [normal_cost] 文）；
 //   - 合成目录：属性洗同池重掷（条数守恒）、武学洗门派/江湖池过滤

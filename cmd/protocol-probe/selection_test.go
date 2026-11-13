@@ -38,7 +38,7 @@ func TestHandleSelectTargetCustom(t *testing.T) {
 	}
 	frames := conn.Frames()
 	// 431 ack = 选中双帧（416/417）+ msg25[30000] 暂存授权（2026-11-12
-	// 深夜恢复，官服 b.pcapng 双样本 + 55981/62096 会话实证：客户端等
+	// 深夜恢复，外服私服 b.pcapng 双样本 + 55981/62096 会话实证：客户端等
 	// 这帧才启动自动接近；7072 线裸双帧方言对本 fork 模式客户端不适用，
 	// 见 selection.go 注释）。
 	if len(frames) != 3 {

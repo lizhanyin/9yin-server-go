@@ -80,8 +80,8 @@ type sceneRun struct {
 	fightRelation map[uint32]int32
 	// npcMoveState 是 NPC 行走状态水位（patrolTick 读写）：id → 最近一次
 	// 下发的 moving 标志。检出翻转时发 0x10 State(183)="walk"/"stand"
-	// （官服 NPC 行为通道：起走发 walk、驻停发 stand，与 0x21 路点帧
-	// 成对出现；docs/官服登录帧对照与缺口清单.md §13.5）。实体注销时
+	// （外服私服 NPC 行为通道：起走发 walk、驻停发 stand，与 0x21 路点帧
+	// 成对出现；docs/外服私服登录帧对照与缺口清单.md §13.5）。实体注销时
 	// 连带清除。run.mu 保护。
 	npcMoveState map[uint32]bool
 	// 路点图导航域（mapnav_chase.go）：nav/navPlanner/navLoaded 由
@@ -226,7 +226,7 @@ func (r *sceneRun) populate(catalog []npcSpawn) error {
 //
 // 子场景闸门（2026-11-08）：creator 条目带 SubSceneNo（成都实测
 // AttackNpc.xml 219 条中 135 条，如夜探守卫 newworld_nangong_yetan_*
-// SubSceneNo=8961）是活动/分线态内容——官服只在子场景激活时由脚本
+// SubSceneNo=8961）是活动/分线态内容——外服私服只在子场景激活时由脚本
 // 物化，基础场景从不出现。战斗脚本类（AttackNpc/BossNpc）带此标记
 // 一律不注册：否则白名活动守卫会被静态摆进大场景主动咬路过玩家。
 // 平民带 SubSceneNo 的照常注册（站桩无害，避免误伤活动对话内容）。
@@ -462,8 +462,8 @@ func (r *sceneRun) registerNPCLocked(id uint32, npc npcSpawn) error {
 		}
 	}
 	entityID := worldcore.EntityID(id)
-	// NPC owner 官服化（npcOwnerID 注释；owner=1 是 fork 方言的 NPC 位，
-	// 官服客户端把它当玩家化身→PvP 分支不自走）。
+	// NPC owner 外服私服化（npcOwnerID 注释；owner=1 是 fork 方言的 NPC 位，
+	// 外服私服客户端把它当玩家化身→PvP 分支不自走）。
 	if err := r.scene.Add(worldcore.Entity{
 		ID:         entityID,
 		OwnerID:    worldcore.EntityID(npcOwnerID(id)),

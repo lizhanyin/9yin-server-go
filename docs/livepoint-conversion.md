@@ -41,7 +41,7 @@ tooltip（tips.idres）：`一级历练：{@0}/999<br>转换速度：{@1}/100秒
    `holdFaculty += actual - gain`
 
 修为链闭环：历练 → Faculty(757) → `advanceFaculty` 每分钟折半消耗涨内功 CurFillValue。
-修为耗尽自动停修（原有官服语义不变）。
+修为耗尽自动停修（原有外服私服语义不变）。
 
 ## custom 235（CLIENT_CUSTOMMSG_LIVEPOINT_INFO）
 

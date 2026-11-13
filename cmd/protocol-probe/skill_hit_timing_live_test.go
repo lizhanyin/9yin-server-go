@@ -7,8 +7,8 @@ import (
 )
 
 // TestRealCatalogHitBreakTiming 真实资源树冒烟（NINEYIN_SERVER_ROOT 未
-// 配置时跳过）：2026-11-11 官服 pcapng（技能/挑战）实测跳时刻 vs 编译产物。
-// 官服值含 ~80ms 客户端 RTT，比对容差 ±120ms。
+// 配置时跳过）：2026-11-11 外服私服 pcapng（技能/挑战）实测跳时刻 vs 编译产物。
+// 外服私服值含 ~80ms 客户端 RTT，比对容差 ±120ms。
 func TestRealCatalogHitBreakTiming(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
@@ -18,7 +18,7 @@ func TestRealCatalogHitBreakTiming(t *testing.T) {
 	}
 	cases := []struct {
 		skill      string
-		officialMs []int // 官服干净样本（就近身战，含 RTT）
+		officialMs []int // 外服私服干净样本（就近身战，含 RTT）
 		tolMs      int   // 0 = 默认 ±130
 	}{
 		{"CS_jz_lyfh01", []int{363, 1110}, 0},

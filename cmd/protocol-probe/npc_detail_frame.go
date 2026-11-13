@@ -29,15 +29,15 @@ var npcDetail0x28Template []byte
 //     （自损帧，客户端按错家族解析报 size/property error）。
 //   - =3 正帧版（正确帧头+obj/owner/变换替换、0x0D 前下发）：真机实证
 //     **客户端崩溃**——通道被消费（对比 =1 的静默拒收），但记录块仍是
-//     官服模板 NPC 的身份（State="ty_bukuai_guard" 动作/ConfigID=
+//     外服私服模板 NPC 的身份（State="ty_bukuai_guard" 动作/ConfigID=
 //     monm031300/icon 路径）套在本服对象上，身份冲突即崩。
 //   - 寻路假设证伪：不开 0x28 时地图点击寻路正常工作——0x28 不是寻路
 //     数据挂载的触发器。
 //   结论：模板重发路线退役（探针已移除防再崩）；0x28 只能走 P3
-//   按对象生成记录块（npc_detail_frame 生成器，docs/官服登录帧对照
+//   按对象生成记录块（npc_detail_frame 生成器，docs/外服私服登录帧对照
 //   与缺口清单.md §14.2/§14.3-P3）。
 
-// npcDetail0x28PatchFrame 以官服模板为底，仅替换 [14:22] obj/owner 与
+// npcDetail0x28PatchFrame 以外服私服模板为底，仅替换 [14:22] obj/owner 与
 // [22:38] 变换四浮点；帧头与记录块保持原样。**不得直接下发**（记录块
 // 身份冲突真机实证崩溃）——P3 生成器在此基础上重写记录块字段后使用。
 func npcDetail0x28PatchFrame(objectID, ownerID uint32, transform worldcore.Transform) []byte {

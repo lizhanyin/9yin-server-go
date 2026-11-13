@@ -11,7 +11,7 @@ import (
 )
 
 // 通道技能（怒招引导型）波次引擎锚点——挑战.pcapng 2026-11-12 寒心恨雪
-// 官服定版（docs/寒心恨雪与太极剑舞引导机制.md §二）：
+// 外服私服定版（docs/寒心恨雪与太极剑舞引导机制.md §二）：
 //  1. 逐波单目标：每波恰 1 个受害者（非 AOE）；
 //  2. 每波 SP−10（先扣）+ 命中 +2 回怒（writeSkillSettleFrames）；
 //  3. SP 不足扣费即吞波（静默收束，零帧）；
@@ -117,7 +117,7 @@ func TestChannelWavesDrainSPAndEmitPerWaveFrames(t *testing.T) {
 	if combo10 != 2 || len(comboValues) != 2 || comboValues[0] != 2 || comboValues[1] != 3 {
 		t.Fatalf("c1=10 段序帧=%d 值=%v, want v=2,3（首波不发）", combo10, comboValues)
 	}
-	// 官服波簇方言（挑战.pcapng 波2 全帧序）：m169 挂/摘对、m18 受击、
+	// 外服私服波簇方言（挑战.pcapng 波2 全帧序）：m169 挂/摘对、m18 受击、
 	// Cant* 翻转、BufferInfo 槽 CSV——动画触发链。
 	buffApply, buffRemove, hurt18 := 0, 0, 0
 	for _, frame := range conn.Frames() {
@@ -199,7 +199,7 @@ func TestChannelStopsWhenNoLivingTarget(t *testing.T) {
 		channelTestCast(worldcore.Transform{X: 0, Y: 0, Z: 0}), forkNPCID(95), meta.ownerID, "test")
 	time.Sleep(80 * time.Millisecond)
 
-	// 官服 1 跳中断形态：首波击杀（c1=29 同毫秒）→ 无活目标即停。
+	// 外服私服 1 跳中断形态：首波击杀（c1=29 同毫秒）→ 无活目标即停。
 	effect71, _, _ := channelFrameStats(t, conn)
 	if effect71 != 1 {
 		t.Fatalf("c1=71 frames=%d, want 1 (目标全灭即停)", effect71)
@@ -279,7 +279,7 @@ func TestChannelSyncCustomEchoesInsideWindowOnly(t *testing.T) {
 }
 
 // TestChannelSpecsWiredToCatalog 真树冒烟：装载仓内 scripts/module/skill
-// 真实宿主后，hyjf08/tqjf08 定义带 Lua 声明的官服定版通道参数且预扣
+// 真实宿主后，hyjf08/tqjf08 定义带 Lua 声明的外服私服定版通道参数且预扣
 // 清零（资源树不可用时跳过）。权威源是 <技能ID>.lua 的 M.compile
 // channel 指令；Go channelSkillSpecs 仅离线兜底。
 func TestChannelSpecsWiredToCatalog(t *testing.T) {
@@ -307,7 +307,7 @@ func TestChannelSpecsWiredToCatalog(t *testing.T) {
 		}
 		if definition.channel.waves != 8 || definition.channel.spPerWave != 10 ||
 			definition.channel.firstWave != 180*time.Millisecond || definition.channel.interval != 440*time.Millisecond {
-			t.Fatalf("%s channel spec = %+v, want 8 waves × SP10 × 440ms（官服定版）", id, definition.channel)
+			t.Fatalf("%s channel spec = %+v, want 8 waves × SP10 × 440ms（外服私服定版）", id, definition.channel)
 		}
 		wantStatic := int32(9019)
 		if id == "CS_jh_tqjf08" {

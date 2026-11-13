@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""多段技能伤害触发时序探针：官服 pcapng → C2S 211 出招 ↔ S2C msg24 c1=17 伤害跳时间轴。
+"""多段技能伤害触发时序探针：外服私服 pcapng → C2S 211 出招 ↔ S2C msg24 c1=17 伤害跳时间轴。
 
 对每笔出招，取其后同技能的伤害飘字，输出：
   cast_ts - msg20/action 帧延迟、每跳相对出招的毫秒延迟、跳间隔。
@@ -139,7 +139,7 @@ def analyze(path):
                     msg20.append((ts, v[1].decode('gbk', 'replace')))
                     break
         elif op == ('i', 24) and len(vals) >= 7 and vals[1][0] == 'o':
-            # 官服形态：[24, obj(受害者), i 17, i 伤害, i 0, i 2, s 技能ID, ...]
+            # 外服私服形态：[24, obj(受害者), i 17, i 伤害, i 0, i 2, s 技能ID, ...]
             if vals[2] == ('i', 17):
                 skill = txt(vals[6])
                 dmg = vals[3][1]

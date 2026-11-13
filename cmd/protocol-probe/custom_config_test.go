@@ -332,7 +332,7 @@ func TestHandleCustomizingCustomFirstUploadGate(t *testing.T) {
 
 	// 有存档：首传（默认键位转储）跳过落库，回发存档再确认恢复态
 	//（2026-11-10 恢复 705 回推：fork 客户端本地不落盘，停推则重登
-	// 丢配置；官服客户端会被 705 打断 2.5D 点击移动，见
+	// 丢配置；外服私服客户端会被 705 打断 2.5D 点击移动，见
 	// custom_config.go pushSavedCustomizing）。
 	store, mock := newMockCustomizingDB(t)
 	mock.ExpectQuery(`SELECT customizing_value FROM role_customizing WHERE role_id = \?`).

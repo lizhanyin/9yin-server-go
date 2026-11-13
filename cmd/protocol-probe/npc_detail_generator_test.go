@@ -57,7 +57,7 @@ func TestNPCDetail0x28GeneratorV2(t *testing.T) {
 	}
 	// 预检：len-1 自洽已在上方断言；生成段（State/Resource/ConfigID/Photo）
 	// 为干净形且逐个可解析；保留段与模板逐字节相等（官方 blob 原样=
-	// 官服客户端已接受的字节）。
+	// 外服私服客户端已接受的字节）。
 	if !bytes.Contains(frame, npcDetail0x28Template[104:126]) {
 		t.Fatal("RotatePara kept-region mutated")
 	}

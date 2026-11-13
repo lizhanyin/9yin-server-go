@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// 宝箱怪判定（官服 AI 编辑器方言，F 盘资源考据 2026-11-08）：
+// 宝箱怪判定（外服私服 AI 编辑器方言，F 盘资源考据 2026-11-08）：
 //
 //	attacknpc 第 82 列 / bossnpc 第 73 列 AIEditorPackID →
 //	share/rule/ai_editor_package.ini [包id] EventGroup=逗号分隔的事件节 id →

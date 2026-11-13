@@ -184,7 +184,7 @@ jma.txt 钉死：
 
 背景：Java ClientReady 共 14 个授予块，Go 补齐前缺 邮件/坐骑/声望/身份/
 兵录 五域；共享库实测只有 role_letters（1 行）与 role_mounts（1 行）有
-数据（role 618 官服迁移档：1 封系统邮件 + 2 只坐骑），故本批移植此两域，
+数据（role 618 外服私服迁移档：1 封系统邮件 + 2 只坐骑），故本批移植此两域，
 其余三域空表零帧（记录下标已探明备用：Repute_Record=44 [7,3,3]、
 Origin_Active=45 [3]、Origin_Prized=48 [3]、binglu_rank_rec=178 [2,2,2]）。
 

@@ -1,6 +1,6 @@
 package main
 
-// 官服点击移动应答方言测试（技能.pcapng §一 全样本定版）：
+// 外服私服点击移动应答方言测试（技能.pcapng §一 全样本定版）：
 // 每帧 0xA000 族 state7/4 回显单条目 0x21（尾三槽 5.5|9.9|msg15 id），
 // 走↔停迁移沿发状态四连（586/645/646/750），state5 跳跃与未知态零回显。
 
@@ -12,7 +12,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// walkUploadMessage 构造官服 82B 走帧形态的 msg15：
+// walkUploadMessage 构造外服私服 82B 走帧形态的 msg15：
 // [15, id, state, x, y, z, destX, destZ, speed, orient, clock]。
 func walkUploadMessage(intentID int32, state int32, x, y, z, destX, destZ, speed, orient float32) clientCustomMessage {
 	return clientCustomMessage{Opcode: 0x1E, Values: []clientCustomValue{
@@ -30,7 +30,7 @@ func walkUploadMessage(intentID int32, state int32, x, y, z, destX, destZ, speed
 	}}
 }
 
-// stopUploadMessage 构造官服 67B 停帧形态：[15, id, 4, x, y, z, 朝向, clock]。
+// stopUploadMessage 构造外服私服 67B 停帧形态：[15, id, 4, x, y, z, 朝向, clock]。
 func stopUploadMessage(intentID int32, x, y, z, facing float32) clientCustomMessage {
 	return clientCustomMessage{Opcode: 0x1E, Values: []clientCustomValue{
 		{Type: 2, Int32: clientCustomMovementUpload},
@@ -61,7 +61,7 @@ func decodePlayerEcho(t *testing.T, frame []byte) (destX, destY, destZ, angle, s
 	return
 }
 
-// 点击地面起跑：状态四连 + 0x21 回显（官服 2.594→2.637/2.701 同构）；
+// 点击地面起跑：状态四连 + 0x21 回显（外服私服 2.594→2.637/2.701 同构）；
 // 同步重发（改向）只回 0x21；到位停帧再发四连 + 停回显；跳跃零回显。
 func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 	conn := &captureMessageConnection{}
@@ -71,7 +71,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 	}
 	player := newPlayerActor("点击侠", 0)
 
-	// 起跑：0xA0000F01 state7（官服 2.594 样本值）。
+	// 起跑：0xA0000F01 state7（外服私服 2.594 样本值）。
 	handled, err := handleMovementUpload(conn, player, world, walkUploadMessage(
 		-1610608895 /* 0xA0000F01 */, 7,
 		945.82, 43.89, 1029.98, 946.54, 1040.19, 4.50, 3.14), "test")
@@ -94,7 +94,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 	if destX != 946.54 || destY != 43.89 || destZ != 1040.19 || speed != 4.50 || orient != 3.14 {
 		t.Fatalf("walk echo dest=(%.2f,%.2f,%.2f) spd=%.2f ori=%.2f", destX, destY, destZ, speed, orient)
 	}
-	// 移动角 = atan2(destX−x, destZ−z)（官服 0.07 样本钉死）。
+	// 移动角 = atan2(destX−x, destZ−z)（外服私服 0.07 样本钉死）。
 	if want := float32(0.0705); math.Abs(float64(angle-want)) > 0.001 {
 		t.Fatalf("walk echo angle=%.4f, want %.4f", angle, want)
 	}
@@ -103,7 +103,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 	}
 
 	// 在途重发（追怪改向同构）：只回 0x21、无 ping、角度按新帧位重算
-	//（官服 347.331 样本：961.16→977.77 ang=1.92）。
+	//（外服私服 347.331 样本：961.16→977.77 ang=1.92）。
 	base := len(conn.Frames())
 	handled, err = handleMovementUpload(conn, player, world, walkUploadMessage(
 		-1610608895, 7, 961.16, 43.89, 1035.31, 977.766, 1029.317, 4.50, 3.14), "test")
@@ -118,7 +118,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 		t.Fatalf("reissue angle=%.4f, want %.4f", angle, want)
 	}
 
-	// 到位停帧：0xA0000000 state4（官服 4.871 样本值）——四连 + 停回显
+	// 到位停帧：0xA0000000 state4（外服私服 4.871 样本值）——四连 + 停回显
 	//（dest=终点、角度=朝向增量、速度 0）。
 	base = len(conn.Frames())
 	handled, err = handleMovementUpload(conn, player, world, stopUploadMessage(
@@ -140,7 +140,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 		t.Fatalf("stop echo tail id=%08x, want a0000000", tail[2])
 	}
 
-	// 跳跃双帧（state5）：官服零回显。
+	// 跳跃双帧（state5）：外服私服零回显。
 	base = len(conn.Frames())
 	jump := clientCustomMessage{Opcode: 0x1E, Values: []clientCustomValue{
 		{Type: 2, Int32: clientCustomMovementUpload},
@@ -169,7 +169,7 @@ func TestMovementUploadEchoesPlayerIntent(t *testing.T) {
 	}
 }
 
-// 负角归一 [0,2π)（官服 -1.076→5.21 样本）与冲锋在途不回显。
+// 负角归一 [0,2π)（外服私服 -1.076→5.21 样本）与冲锋在途不回显。
 func TestMovementEchoAngleWrapAndRushGate(t *testing.T) {
 	if got := moveEchoAngle(-9.34, 5.04); math.Abs(float64(got-5.207)) > 0.001 {
 		t.Fatalf("moveEchoAngle(-9.34,5.04)=%.4f, want 5.207", got)
@@ -200,7 +200,7 @@ func TestMovementEchoAngleWrapAndRushGate(t *testing.T) {
 		-1610608895, 7, 2, 0, 0, 9, 0, 4.5, 3.14), "test"); err != nil {
 		t.Fatal(err)
 	}
-	// 2026-11-11 接近段回显定版（jn 34.105/34.833 官服样本）：c61 未发的
+	// 2026-11-11 接近段回显定版（jn 34.105/34.833 外服私服样本）：c61 未发的
 	// 技能接近段照发 0x21 玩家回显——缺它客户端中途停滞不自走（64785
 	// 实证）。冲刺段（markRushDashIssued 后）才静默走 212 落地链。
 	sawEcho := false

@@ -65,7 +65,7 @@ const (
 	// 此前 Go 用 MaxHP/50(≥10, Boss×2)/1500ms/3.5m 属本地自造，整体废弃。
 	npcAttackRangeMeters = float32(6.0)
 	// npcEngageRangeMeters 追击停靠分位：reach 超过它继续逼近、进入它
-	// 才站定输出。官服野怪出招距离实测（技能.pcapng，受害者双源新鲜
+	// 才站定输出。外服私服野怪出招距离实测（技能.pcapng，受害者双源新鲜
 	// 坐标 msg337+C2S211）min≈0.8 / p50≈2.3 / p75≈6.5m——即怪贴脸到
 	// 2~3m 打、6m 内仍能命中；Java 的 6m 只是反击循环有效距（玩家跑出
 	// 才收手），不是停靠线。单用 6m 停靠 = 怪在六米外站桩隔空挥击
@@ -186,7 +186,7 @@ func (r *sceneRun) combatTick(now time.Time) {
 		// 战斗 tick 只推数值 vitals 小帧——全量面板（vitalUpdate）含
 		// State="stand"/LogicState/CurSkillID/PauseSkill，会在冲锋受理簇
 		// 之后把客户端的自动接近态洗掉（53051 会话实证：簇后 1s 全量面板
-		// 到达 → CurSkillID 被清空 → 客户端不自走、220 冻结刷）。官服
+		// 到达 → CurSkillID 被清空 → 客户端不自走、220 冻结刷）。外服私服
 		// 战斗中从不重推全量面板。
 		if frame, err := member.player.combatVitalsFrame(); err == nil {
 			if err := member.view.conn.WriteFrame(frame); err != nil {
@@ -442,7 +442,7 @@ func (r *sceneRun) simulateLocked(now time.Time) *combatTickOutcome {
 		}
 		aggressors++
 		target := memberByID[state.TargetMember]
-		// 追击/攻击双分位（官服方言，2026-11-12）：reach > EngageRange(3m)
+		// 追击/攻击双分位（外服私服方言，2026-11-12）：reach > EngageRange(3m)
 		// 继续逼近，reach ≤ AttackRange(6m) 即可命中——两档之间（3~6m 带）
 		// 边走边打，怪不再在 6m 线外站桩隔空挥击。
 		if npcChaseEnabled() && reach > state.EngageRange {
@@ -479,7 +479,7 @@ func (r *sceneRun) simulateLocked(now time.Time) *combatTickOutcome {
 				return
 			}
 			moves = append(moves, npcMoveUpdate{id: meta.id, ownerID: meta.ownerID, destination: destination, speed: state.MoveSpeed, delay: delay})
-			// 追击行进态翻转（巡逻 0x21 同款，官服 e.pcapng §13.5）：
+			// 追击行进态翻转（巡逻 0x21 同款，外服私服 e.pcapng §13.5）：
 			// 起 chase 即 State=walk（含首拍），进入攻击位/脱战回位翻回
 			// stand——0x21 只驱动位移，跑步动画还需 State 行。
 			if last, seen := r.npcMoveState[uint32(id)]; !seen || !last {
@@ -490,7 +490,7 @@ func (r *sceneRun) simulateLocked(now time.Time) *combatTickOutcome {
 				// 命中有效距之外：本拍只追不打。
 				return
 			}
-			// 3~6m 带：位移照发、出招照走（官服野怪边逼近边挥击的样本，
+			// 3~6m 带：位移照发、出招照走（外服私服野怪边逼近边挥击的样本，
 			// 技能.pcapng p75≈6.5m 命中即此带内出招）。
 		} else if last, seen := r.npcMoveState[uint32(id)]; seen && last {
 			// 进入攻击位（本 tick 不再位移）：行进态若仍挂着翻回 stand。
@@ -668,11 +668,11 @@ func (s *sceneLifecycle) combatTickForTest(player *playerActor, position role.Po
 // 来朝目的地播放动画之后，才确认最终位置。transform
 // 比较即是取消令牌：持续追击每 tick 都会更新它，
 // 因此过期的定时器绝不会确认一个陈旧的目的地——但持续追击
-// 期间也不能让客户端对 NPC 的位置认知一直停在出生点（官服
+// 期间也不能让客户端对 NPC 的位置认知一直停在出生点（外服私服
 // a.pcapng 追击中的怪拿到 6 次坐标变化的 0x1F；本服 57587 会话
 // 追击全程零 0x1F，客户端认知滞后 4m+，冲锋 c61 终点随之错位）。
 // 因此被更新的定时器不再静默丢弃：距上次广播位移超阈值时改发
-// 当前权威坐标的 0x1F（节流 ≥1m 且 ≥500ms，与官服追逐中几秒一帧
+// 当前权威坐标的 0x1F（节流 ≥1m 且 ≥500ms，与外服私服追逐中几秒一帧
 // 的节奏同量级；同 tick 与 0x20 成对发送的瞬移观感只在无节流的
 // 逐 tick 直发时出现）。
 // 定时器归场景运行时所有（epoch 防护），确认帧扇出给
@@ -844,7 +844,7 @@ func sameCombatTransform(a, b worldcore.Transform) bool {
 		math.Abs(float64(a.Orient-b.Orient)) < epsilon
 }
 
-// NPC 0x1F 位置广播节流参数（官服 a.pcapng 追击中的怪 ~几秒一帧）。
+// NPC 0x1F 位置广播节流参数（外服私服 a.pcapng 追击中的怪 ~几秒一帧）。
 const (
 	npcLocationBroadcastMinMeters   = 1.0
 	npcLocationBroadcastMinInterval = 500 * time.Millisecond
@@ -894,7 +894,7 @@ func npcCombatProperties(state entity.ActorState) []clientdata.IndexedProperty {
 		hpRatio = int32(int64(state.HP) * 100 / int64(state.MaxHP))
 	}
 	props := make([]clientdata.IndexedProperty, 0, 9)
-	// Prop21(fork-only@21)：官服表缺席，按名门控——官服方言跳过。
+	// Prop21(fork-only@21)：外服私服表缺席，按名门控——外服私服方言跳过。
 	if prop21, ok := clientdata.SceneProperty("Prop21"); ok {
 		props = append(props, clientdata.IndexedProperty{Index: prop21.Index, Name: prop21.Name, Value: clientdata.ByteValue(1)})
 	}

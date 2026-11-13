@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-// TestCompileSkillActionsHitBreakTiming 锚定 2026-11-11 官服 pcapng 定版的
+// TestCompileSkillActionsHitBreakTiming 锚定 2026-11-11 外服私服 pcapng 定版的
 // 多段判定时序（技能.pcapng + 挑战.pcapng 12 技互证）：
 //
 //  1. hitbreak 帧优先于 trigger_effect（wuji_CS_jz_lyfh07 无任何
-//     trigger_effect，官服仍按 hitbreak 15/45/75/105/135 → 500..4500ms 五段）；
+//     trigger_effect，外服私服仍按 hitbreak 15/45/75/105/135 → 500..4500ms 五段）；
 //  2. 帧是段内相对帧，段 N 时刻 = 前序段全时长累加 + 帧号/30fps
-//     （CS_jz_lyfh02 seg1@14/seg2@12 → 467/1067ms；官服实测 551/1141，
-//     差值=客户端→官服 RTT≈80ms，服务端不补偿）；
+//     （CS_jz_lyfh02 seg1@14/seg2@12 → 467/1067ms；外服私服实测 551/1141，
+//     差值=客户端→外服私服 RTT≈80ms，服务端不补偿）；
 //  3. inBlend 只折减动画混融（followup 播放），不折减判定时刻；
 //  4. 无 hitbreak 的技能回落 trigger_effect _hurt/核心前缀旧口径（shl08）。
 func TestCompileSkillActionsHitBreakTiming(t *testing.T) {
@@ -81,7 +81,7 @@ func TestCompileSkillActionsHitBreakTiming(t *testing.T) {
 	approx("orphan-seg", hitFrameMs, []float64{10.0 / 30})
 
 	// CS_wd_tjj07 太极剑舞（挑战.pcapng 2026-11-12 定版）：判定帧 =
-	// hitback×6 + hitbreak×2 = 官服 8 跳。段链 41/49/56/38/56 帧全时长
+	// hitback×6 + hitbreak×2 = 外服私服 8 跳。段链 41/49/56/38/56 帧全时长
 	// 累加，hitbreak-only 只会 2 跳——这是 hitback 合并的回归锚点。
 	tjj07 := []iniField{
 		{key: "1", value: "wdj_01;0;41;-1;0.765;1"},

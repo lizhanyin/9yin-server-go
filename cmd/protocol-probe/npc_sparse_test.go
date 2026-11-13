@@ -7,8 +7,8 @@ import (
 )
 
 // TestNPCSparseModeEmitsOfficial16PropSet sparse 二分实验闸：开关开启时
-// NPC 0x0D 只含官服位行集（#1777 方言），schema 行归零；关闭时行为不变
-// （schema 行 + 官服补集）。官服方言与 fork 方言下各自断言行数与走查。
+// NPC 0x0D 只含外服私服位行集（#1777 方言），schema 行归零；关闭时行为不变
+// （schema 行 + 外服私服补集）。外服私服方言与 fork 方言下各自断言行数与走查。
 func TestNPCSparseModeEmitsOfficial16PropSet(t *testing.T) {
 	npc := testNPCSpawn()
 	msg, err := npcAddObject(2, npc, 0)
@@ -34,7 +34,7 @@ func TestNPCSparseModeEmitsOfficial16PropSet(t *testing.T) {
 	if sparseCount == 0 || sparseCount >= fullCount {
 		t.Fatalf("sparse count=%d, want in (0,%d)", sparseCount, fullCount)
 	}
-	// 官服 16-prop 方言关键行必须在：Type/BornAction/IDCard（常量行）。
+	// 外服私服 16-prop 方言关键行必须在：Type/BornAction/IDCard（常量行）。
 	if !containsProp(msg2, 4) { // Type=4 byte
 		t.Fatal("sparse frame missing Type row")
 	}

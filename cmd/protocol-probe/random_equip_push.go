@@ -2,7 +2,7 @@ package main
 
 // 娃娃/宝物随机属性的持久化与下发（第一批接线）。
 //
-// 官服 record 方言（artifacts a-e.pcapng 实证，盘点文档 §3.6）：
+// 外服私服 record 方言（artifacts a-e.pcapng 实证，盘点文档 §3.6）：
 //   0x11 flag=1：u32 viewID + u32 objectIndex + u16 record + u16 源行 +
 //                u16 行数，一帧可批多行（属性行 3-4 行同帧实证）。
 //   宝物：RandomPropRec(400)=[propID,value f64,0,0,0,0]、
@@ -42,7 +42,7 @@ func serverRecordAddRowsView(viewID, objectIndex uint16, recordIndex uint16, row
 	}
 	msg := make([]byte, 16)
 	msg[0] = 0x11
-	msg[1] = 1 // 视图对象（官服娃娃/宝物行帧实证；0=场景对象）
+	msg[1] = 1 // 视图对象（外服私服娃娃/宝物行帧实证；0=场景对象）
 	binary.LittleEndian.PutUint32(msg[2:], uint32(viewID))
 	binary.LittleEndian.PutUint32(msg[6:], uint32(objectIndex))
 	binary.LittleEndian.PutUint16(msg[10:], recordIndex)
@@ -137,7 +137,7 @@ func encodeRecordCell(recordName string, column int, columnType byte, cell *reco
 }
 
 // randomPropRecRows RandomPropRec 行（六列：id/value/0/flag/品质/等级；
-// 宝物后四列官服恒 0，由快照字段决定）。
+// 宝物后四列外服私服恒 0，由快照字段决定）。
 func randomPropRecRows(lines []randomPropLine) [][]recordCell {
 	rows := make([][]recordCell, 0, len(lines))
 	for _, line := range lines {

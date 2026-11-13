@@ -9,7 +9,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// TestNPCDetail0x28TemplateHeaderInvariants 钉死官服 0x28 模板帧头布局
+// TestNPCDetail0x28TemplateHeaderInvariants 钉死外服私服 0x28 模板帧头布局
 // （c.pcapng 21 帧双模板逐字节定版，2026-11-10）：[0]=0x28、[1]=0x47
 // 家族标记、[2:6]=len-1。=1 探针三轮真机被拒的根因正是把 serial 写进
 // [1:5] 覆写 0x47 标记——本测试防止任何改动再破坏这些不变量。
@@ -29,7 +29,7 @@ func TestNPCDetail0x28TemplateHeaderInvariants(t *testing.T) {
 }
 
 // TestNPCDetail0x28PatchFrameOnlyTouchesObjectAndTransform 替换版只允许
-// 改 [14:22] obj/owner 与 [22:38] 变换四浮点；帧头与记录块必须与官服
+// 改 [14:22] obj/owner 与 [22:38] 变换四浮点；帧头与记录块必须与外服私服
 // 模板逐字节一致（记录块语义待后续按 NPC schema 生成，当前为诊断形态）。
 func TestNPCDetail0x28PatchFrameOnlyTouchesObjectAndTransform(t *testing.T) {
 	transform := worldcore.Transform{X: 100.5, Y: 2.25, Z: -88.75, Orient: 3.5}

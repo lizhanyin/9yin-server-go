@@ -150,7 +150,7 @@ func (r *sceneRun) advanceChaseLocked(meta *sceneEntity, state *sim.Brain, trans
 	}
 
 	// 末段直线：距目标 ~一个路点间距内直线逼近，步长钳到停靠分位
-	// （EngageRange≈3m，官服野怪贴脸出招；命中有效距另算，见
+	// （EngageRange≈3m，外服私服野怪贴脸出招；命中有效距另算，见
 	// combat_ai.go 双分位注释）。y 绝不朝目标插值——玩家可能站在 NPC
 	// 不可达的高处（屋顶/柱顶/跳跃途中），旧“近距目标 y 可信”假设正是
 	// 追击飞天/瞬移的根因；改为以限速向落点最近路点高度贴地收敛，零

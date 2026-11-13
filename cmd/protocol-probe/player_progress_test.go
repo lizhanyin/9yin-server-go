@@ -98,7 +98,7 @@ func TestPlayerVitalsIncludeMaxSPDisplayCap(t *testing.T) {
 	}
 	// 登录/切图链的首个权威 0x10(=stateProperties 大批 + MaxSP 折算
 	// 最终值一次,无独立怒气帧):SP(467)=满值(有效上限),MaxSP(580)=
-	// 基础 80 + 运行内功档位加成,MaxSPAdd(583) 按官服口径不出帧。
+	// 基础 80 + 运行内功档位加成,MaxSPAdd(583) 按外服私服口径不出帧。
 	frame, err := player.loginVitalUpdate()
 	if err != nil {
 		t.Fatal(err)
@@ -297,10 +297,10 @@ func TestInnerPowerC2SUpdatesNormalPropertyAndViewState(t *testing.T) {
 	conn := &captureMessageConnection{}
 
 	// 215 必须只接受已学习的 View=43 秘籍，并用 CurNeiGong 绑定消费的
-	// 常规属性档案回复。官服增量口径（2026-11-10 对齐）：MaxSP 专帧
+	// 常规属性档案回复。外服私服增量口径（2026-11-10 对齐）：MaxSP 专帧
 	//（折算最终值,ng_jh_001 坐忘功 +10 → 90）→ 常规状态批 → 换书战斗
 	// 面板增量（单属性 0x10：五维 Add/HP·MP/Parry/CurNeiGongWuXing
-	// 变化项；官服运行期从不重推全量）。
+	// 变化项；外服私服运行期从不重推全量）。
 	handled, err := handlePlayerProgressCustom(conn, player, clientCustomMessage{Values: []clientCustomValue{
 		{Type: 2, Int32: 215}, {Type: 6, Text: "ng_jh_001"},
 	}})
@@ -604,7 +604,7 @@ func TestActiveFacultyLevelUpNotifiesClientAfterStateAndViewRefresh(t *testing.T
 }
 
 // bookUpdateFrame 的方言钉死：0x10 isView=1 view=43 owner=行号，六属性
-// 集 Level(byte)/MaxLevel/CurFill/TotalFill/Power/MaxPower——与官服
+// 集 Level(byte)/MaxLevel/CurFill/TotalFill/Power/MaxPower——与外服私服
 // e.pcapng 既有视图行更新帧（0x10 isView=1 view=40 行）同构。
 func TestNeiGongBookUpdateFrameIsViewRowPropertyUpdate(t *testing.T) {
 	progress := newPlayerProgress()

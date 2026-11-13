@@ -151,7 +151,7 @@ func mergeVisual(base roleVisual, equips []equipRow) roleVisual {
 // appearanceFrame 外观属性帧（0x10）：显示开关 ShowEquipType + 三模式裁决
 // 后的衣/裤/鞋/帽主通道 + 时装镜像通道（FashionCoat/Hat/Shoes 原始模型）
 // + 武器三属性（Weapon/ShotWeapon/ActionSet——引擎挂 obj\weapon\<名>，
-// 官服实证；空串=收武器显式清除，衣裤鞋空值仍跳过保持客户端当前值）。
+// 外服私服实证；空串=收武器显式清除，衣裤鞋空值仍跳过保持客户端当前值）。
 // 登录期 addObject 后补帧、穿戴/切换后实时推送共用。
 func appearanceFrame(objectID, ownerID uint32, showEquipType int, sex byte, equips []equipRow) ([]byte, error) {
 	models := wornModels(sex, equips)

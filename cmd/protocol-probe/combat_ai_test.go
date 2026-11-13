@@ -305,7 +305,7 @@ func TestCombatTickRespawnsDeadHostileAtHome(t *testing.T) {
 	}
 	frames := conn.Frames()
 	// 重生瞬移走 0x21（速度 0）+ 0x10 属性帧（2026-11-11 追击方言
-	// 对齐：0x20 全程 0 次官服定论）。
+	// 对齐：0x20 全程 0 次外服私服定论）。
 	if len(frames) != 2 || frames[0][0] != 0x21 || frames[1][0] != 0x10 {
 		t.Fatalf("respawn frames=%x", frames)
 	}
@@ -322,7 +322,7 @@ func TestCombatMoveDoesNotImmediatelyConfirmLocation(t *testing.T) {
 	lifecycle.combatTickForTest(player, role.Position{X: 10, Y: 0, Z: 0}, time.Unix(4000, 0))
 	frames := conn.Frames()
 	// 首拍追击 = 0x21 移动（带速度）+ 0x10 State=walk 翻转（跑步动画
-	// 双通道，官服 e.pcapng §13.5 巡逻同款语义）。
+	// 双通道，外服私服 e.pcapng §13.5 巡逻同款语义）。
 	if len(frames) != 2 || frames[0][0] != 0x21 || frames[1][0] != 0x10 {
 		t.Fatalf("first chase tick frames=%x, want 0x21 move + State flip", frames)
 	}
@@ -462,7 +462,7 @@ func TestCombatTickClearsNPCFightingAfterLeash(t *testing.T) {
 			continue
 		}
 		// npcCombatProperties 线宽按当前方言表线型推导（fork 21/463/464=1B、
-		// 28/30/32/465/469/578=4B；官服位随表漂移）。
+		// 28/30/32/465/469/578=4B；外服私服位随表漂移）。
 		off := 12
 		for i := 0; i < int(binary.LittleEndian.Uint16(frame[10:])); i++ {
 			idx := binary.LittleEndian.Uint16(frame[off:])

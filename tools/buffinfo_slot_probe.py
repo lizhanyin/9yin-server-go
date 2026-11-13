@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""k.pcapng BufferInfo 槽帧(官服表 631..654) 5/6 段旗标语义考证。
+"""k.pcapng BufferInfo 槽帧(外服私服表 631..654) 5/6 段旗标语义考证。
 
 提取：
   A. 全部 0x10 帧中 idx∈[631,654] 的字符串槽值（CSV buffId,obj,owner,level,flagA,flagB）
@@ -16,7 +16,7 @@ from pcaplib import build_streams, stream_frames
 PCAP = sys.argv[1] if len(sys.argv) > 1 else r'F:\Game\Online\9yin\9yin-server-go\artifacts\k.pcapng'
 TABLE = r'G:\pojie\ai\9yin-server-go\internal\clientdata\official_property_table_2433.txt'
 
-# 官服表 index -> (name, wire_type)
+# 外服私服表 index -> (name, wire_type)
 types = {}
 with open(TABLE, 'rb') as f:
     for line in f:

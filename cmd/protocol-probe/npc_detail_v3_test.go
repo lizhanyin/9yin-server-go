@@ -9,7 +9,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// parseDetail0x28V3Fields 按官服 0x09 表列型回走 v3 明文帧字段区，
+// parseDetail0x28V3Fields 按外服私服 0x09 表列型回走 v3 明文帧字段区，
 // 返回 idx→(名字, 解码值)。帧语法见 npc_detail_v3.go 头注。
 func parseDetail0x28V3Fields(t *testing.T, frame []byte) map[uint16]struct {
 	name  string
@@ -173,7 +173,7 @@ func TestNPCDetail0x28V3Frame(t *testing.T) {
 			t.Fatalf("%s=%d", name, got)
 		}
 	}
-	// #0 形官服常量族（官方 #0 帧 26 字段逐位对齐）。
+	// #0 形外服私服常量族（官方 #0 帧 26 字段逐位对齐）。
 	for name, want := range map[string]int32{
 		"CursorShape": 2, "MPRatio": 11, "HasKarma": 1, "Character": 1,
 		"KarmaLevel": 3, "OriginPara1": 7, "OriginPara2": 1, "OriginPara3": 5,
@@ -316,7 +316,7 @@ func TestNPCDetail0x28V3CollideSchemaPassThrough(t *testing.T) {
 	}
 }
 
-// TestNPCDetail0x28V3MovingTarget 走动物化 posB=目标位（npc.pcapng 官服
+// TestNPCDetail0x28V3MovingTarget 走动物化 posB=目标位（npc.pcapng 外服私服
 // 0x46 帧 8/8 A≠B，B=段末目的地）；nil target 保持 A=B（静立/停留方言）。
 func TestNPCDetail0x28V3MovingTarget(t *testing.T) {
 	clientdata.SwapPropertyTableForTest(t, "official2433")

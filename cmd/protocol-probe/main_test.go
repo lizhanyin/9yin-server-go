@@ -35,16 +35,16 @@ func TestStarterNPCUsesClientResourceIdentity(t *testing.T) {
 	if !bytes.Contains(msg, []byte{34, 0, 229, 0, 0, 0}) {
 		t.Fatal("NPC AddObject does not contain int32 NpcType=229")
 	}
-	// 官服位属性增补后：fork schema 7 项 + 官服固定 11 项（CollideRadius/
+	// 外服私服位属性增补后：fork schema 7 项 + 外服私服固定 11 项（CollideRadius/
 	// State/Type/ActionSpeed/BossLevel/IDCard/BornAction/WeaponMode/三比例；
-	// Material/Level 缺省不追加）= 21（officialNPCProperties 官服 16-prop
+	// Material/Level 缺省不追加）= 21（officialNPCProperties 外服私服 16-prop
 	// 方言对齐 c.pcapng #1777，2026-11-10）。
-	// Resource 回退（fde3fcd）：schema 无 Material 有 Resource 时官服位
+	// Resource 回退（fde3fcd）：schema 无 Material 有 Resource 时外服私服位
 	// Resource/ConfigID/Photo 三行由 schema 直供 → 18+3=21。
 	if got := binary.LittleEndian.Uint16(msg[0x3d:]); got != 21 {
 		t.Fatalf("NPC property count=%d, want 21", got)
 	}
-	// 官服 #1777 定版三新行：Type(fork 181)=4 / BossLevel(fork 1590)=1 /
+	// 外服私服 #1777 定版三新行：Type(fork 181)=4 / BossLevel(fork 1590)=1 /
 	// IDCard(fork 1595)="null,null,null,null,null"（0x0D 串=u32 长度+NUL）。
 	if !bytes.Contains(msg, []byte{0xb5, 0x00, 0x04}) {
 		t.Fatal("NPC AddObject does not contain official-position Type=4")
@@ -187,7 +187,7 @@ func TestEventNPCIsNotMaterializedWithoutTaskOwnership(t *testing.T) {
 // TestSubSceneCombatNPCIsNotMaterialized 子场景闸门：creator 条目带
 // SubSceneNo 的战斗脚本类（AttackNpc/BossNpc）是活动/分线态内容（成都
 // AttackNpc.xml 135/219 条，如夜探守卫 newworld_nangong_yetan_*
-// SubSceneNo=8961），官服只在子场景激活时物化——基础场景不注册、不
+// SubSceneNo=8961），外服私服只在子场景激活时物化——基础场景不注册、不
 // 物化、无 Vitals/Brain。平民带 SubSceneNo 照常注册（站桩无害）。
 func TestSubSceneCombatNPCIsNotMaterialized(t *testing.T) {
 	combat := testNPCSpawn()
@@ -1006,5 +1006,5 @@ func TestNpcServiceWithoutScriptStaysUnimplemented(t *testing.T) {
 	}
 }
 
-// npcTestOwner 测试侧 NPC owner 期望值（随 npcOwnerID 官服化）。
+// npcTestOwner 测试侧 NPC owner 期望值（随 npcOwnerID 外服私服化）。
 func npcTestOwner(bareID uint32) uint32 { return npcOwnerID(forkNPCID(bareID)) }

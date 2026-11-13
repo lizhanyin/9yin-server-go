@@ -11,13 +11,13 @@ import (
 )
 
 // npcDetail0x28Enabled 控制 0x28 详情记录生成下发（NINEYIN_NPC_DETAIL_0X28=1）。
-// 2026-11-10 真机 sparse 二分定案：官服表方言下 NPC 渲染必需 0x28（0x0D
-// 与官服样本同构也不够）——本生成器是官服模式 NPC 渲染的载体。
+// 2026-11-10 真机 sparse 二分定案：外服私服表方言下 NPC 渲染必需 0x28（0x0D
+// 与外服私服样本同构也不够）——本生成器是外服私服模式 NPC 渲染的载体。
 func npcDetail0x28Enabled() bool {
 	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_DETAIL_0X28")) == "1"
 }
 
-// npcDetail0x28Event 为每次物化生成的事件 u32（官服 [38:42] 每物化事件
+// npcDetail0x28Event 为每次物化生成的事件 u32（外服私服 [38:42] 每物化事件
 // 一个值、同对象重发幂等——l.pcapng 218 帧实证）。
 var npcDetail0x28Event atomic.Uint32
 
@@ -58,7 +58,7 @@ func npcDetail0x28Frame(objectID, ownerID uint32, transform worldcore.Transform,
 	binary.LittleEndian.PutUint32(frame[26:], math.Float32bits(transform.Y))
 	binary.LittleEndian.PutUint32(frame[30:], math.Float32bits(transform.Z))
 	binary.LittleEndian.PutUint32(frame[34:], math.Float32bits(transform.Orient))
-	// 事件 u32：每物化一值（同对象重复物化也递增——官服幂等重发场景
+	// 事件 u32：每物化一值（同对象重复物化也递增——外服私服幂等重发场景
 	// 我们不产生，重进视口重发取同帧语义由调用方缓存实现，此处从简）。
 	binary.LittleEndian.PutUint32(frame[38:], 0x0000E900+npcDetail0x28Event.Add(1))
 
@@ -93,7 +93,7 @@ func npcDetail0x28Frame(objectID, ownerID uint32, transform worldcore.Transform,
 }
 
 // appendClean0x28String 追加干净串字段：[u16 idx][u8 len=strlen+1][01 00]
-// [值+NUL]（官服 State/ConfigID/WeaponMode 同形实证；l.pcapng 交叉验证）。
+// [值+NUL]（外服私服 State/ConfigID/WeaponMode 同形实证；l.pcapng 交叉验证）。
 func appendClean0x28String(out []byte, index uint16, value string) []byte {
 	out = binary.LittleEndian.AppendUint16(out, index)
 	out = append(out, byte(len(value)+1), 0x01, 0x00)

@@ -113,7 +113,7 @@ func TestBatchRespawnSweepRevivesDeadAndLeavesAlive(t *testing.T) {
 		t.Fatalf("alive NPC moved: %+v -> %+v", aliveTransform, after)
 	}
 	// 复活帧组：0x21 回家（速度 0）+ 0x10 属性（与每怪复活同帧方言；
-	// 2026-11-11 追击/瞬移统一 0x21——0x20 官服全程 0 次）。
+	// 2026-11-11 追击/瞬移统一 0x21——0x20 外服私服全程 0 次）。
 	opcodes := frameOpcodes(conn.Frames())
 	if !opcodes.has(0x21) || !opcodes.has(0x10) {
 		t.Fatalf("respawn frames=%v", opcodes)
@@ -186,7 +186,7 @@ func TestBatchRespawnReRegistersRemovedCorpse(t *testing.T) {
 	}
 }
 
-// TestKillAttachesLootToCorpse 普通怪击杀：掉落挂尸体本体（官服懒加载
+// TestKillAttachesLootToCorpse 普通怪击杀：掉落挂尸体本体（外服私服懒加载
 // 方言）——不生成新实体、无 0x0D 物化；死亡中继随发 CanPick=1 +
 // PickMember=击杀者名（客户端冒光+拾取光标判据）。
 func TestKillAttachesLootToCorpse(t *testing.T) {

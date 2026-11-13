@@ -492,7 +492,7 @@ func handleMoveItemCustom(h *itemSession, custom clientCustomMessage) (bool, err
 // unequipFromDoll 脱下：装备栏 → 背包页（toView 非背包页归装备页 121；
 // toSlot<=0 自动选该页首空格）。
 func unequipFromDoll(h *itemSession, equipSlot, toView, toSlot int32) {
-	// 战斗属性增量推送基线（官服运行期模型：只推变化项单属性 0x10，
+	// 战斗属性增量推送基线（外服私服运行期模型：只推变化项单属性 0x10，
 	// official_login_align.go；快照必须在装备表变更前取）。
 	combatBefore := combatPanelSnapshot(h.player)
 	item, index, ok := h.player.equipAtSlot(equipSlot)
@@ -558,7 +558,7 @@ func unequipFromDoll(h *itemSession, equipSlot, toView, toSlot int32) {
 	} else if err := h.link.WriteFrame(appearance); err != nil {
 		log.Printf("%s: unequip appearance frame: %v", h.remote, err)
 	}
-	// 普通装备随机属性折算刷新，再推增量（官服单属性帧形态）。
+	// 普通装备随机属性折算刷新，再推增量（外服私服单属性帧形态）。
 	h.player.setEquipAttributeAdds(equipAttributeSums(equipsNow, h.randomProps.LoadAll(h.ctx, h.roleID)))
 	pushCombatAttributeDelta(h.link, h.player, combatBefore, h.remote)
 	log.Printf("%s: move 30 equip[%d]->bag[%d:%d] config=%s", h.remote, equipSlot, view, slot, item.configID)

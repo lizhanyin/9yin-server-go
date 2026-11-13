@@ -150,7 +150,7 @@ func TestCurrentSkillClearEchoesCombatLogicState(t *testing.T) {
 		t.Fatalf("clear frame opcode=%#x, want 0x10", frame[0])
 	}
 	if got := binary.LittleEndian.Uint16(frame[10:12]); got != 8 {
-		t.Fatalf("clear frame props=%d, want 8 (六项 + CantMove/CantParry 官服 46.175 收尾对)", got)
+		t.Fatalf("clear frame props=%d, want 8 (六项 + CantMove/CantParry 外服私服 46.175 收尾对)", got)
 	}
 	wantIndices := []uint16{463, propCurSkillID, propCurSkillTarget, propCurSkillCanNoLimit, propCantBeSkillLocked, propCantBeSkillMustLocked, propRushCantMove, propCantParry}
 	off := 12

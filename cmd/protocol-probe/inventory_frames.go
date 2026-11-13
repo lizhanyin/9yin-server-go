@@ -187,7 +187,7 @@ func md5Hex16(seed string) string {
 }
 
 // weaponVisual 武器外观三属性（玩家属性 Weapon/ShotWeapon/ActionSet）。
-// 官服真机 0x10 帧实证：引擎按 Weapon 裸模型名挂 obj\weapon\<名>\<名>.xmod，
+// 外服私服真机 0x10 帧实证：引擎按 Weapon 裸模型名挂 obj\weapon\<名>\<名>.xmod，
 // ActionSet 驱动持械动画组。
 type weaponVisual struct {
 	weapon     string

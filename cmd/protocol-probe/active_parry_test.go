@@ -38,7 +38,7 @@ func TestActiveParryRejectsFractionalSubtypeWithoutMutatingState(t *testing.T) {
 	}
 }
 
-// msg54 手动格挡（Java handleManualParry 同源）：按下回官服六件套序
+// msg54 手动格挡（Java handleManualParry 同源）：按下回外服私服六件套序
 // （含 BufferInfo4 无时长槽串）+m169；松开七帧清空；重复按下静默；
 // 游离松开重推释放序。
 func TestBlockStateEngageAndRelease(t *testing.T) {
@@ -51,7 +51,7 @@ func TestBlockStateEngageAndRelease(t *testing.T) {
 		}}
 	}
 
-	// 按下（0=engage）：官服六件套序（a.pcapng 5.2s 定版）
+	// 按下（0=engage）：外服私服六件套序（a.pcapng 5.2s 定版）
 	// ——MoveSpeed+RunSpeedAdd+InParry+ParryUpSpeedAdd+BufferInfo4 五单属性帧
 	// + msg169 + InManualParry，共 7 帧。格挡不清怒。
 	spBefore := player.skillSP()
@@ -84,7 +84,7 @@ func TestBlockStateEngageAndRelease(t *testing.T) {
 	if state[0] != 0x10 || binary.LittleEndian.Uint16(state[12:]) != propParryTokenMoveSpeed {
 		t.Fatalf("parry state frame=%x (want MoveSpeed single-prop head of official order)", state)
 	}
-	// 第 5 帧=BufferInfo4 官服无时长槽串（a.pcapng 5.2s
+	// 第 5 帧=BufferInfo4 外服私服无时长槽串（a.pcapng 5.2s
 	// '11CE,701E5A4,3AD5FB,1,0,0' 同形：seg5 到期/seg6 剩余跳恒 0）。
 	wantSerial := fmt.Sprintf("%X,%X,%X,1,0,0", parryBuffStaticData, playerObjectID, playerOwnerID)
 	serial := frames[4]
@@ -106,7 +106,7 @@ func TestBlockStateEngageAndRelease(t *testing.T) {
 		t.Fatalf("duplicate engage appended frames: %d", got)
 	}
 
-	// 松开（非 0）：官服七帧释放序（m169 移除+六单属性）。
+	// 松开（非 0）：外服私服七帧释放序（m169 移除+六单属性）。
 	if err := handleBlockStateCustom(conn, player, blockMsg(1), "test"); err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestBlockStateEngageAndRelease(t *testing.T) {
 	}
 }
 
-// 格挡槽串官服无时长：seg5 到期/seg6 剩余跳恒 0（a.pcapng 5.2s
+// 格挡槽串外服私服无时长：seg5 到期/seg6 剩余跳恒 0（a.pcapng 5.2s
 // '11CE,701E5A4,3AD5FB,1,0,0' 定版；对照限时 buff '229D,…,8,
 // C38EA546FE9,A'——seg5=1601 纪元毫秒、seg6 递减）。格挡 buf 事件驱动：
 // 按下登记、松开/被打破摘除。两代同症教训都钉在这条断言上：旧 fork
@@ -255,7 +255,7 @@ func TestChangeWarningRejectsExtraPayloadWhileCastingAndWhileParrying(t *testing
 	if got := player.logicStateSnapshot(); got != 0 {
 		t.Fatalf("parrying toggle flipped state to %d", got)
 	}
-	// 至此连接上只有格挡按下产生的官服七帧序（预警拒绝不回帧）。
+	// 至此连接上只有格挡按下产生的外服私服七帧序（预警拒绝不回帧）。
 	if frames := conn.Frames(); len(frames) != 7 {
 		t.Fatalf("warning rejections emitted frames: %x", frames)
 	}

@@ -66,7 +66,7 @@ var (
 	propMaxHPAdd       = clientdata.MustPlayerProperty("MaxHPAdd").Index       // MaxHPAdd（fork=581）
 	propMaxMPAdd       = clientdata.MustPlayerProperty("MaxMPAdd").Index       // MaxMPAdd（fork=582）
 	propMaxSP          = clientdata.MustPlayerProperty("MaxSP").Index          // MaxSP（fork=580）
-	propMaxSPAdd       = clientdata.MustPlayerProperty("MaxSPAdd").Index       // 官方表存在但官服全程零下发;本服不出帧(加成折进 MaxSP)（fork=583）
+	propMaxSPAdd       = clientdata.MustPlayerProperty("MaxSPAdd").Index       // 官方表存在但外服私服全程零下发;本服不出帧(加成折进 MaxSP)（fork=583）
 	propMaxLevel       = clientdata.MustPlayerProperty("MaxLevel").Index       // MaxLevel（fork=2083）
 	// View 43 的条目是普通客户端对象。GoodsGrid 读取这两个属性来解析
 	// 当前的内功静态记录及其图片；对现代客户端而言仅有 ConfigID 是
@@ -77,7 +77,7 @@ var (
 	//（太极/阴柔/阳刚，ui_wuxue_prop_N）的显示来源：面板按 FacultyName
 	// 取武学对象后 QueryProp("WuXing")，缺省时整列退回 ui_train_elemt。
 	propWuXing = clientdata.MustPlayerProperty("WuXing").Index // WuXing（fork=2243）
-	// 阴阳太极累计（官服 4.7s 登录簇 0x10 YinLevel=1089/YangLevel=623/
+	// 阴阳太极累计（外服私服 4.7s 登录簇 0x10 YinLevel=1089/YangLevel=623/
 	// TaijiLevel=299）：按已学内功 wuxing（wuxuebaseinfo.ini nWuXing：
 	// 5=太极/6=阴柔/7=阳刚，neigong_effects.go 目录）分桶累计等级——
 	// 「当前修炼的内功、技能的属性（wuxing）」口径（2026-11-10 对齐）。
@@ -89,7 +89,7 @@ var (
 	// 玩家持有值无存档源：默认 0，NINEYIN_WUJI_POINT/_MAX 覆盖。
 	propWuJiPoint    = clientdata.MustPlayerProperty("WuJiPoint").Index    // WuJiPoint（fork=862）
 	propMaxWuJiPoint = clientdata.MustPlayerProperty("MaxWuJiPoint").Index // MaxWuJiPoint（fork=863）
-	// CurNeiGongWuXing(654) 当前运行内功的五行（官服 4.7s View43 行簇后
+	// CurNeiGongWuXing(654) 当前运行内功的五行（外服私服 4.7s View43 行簇后
 	// 0x10 单帧实证，值 6=阴柔同族口径）：内修面板当前页的属性角标来源。
 	propCurNeiGongWuXing = clientdata.MustPlayerProperty("CurNeiGongWuXing").Index // CurNeiGongWuXing（fork=654）
 	// 装备内功的 PropModify 加成。
@@ -132,7 +132,7 @@ const (
 	// 100 秒整步进（在线每 100 秒 +1 点历练）；每步累积步长 1000 毫。
 	livepointStepSeconds        = 100
 	livepointAccrueMillis int32 = 1_000
-	// 新角色修为种子默认（官服模型下历练是修为主供给；-faculty-seed 可配）。
+	// 新角色修为种子默认（外服私服模型下历练是修为主供给；-faculty-seed 可配）。
 	initialFaculty int32 = 10_000
 
 	// CLIENT_CUSTOMMSG_LIVEPOINT_INFO（client_custom_define.lua:145）：
@@ -413,7 +413,7 @@ func newPlayerProgress() playerProgress {
 	progress := playerProgress{
 		books:      books,
 		curNeiGong: books[0].configID,
-		// 完整官服模型：修为由历练转化供给。新角色种子可配（-faculty-seed），
+		// 完整外服私服模型：修为由历练转化供给。新角色种子可配（-faculty-seed），
 		// 存量角色由快照 restore 覆盖；GM set_faculty 保留直设兜底（原
 		// 9,999,999 无限种子废弃）。
 		faculty:      facultySeed,
@@ -664,7 +664,7 @@ func (p *playerProgress) bookFrame(slot uint16) ([]byte, error) {
 }
 
 // bookUpdateFrame View43 行级增量帧（0x10 isView=1 view=43 owner=行号）。
-// 官服方言（e.pcapng 实证：既有视图行更新走 0x10 isView=1，本服经脉
+// 外服私服方言（e.pcapng 实证：既有视图行更新走 0x10 isView=1，本服经脉
 // jingMaiViewUpdateFrame / 技能行 CanUse 同构）：已存在行的等级/进度/
 // 内力变化必须走属性增量帧——裸 0x18 VIEW_ADD 对已存在行号不触发客户端
 // databinder 的 updateitem，武学面板(K)内功页会一直停在旧等级/旧进度
@@ -1187,7 +1187,7 @@ func handlePlayerProgressCustom(link sceneMessageConnection, player *playerActor
 		}
 		return link.WriteFrame(frame)
 	}
-	// syncCombatPanel 换书/升级后的战斗面板增量（官服运行期模型：
+	// syncCombatPanel 换书/升级后的战斗面板增量（外服私服运行期模型：
 	// 只推变化项单属性 0x10；换书改五维总值/CurNeiGongWuXing，升级
 	// 改阴阳太极桶与书 Add，vitalUpdate 大批不覆盖这些列）。
 	syncCombatPanel := func(before map[uint16][]byte) {
@@ -1389,7 +1389,7 @@ func handlePlayerProgressCustom(link sceneMessageConnection, player *playerActor
 				return true, err
 			}
 			if levelUp {
-				// 战斗面板增量（书 Add/阴阳太极桶随等级变化，官服单属性帧
+				// 战斗面板增量（书 Add/阴阳太极桶随等级变化，外服私服单属性帧
 				// 形态；先于原生升级通知，面板与飘字同帧口径）。
 				syncCombatPanel(combatBefore)
 				// 客户端不会仅凭 View=43 推断出升级。faculty.lua 把 sub=14 映射

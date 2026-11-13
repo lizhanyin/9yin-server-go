@@ -64,7 +64,7 @@ type learnedSkillView struct {
 }
 
 // starterSkillViews 是当前已学习的武学集合。前五件是默认分类
-// 「基础武学 → 三脚猫招式」五件套（bug.txt：官服全角色默认已学，
+// 「基础武学 → 三脚猫招式」五件套（bug.txt：外服私服全角色默认已学，
 // Java StarterSkills.DEFAULT_BASIC_SKILLS 对拍）：剑普攻 / 飞刀普攻 /
 // 打坐调息 / 自断经脉 / 骑术精通。普攻族固定发剑+飞刀两件（官方观测
 // 同款，不随门派变——其余武器普攻 zs_normal_ 与 hw_normal_ 族官方未授）。
@@ -239,7 +239,7 @@ func skillRowProperties(skill learnedSkillView) []serverViewProperty {
 	return properties
 }
 
-// skillWuXing 是技能行五行/属性（官服 55866 抓包实证 View40 每行都带
+// skillWuXing 是技能行五行/属性（外服私服 55866 抓包实证 View40 每行都带
 // WuXing@2243）：wuxuebaseinfo.ini 目录值（刚1/柔2/阴3/阳4），缺行回退
 // 5=太极——Java StarterSkills.skillWuXing 同款，客户端对 ≤0/>7 才退回
 // ui_train_elemt 缺省文案。

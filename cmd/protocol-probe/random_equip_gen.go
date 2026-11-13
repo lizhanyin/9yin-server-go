@@ -14,7 +14,7 @@ package main
 //   rule/randomequiprule/*             宝物掷值管线（顶级）
 //   rule/randomequiprule/newtersure/*  翡翠娃娃掷值管线
 //
-// 官服 record 方言（artifacts a-e.pcapng 实证，盘点 §3.6）：0x11 flag=1 =
+// 外服私服 record 方言（artifacts a-e.pcapng 实证，盘点 §3.6）：0x11 flag=1 =
 // 视图对象寻址，objId=viewID、second=objectIndex，一帧可批多行；宝物属性行
 // RandomPropRec(400)=[propID,value f64,0,0,0,0]、技能行
 // RandomSkillRec(401)=[skillstore下标,0,value f64,0]。
@@ -38,7 +38,7 @@ const (
 	randomKindWawa    = 2 // EquipType=NewTreasure（ItemType 193）
 )
 
-// randomPropLine 一条随机属性行（RandomPropRec 行镜像；宝物后 4 列官服恒 0，
+// randomPropLine 一条随机属性行（RandomPropRec 行镜像；宝物后 4 列外服私服恒 0，
 // 娃娃列 3=有效/4=品质/5=等级）。
 type randomPropLine struct {
 	PropID  int     `json:"prop"`
@@ -743,7 +743,7 @@ func (c *randomEquipCatalog) zhenpaiAffixesJSON(configID string) string {
 // ---- 实力点数推导与称号 ----
 
 // derivePowerLevel 实力点数 = max(已学内功当前层 varprop.NeiGongLevel)
-// （varprop 节号 = MinVarPropNo + 层-1；官服"坐忘功等价"口径，盘点 §2.7）。
+// （varprop 节号 = MinVarPropNo + 层-1；外服私服"坐忘功等价"口径，盘点 §2.7）。
 func (c *randomEquipCatalog) derivePowerLevel(books []neigongPowerBook) int {
 	best := 0
 	for _, book := range books {

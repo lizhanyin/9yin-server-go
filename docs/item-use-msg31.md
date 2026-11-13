@@ -114,7 +114,7 @@ qy_chengdu_021/022）——官方包体从未随资源发布。本次按 qy_chen
   快捷栏/打坐/格挡等 custom 面；`OpenBoxFunc`（names_gen.go:1019）只是 NPC 规则
   属性（GivingNpc.xml 世界箱），与背包物品无关。野外开箱在 bak 是 CloneLoot
   （boxnpc NPC + S2C 0x05 worldInfo 文字）。
-- **两个"官服"zip 均非官服**：`九阴服务端.zip`（31,546 条目）= go-server1 工作树快照；
+- **两个"外服私服"zip 均非外服私服**：`九阴服务端.zip`（31,546 条目）= go-server1 工作树快照；
   `野猪端.zip`（11,824 条目）= 更旧 Go 树 + mysql + 抓包。全库 0 个服务端 .lua。
   官方 BoxItem.lua/CompensateItem.lua 在磁盘上不可得，语义只能从数据逆推。
 

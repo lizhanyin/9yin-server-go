@@ -110,7 +110,7 @@ func TestRoleListTitleLadder(t *testing.T) {
 
 func TestServerRecordAddRowsViewEncoding(t *testing.T) {
 	// RandomPropRec(400) 六列 [int32,f64,int32,int32,int32,int32]：编码后
-	// 头 16 字节 + 逐行 28 字节；官服方言 flag=1 + viewID/objectIndex 寻址。
+	// 头 16 字节 + 逐行 28 字节；外服私服方言 flag=1 + viewID/objectIndex 寻址。
 	rows := [][]recordCell{
 		{recordInt(9), recordFloat64(14), recordInt(0), recordInt(0), recordInt(0), recordInt(0)},
 		{recordInt(12), recordFloat64(16), recordInt(0), recordInt(0), recordInt(0), recordInt(0)},

@@ -217,7 +217,7 @@ func ResolveNPC(table *NPCTemplateTable, instance NPCCreatorInstance, options Re
 		placement["Orient"] = Float32Value(*instance.Transform.AY)
 	}
 	// 摆放坐标的权威在 resolved.Transform；属性表副本仅服务 fork 方言
-	// 0x0D 属性行（PosiX/Y/Z/Orient 为 fork-only 名）。官服方言下按名
+	// 0x0D 属性行（PosiX/Y/Z/Orient 为 fork-only 名）。外服私服方言下按名
 	// 缺席即不注入（0x0D 坐标走固定头，§14.3 场景域处置同策）。
 	wirePlacement := make(map[string]Value, len(placement))
 	for name, value := range placement {
@@ -396,10 +396,10 @@ func VisibleNPCSpawnDefaultsCompatV1() map[string]Value {
 		"OnlyCareDistance": Int32Value(0),
 		"RefreshAtOnce":    Int32Value(0),
 	}
-	// 0x09 表方言门控（docs 官服登录帧对照 §14.3）：默认层按当前表场景域
-	// （首现）过滤——缺席名（fork-only，官服表无此行）与线型不符名
-	//（ActionSoundMode fork 场景位=int32、官服唯一现=string）一律不注入，
-	// 避免 ResolveNPC 类型校验硬错。2026-11-10 真机：官服方言下该层
+	// 0x09 表方言门控（docs 外服私服登录帧对照 §14.3）：默认层按当前表场景域
+	// （首现）过滤——缺席名（fork-only，外服私服表无此行）与线型不符名
+	//（ActionSoundMode fork 场景位=int32、外服私服唯一现=string）一律不注入，
+	// 避免 ResolveNPC 类型校验硬错。2026-11-10 真机：外服私服方言下该层
 	// 5413/5413 实例尽没于 ActionSoundMode 类型错配→NPC 目录空→选角链
 	// 断连。fork 表下全部条目类型吻合，行为逐位不变。
 	filtered := make(map[string]Value, len(defaults))

@@ -11,7 +11,7 @@ import (
 )
 
 // 九阴志全局门控状态机：语义逐条对齐 Java 蓝本 NinJiuZhi.java
-//（9yin-server git 3d1df4a），Go 差异只有初始缺省阶段 6（官服
+//（9yin-server git 3d1df4a），Go 差异只有初始缺省阶段 6（外服私服
 // gamestep 对齐）与落盘路径随 server root。
 
 func TestJyzGateSetStageMonotonic(t *testing.T) {

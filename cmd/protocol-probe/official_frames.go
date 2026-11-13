@@ -1,23 +1,23 @@
 package main
 
-// 官服帧级定版 builders（f/g/b.pcapng 2026-11-08 帧级实证，见
-// docs/冲锋与打坐官服抓包分析及Go移植.md §3.2.2）：
+// 外服私服帧级定版 builders（f/g/b.pcapng 2026-11-08 帧级实证，见
+// docs/冲锋与打坐外服私服抓包分析及Go移植.md §3.2.2）：
 //
 //   0x13 ServerRecordGrid 逐格写：[13][00][obj][owner][rec u16][nrows u16=1]
 //          [row u16][col u8][按 schema 列型的单格值]
-//   0x11 ServerRecordAdd 空行：官服 CD 行先铺零行、再逐格 0x13 填充
+//   0x11 ServerRecordAdd 空行：外服私服 CD 行先铺零行、再逐格 0x13 填充
 //   rec114 fight_relation（schema [obj,word]）：行加 0x11 / 逐击 0x13 行0列1(u16) /
 //          撤销 0x12 行0（g/f 击杀簇与直收簇实证）
 //   0x2D 多属性帧：[2D][01][00][obj][owner][n u16]([idx u16][i32])×n
-//          （官服 NPC 血量刷新通道 HPRatio/HitHPRatio；Go 旧 28/112 形态已废弃）
+//          （外服私服 NPC 血量刷新通道 HPRatio/HitHPRatio；Go 旧 28/112 形态已废弃）
 //   msg24 c1=10 怒气段序 / c1=29 击退（f 44.539、g 39.072/56.468 击杀簇实证）
 //   msg284 空值标记帧（g 直收簇 CurSkillTarget 后恒发，语义未定位，逐位镜像）
 //
 // CD 行方言（2026-11-09 真机定版）：现行=**行0 整行**（serverRecordAddCells
-// 一帧带全 4 列），native-menu 反编译同款真机转圈双验；官服抓包方言
+// 一帧带全 4 列），native-menu 反编译同款真机转圈双验；外服私服抓包方言
 //（0x11 空行行97个人/98公共 + 0x13 逐格 + 行3=施法窗 1s 非 CD）帧与
 // g 14.660 逐字节同构仍不转圈，客户端消费前置待考证（疑登录期视图
-// 绑定），官服槽号与逐格 builders 保留在库供考证启用：
+// 绑定），外服私服槽号与逐格 builders 保留在库供考证启用：
 //   个人行 97：col0 类别 / col1 起 / col2 止 / col3 0xFFFF；铺完重写行3 施法窗
 //   公共行 98：col0=50000 / col3=CoolDownTeam；无行3 对
 //   过期行在下一次受理时惰性 0x12 清扫
@@ -33,11 +33,11 @@ import (
 const (
 	recordColumnObject byte = 9
 
-	// 官服 CD 行双槽（f/g 玩家实证 97/98；b 玩家 93/94——槽号因人而异，
+	// 外服私服 CD 行双槽（f/g 玩家实证 97/98；b 玩家 93/94——槽号因人而异，
 	// 按最常见固定对实现，客户端按 rec/行号镜像渲染，不参与业务判定）。
 	cooldownRowPersonal uint16 = 97
 	cooldownRowPublic   uint16 = 98
-	// cooldownRowWindow：官服在个人行铺完后重写的「当前施法窗」行
+	// cooldownRowWindow：外服私服在个人行铺完后重写的「当前施法窗」行
 	//（f 42.948 / g 22.157 个人行 col1/col2 后各跟一对行3 写，语义未定位）。
 	cooldownRowWindow uint16 = 3
 )
@@ -48,7 +48,7 @@ func recordObject(id, owner uint32) recordCell {
 	return recordCell{int64Value: &[]int64{int64(value)}[0], objectCell: true}
 }
 
-// serverRecordAddEmptyRow 铺一行全零的 0x11（官服 CD 行先加空行再逐格填）。
+// serverRecordAddEmptyRow 铺一行全零的 0x11（外服私服 CD 行先加空行再逐格填）。
 func serverRecordAddEmptyRow(objectID, ownerID uint32, recordIndex, row uint16) ([]byte, error) {
 	schema, ok := clientdata.RecordSchemaByIndex(int(recordIndex))
 	if !ok {
@@ -69,7 +69,7 @@ func serverRecordAddEmptyRow(objectID, ownerID uint32, recordIndex, row uint16) 
 		case recordColumnWord:
 			msg = binary.LittleEndian.AppendUint16(msg, 0)
 		case recordColumnInt, recordColumnString:
-			// 字符串零格与官服一致：u32(1)+NUL。
+			// 字符串零格与外服私服一致：u32(1)+NUL。
 			if colType == recordColumnString {
 				msg = binary.LittleEndian.AppendUint32(msg, 1)
 				msg = append(msg, 0)
@@ -127,7 +127,7 @@ func appendRecordCellValue(msg []byte, schema clientdata.RecordSchema, col int, 
 	}
 }
 
-// serverRecordGridCell 即官服 0x13 逐格写：
+// serverRecordGridCell 即外服私服 0x13 逐格写：
 //
 //	13 | 00 | obj u32 | owner u32 | rec u16 | nrows u16(=1) | row u16 | col u8 | 值
 func serverRecordGridCell(objectID, ownerID uint32, recordIndex, row uint16, col uint8, cell recordCell) ([]byte, error) {
@@ -170,7 +170,7 @@ func fightRelationRowAddFrame(targetID, targetOwner uint32) []byte {
 }
 
 // fightRelationHitCellFrame 逐击累计格：0x13 rec114 行0 列1（u16）。
-// 官服值恒 +500/击（g 三样本每击 +500 实证，与伤害值无关），语义未定位。
+// 外服私服值恒 +500/击（g 三样本每击 +500 实证，与伤害值无关），语义未定位。
 func fightRelationHitCellFrame(hits int32) []byte {
 	msg := make([]byte, 19)
 	msg[0] = 0x13
@@ -192,11 +192,11 @@ func fightRelationRowDeleteFrame() []byte {
 
 // ---- 0x2D 多属性帧 ----
 
-// multiPropUpdateFrame 官服 0x2D 多属性形态：
+// multiPropUpdateFrame 外服私服 0x2D 多属性形态：
 //
 //	2D | 01 | 00 | obj u32 | owner u32 | n u16 | (idx u16 + i32 值)×n
 //
-// 官服 NPC 战斗血量（HPRatio/HitHPRatio）与击杀清零（六属性全零）都走
+// 外服私服 NPC 战斗血量（HPRatio/HitHPRatio）与击杀清零（六属性全零）都走
 // 本帧（f 43.548/44.668、g 22.592/39.286 实证），非 Go 旧 28/112 单形态。
 func multiPropUpdateFrame(objectID, ownerID uint32, props []clientdata.IndexedProperty) ([]byte, error) {
 	if len(props) == 0 || len(props) > 0xFFFF {
@@ -228,7 +228,7 @@ func multiPropUpdateFrame(objectID, ownerID uint32, props []clientdata.IndexedPr
 // ---- msg24 段序/击退 ----
 
 // rageComboFloatFrame 即 msg24 c1=10 怒气段序：[24, obj, 10, i32 段序]。
-// 官服自第 2 段起发，值为段序（2/3/4，f/g 实证）。
+// 外服私服自第 2 段起发，值为段序（2/3/4，f/g 实证）。
 func rageComboFloatFrame(count int32) ([]byte, error) {
 	return serverCustomIntMessage(24,
 		customObject(playerObjectID, playerOwnerID),
@@ -249,13 +249,13 @@ func knockbackFloatFrame(victimID, victimOwner, attackerID, attackerOwner uint32
 	)
 }
 
-// rushCastMark284Frame 即 msg284 空值帧：官服直收簇 CurSkillTarget 之后
+// rushCastMark284Frame 即 msg284 空值帧：外服私服直收簇 CurSkillTarget 之后
 // 恒发（g 三样本逐位一致），语义未定位，原样镜像。
 func rushCastMark284Frame() ([]byte, error) {
 	return serverCustomIntMessage(284)
 }
 
-// officialStatePingFrames 官服状态四连（f/g 全样本实证：受理簇/直收簇尾
+// officialStatePingFrames 外服私服状态四连（f/g 全样本实证：受理簇/直收簇尾
 // msg707 之后同毫秒必发，且全程 ~3-4s 周期重发；值恒定）：
 //
 //	msg586[5] + msg645[1] + msg646[1] + msg750[20]
@@ -278,7 +278,7 @@ func officialStatePingFrames() [4][]byte {
 	return frames
 }
 
-// ---- CD 行官服方言（槽位覆写模型，玩家级双槽） ----
+// ---- CD 行外服私服方言（槽位覆写模型，玩家级双槽） ----
 
 // cooldownRowBook 记录 CD 行的已下发状态（惰性清扫判定）。行0 整行
 // 方言下个人/公共共用行 0（后写覆盖），expires 取两者较晚。
@@ -290,7 +290,7 @@ type cooldownRowBook struct {
 }
 
 // sweepExpiredCooldownRows 惰性清扫：CD 行过期后在下一次受理时发 0x12
-// 删行 0，避免客户端残留上一招的 CD 行（官服 0x12 清扫语义的行0 简化）。
+// 删行 0，避免客户端残留上一招的 CD 行（外服私服 0x12 清扫语义的行0 简化）。
 func (p *playerActor) sweepExpiredCooldownRows(now time.Time) [][]byte {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -306,10 +306,10 @@ func (p *playerActor) sweepExpiredCooldownRows(now time.Time) [][]byte {
 // writeOfficialCooldownRows 落出招 CD 双行（受理即结的普通出招、直收簇、
 // c61 触发簇共用）。**行0 整行方言**（0x12 recordAddCells）：native-menu
 // 反编译同款（skillCooldownFrameWithDuration，行0+UnixMilli）与本服
-// fb5df8e 构建真机双验转圈——2026-11-09 官服逐格方言（0x11 空行行97/98+
+// fb5df8e 构建真机双验转圈——2026-11-09 外服私服逐格方言（0x11 空行行97/98+
 // 0x13 逐格+行3 施法窗）真机不转圈（纪元修复后仍不认，帧与 g 14.660
 // 逐字节同构），客户端消费该方言的前置（疑视图绑定/初始化）待考证，
-// 见 docs/冲锋与打坐官服抓包分析及Go移植.md §3.2.2。
+// 见 docs/冲锋与打坐外服私服抓包分析及Go移植.md §3.2.2。
 func (p *playerActor) writeOfficialCooldownRows(link sceneMessageConnection,
 	category int32, team int32, personal time.Duration, public time.Duration, now time.Time) error {
 	// 字面定义（测试/自增益零成本）不落 CD 行——官方从不发类别 0 的行。

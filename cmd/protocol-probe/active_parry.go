@@ -103,11 +103,11 @@ func handleChangeWarningCustom(link sceneMessageConnection, player *playerActor,
 }
 
 // handleBlockStateCustom 还原手动格挡（Java handleManualParry 同源，
-// clientCustomBlockState=54 即 C2S m54）。应答=官服六件套序
+// clientCustomBlockState=54 即 C2S m54）。应答=外服私服六件套序
 // （writeOfficialParryTokenAck，a.pcapng 5.2/5.7s 定版：按下
 // MoveSpeed+RunSpeedAdd+InParry+ParryUpSpeedAdd+BufferInfo4 无时长槽串
 // +m169 添加+InManualParry；松开反向+m169 移除）——此前 fork 四属性合帧
-// 应答缺速度族，客户端 m54 连发 5971 条等不到官服方言（2026-11-12 P2）。
+// 应答缺速度族，客户端 m54 连发 5971 条等不到外服私服方言（2026-11-12 P2）。
 // 重复按下静默；重复松开仍回帧（客户端状态重同步，78 发按值去重
 // =50 沿=50 回帧的 F 盘实证）。非战斗也可按格挡（不切 LogicState）。
 func handleBlockStateCustom(link sceneMessageConnection, player *playerActor, custom clientCustomMessage, remote string) error {
@@ -146,7 +146,7 @@ func handleBlockStateCustom(link sceneMessageConnection, player *playerActor, cu
 			// 格挡认知锚在 msg169 BuffInParry 事件上，仅属性帧摘不掉：
 			// 2026-11-12 真机死锁（旧纪元 bug 残留）客户端带"已格挡"认知
 			// 只发 1 等确认、永不再发按下(0)，单属性帧 ack 无法解锁，
-			// 两帧对一发即恢复。官服登录段本就有 remove→clear→fill→add
+			// 两帧对一发即恢复。外服私服登录段本就有 remove→clear→fill→add
 			// 重登记舞步（k.pcapng），多发一次摘除事件方言安全。
 			if err := writeOfficialParryTokenAck(link, player, false); err != nil {
 				return err
@@ -172,7 +172,7 @@ func handleBlockStateCustom(link sceneMessageConnection, player *playerActor, cu
 	return nil
 }
 
-// ---- m54 官服令牌格挡问答（a.pcapng 5.144/5.695 定版，2026-11-12 P2） ----
+// ---- m54 外服私服令牌格挡问答（a.pcapng 5.144/5.695 定版，2026-11-12 P2） ----
 
 var (
 	propParryTokenMoveSpeed   = clientdata.MustPlayerProperty("MoveSpeed").Index
@@ -181,8 +181,8 @@ var (
 	propParryTokenBufferInfo4 = clientdata.MustPlayerProperty("BufferInfo4").Index
 )
 
-// handleParryTokenCustom 处理 C2S m54（格挡令牌问答，官服令牌/fork 0-1 双形态）。
-// 官服客户端连发令牌版 m54 等六件套应答（a.pcapng：按下=MoveSpeed 1.9f+
+// handleParryTokenCustom 处理 C2S m54（格挡令牌问答，外服私服令牌/fork 0-1 双形态）。
+// 外服私服客户端连发令牌版 m54 等六件套应答（a.pcapng：按下=MoveSpeed 1.9f+
 // RunSpeedAdd -1.2f+InParry 1+ParryUpSpeedAdd -93+BufferInfo4 无时长槽串+
 // m169 添加+InManualParry 1；松开=m169 移除+BufferInfo4 清空+InParry 0+
 // MoveSpeed 4.8f+RunSpeedAdd 0.6f+ParryUpSpeedAdd 10+InManualParry 0，
@@ -190,9 +190,9 @@ var (
 // 令牌值每会话成对随机，按下/松开判定=状态机（非格挡态收到→按下，
 // a 会话三对完美交替实证）；fork 客户端 0/1 形态按值（1=按下持续上报、
 // 0=松开）。此前全天 5971 条 m54 零应答——客户端 m54 连发不停的同源根因，
-// 亦是「官服应答方言正确→客户端切官服模式」假说（P2）的探针。
-// writeOfficialParryTokenAck 官服 m54 应答（单属性帧序照 a.pcapng，
-// m169 与 78 通道同构九值帧；速度对照抄官服样本值 1.9/-1.2 → 4.8/0.6）。
+// 亦是「外服私服应答方言正确→客户端切外服私服模式」假说（P2）的探针。
+// writeOfficialParryTokenAck 外服私服 m54 应答（单属性帧序照 a.pcapng，
+// m169 与 78 通道同构九值帧；速度对照抄外服私服样本值 1.9/-1.2 → 4.8/0.6）。
 // BufferInfo4 槽串=curated.md a.pcapng 5.2/5.7s 逐字节定版：按下
 // '11CE,701E5A4,3AD5FB,1,0,0'、松开空串。seg5 到期/seg6 剩余跳恒 0——
 // 格挡 buff 无时长、事件驱动（按下登记，松开/被打破摘除）。曾误抄
@@ -233,7 +233,7 @@ func writeOfficialParryTokenAck(link sceneMessageConnection, player *playerActor
 		if err := single(propParryTokenUpSpeedAdd, "ParryUpSpeedAdd", clientdata.Int32Value(-93)); err != nil {
 			return err
 		}
-		// BufferInfo4 官服=六段 CSV 槽串（curated.md a.pcapng 5.2s
+		// BufferInfo4 外服私服=六段 CSV 槽串（curated.md a.pcapng 5.2s
 		// '11CE,701E5A4,3AD5FB,1,0,0'），seg5 到期/seg6 剩余跳恒 0：
 		// 格挡 buff 无时长，靠 m169 事件对增删。曾误抄字面量 "26"，
 		// 客户端解析不出 0x11CE 登记→非战斗姿态按下即被撤销（战斗态
@@ -251,7 +251,7 @@ func writeOfficialParryTokenAck(link sceneMessageConnection, player *playerActor
 	if err := link.WriteFrame(notice); err != nil {
 		return err
 	}
-	// 官服松开=BufferInfo4 清空串（curated.md a.pcapng 5.7s 'BufferInfo4='）。
+	// 外服私服松开=BufferInfo4 清空串（curated.md a.pcapng 5.7s 'BufferInfo4='）。
 	if err := single(propParryTokenBufferInfo4, "BufferInfo4", clientdata.StringValue("")); err != nil {
 		return err
 	}

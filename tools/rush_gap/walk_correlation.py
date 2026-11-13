@@ -4,7 +4,7 @@
 对每次 C2S m211 出招：找其后 2.5s 内首条 m15 state=7 自走与 0.5s 内受理簇
 （CurSkillID 帧到达），输出相对时延与先后——用于判定「按下即走（本地决策）
 / 簇到即走（服务端武装）/ 不走」。定版结论见
-docs/冲锋自走触发链官服定版与差集.md §1.1。
+docs/冲锋自走触发链外服私服定版与差集.md §1.1。
 
 用法：
   python -I walk_correlation.py <events.json>

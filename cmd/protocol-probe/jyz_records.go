@@ -12,8 +12,8 @@ import (
 // data_record）据此解锁章节门槛的系统；lua 侧查不到 414/770/
 // data_record 引用，全部走 C++ 原生。
 //
-// 官方方言（2026-11-08 官服 c.pcapng 实证，替代此前 native-menu
-// 逆向的 0x1E 419 单 int 方言——419 在官服记录表另有其主：plug_record
+// 官方方言（2026-11-08 外服私服 c.pcapng 实证，替代此前 native-menu
+// 逆向的 0x1E 419 单 int 方言——419 在外服私服记录表另有其主：plug_record
 // 奇珍系统，与九阴志无关）：
 //
 //   - S2C 0x1E custom 414 ['gamestep', step, flag]（抓包 #111：
@@ -34,27 +34,27 @@ import (
 // 本配置只作装载期的初始值与 data_record 行值来源。
 const (
 	// serverJyzGameStepMessage 0x1E 首值=414，次值窄字符串 'gamestep'
-	// 命令名寻址（官服 #111 逐字节）。
+	// 命令名寻址（外服私服 #111 逐字节）。
 	serverJyzGameStepMessage int32 = 414
 	// serverJyzLegacyStepMessage 0x1E 419 单 int 步骤帧（native-menu
-	// #1683 `1e 02 00 02 a3010000 02 06000000`；419 记录表在官服另有
+	// #1683 `1e 02 00 02 a3010000 02 06000000`；419 记录表在外服私服另有
 	// 其主=plug_record 奇珍，此帧仅 native 方言兼容）。
 	serverJyzLegacyStepMessage int32 = 419
-	// serverJyzDetailMessage 0x1E 事件明细应答帧 ID（官服 #2026）。
+	// serverJyzDetailMessage 0x1E 事件明细应答帧 ID（外服私服 #2026）。
 	serverJyzDetailMessage int32 = 770
-	// clientCustomJyzQuery 客户端步骤上报/查询（官服 C2S #12 ('', 6)）。
+	// clientCustomJyzQuery 客户端步骤上报/查询（外服私服 C2S #12 ('', 6)）。
 	clientCustomJyzQuery int32 = 770
 	// jyzEventCount data_record 官方打包行数（#256 rowCount=0x3a）。
 	jyzEventCount = 58
 )
 
-// jyzEventEntry 770 明细应答里的单事件条目：官服四元组 (id, 0, 1, state)。
+// jyzEventEntry 770 明细应答里的单事件条目：外服私服四元组 (id, 0, 1, state)。
 type jyzEventEntry struct {
 	id    int32
 	state int32
 }
 
-// jyzDetailEntries 官服 #2026 抓包逐值照录的默认事件集。
+// jyzDetailEntries 外服私服 #2026 抓包逐值照录的默认事件集。
 // 状态 1=进行中前段、2=后段（75605/75641/75606 为 2）。
 var jyzDetailEntries = []jyzEventEntry{
 	{75601, 1}, {75602, 1}, {75603, 1}, {75604, 1}, {75642, 1},
@@ -67,7 +67,7 @@ type jyzConfig struct {
 	eventState uint16
 }
 
-// defaultJyzConfig 步骤缺省与官服 #111 gamestep=6 一致。
+// defaultJyzConfig 步骤缺省与外服私服 #111 gamestep=6 一致。
 func defaultJyzConfig() jyzConfig {
 	return jyzConfig{step: 6, eventState: 2}
 }
@@ -90,7 +90,7 @@ func resolveJyzConfig(getenv func(string) string) jyzConfig {
 // 不变）。运行期下发一律取 jyzGate.config()。
 var jyzRecordsConfig = resolveJyzConfig(os.Getenv)
 
-// jyzStepFrame 0x1E 414 ['gamestep', step, 1]（官服 #111 同形）。
+// jyzStepFrame 0x1E 414 ['gamestep', step, 1]（外服私服 #111 同形）。
 // 注意：此帧必须在 switch sync 之后收尾下发（pushJyzGameStepFinal），
 // sync 会重置 414 域状态，先发的 gamestep 会被抹掉（native #1743→#1744
 // 帧序铁律；此前 gamestep 在 sync 前发导致功能入口不出）。
@@ -99,12 +99,12 @@ func jyzStepFrame(cfg jyzConfig) ([]byte, error) {
 }
 
 // jyzLegacyStepFrame 0x1E 419 单 int 步骤帧（native-menu #1683 同形，
-// 官服不发）。quest49 簇之后、data_record 之前下发。
+// 外服私服不发）。quest49 簇之后、data_record 之前下发。
 func jyzLegacyStepFrame(cfg jyzConfig) ([]byte, error) {
 	return serverCustomIntMessage(serverJyzLegacyStepMessage, customInt(cfg.step))
 }
 
-// jyzDetailFrame 0x1E 770 [0, (id, 0, 1, state)×n]（官服 #2026 同形）。
+// jyzDetailFrame 0x1E 770 [0, (id, 0, 1, state)×n]（外服私服 #2026 同形）。
 func jyzDetailFrame() ([]byte, error) {
 	values := make([]serverCustomValue, 0, 2+4*len(jyzDetailEntries))
 	values = append(values, customInt(0))
@@ -116,7 +116,7 @@ func jyzDetailFrame() ([]byte, error) {
 
 // pushJyzRecords ClientReady 一次性下发九阴志数据部（native 62311
 // #1680-#1742 帧序）：quest49 簇 → 419 步骤 → data_record 58 行单帧
-// 打包（官服 #256 方言）。gamestep 步骤帧不在此处——见
+// 打包（外服私服 #256 方言）。gamestep 步骤帧不在此处——见
 // pushJyzGameStepFinal（必须在 switch sync 之后收尾）。
 func pushJyzRecords(link sceneMessageConnection, cfg jyzConfig, ownedMountPacks map[uint32]bool) error {
 	if err := pushJyzQuestCluster(link, ownedMountPacks); err != nil {
@@ -131,7 +131,7 @@ func pushJyzRecords(link sceneMessageConnection, cfg jyzConfig, ownedMountPacks 
 
 // pushJyzDataRecords m416 域声明 + 419 步骤 + data_record 打包行
 // （770 查询应答复用；quest 簇只进 ClientReady 一次性链，重发会重复行）。
-// m416 ["DomainJiuYinZhi", step]：官服 4.7s 在 m419 前发（c.pcapng
+// m416 ["DomainJiuYinZhi", step]：外服私服 4.7s 在 m419 前发（c.pcapng
 // 4.71s 实证，对照文档 §三-3.3）；本服此前零下发。
 func pushJyzDataRecords(link sceneMessageConnection, cfg jyzConfig) error {
 	domain, err := serverCustomIntMessage(officialMsgJyzDomain, customString("DomainJiuYinZhi"), customInt(int32(cfg.step)))
@@ -195,7 +195,7 @@ func pushJyzStageChange(link sceneMessageConnection, newStage int) error {
 }
 
 // handleJyzQueryCustom 应答 C2S 770 (player_name, msgID)：回 419+data
-// 数据部 + 414 gamestep + 770 事件明细帧。官服对该查询无即时应答
+// 数据部 + 414 gamestep + 770 事件明细帧。外服私服对该查询无即时应答
 // （步骤帧已在登录推过、明细帧由 UI 查询链触发），这里补齐保证
 // 客户端状态完整；quest 簇不重发（会重复行）。步骤值取全服门控
 // 当前阶段。

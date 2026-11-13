@@ -299,15 +299,15 @@ type rawActionSegment struct {
 // （尾段去数字取前 3 字母，如 sfgp01→sfg）开头的帧（shl08 的 shl08_NN×6
 // =6 段）；刀光/fly/特效帧与技能全名施法帧剔除；皆无 → 单段即时结算。
 //
-// 2026-11-11 官服 pcapng 定版（技能/挑战 双抓包 12 技互证）：伤害跳对齐
+// 2026-11-11 外服私服 pcapng 定版（技能/挑战 双抓包 12 技互证）：伤害跳对齐
 // trigger_hitbreak 帧位——hitbreak 优先取用；帧是段内相对帧，段 N 的判定
 // 时刻 = 前序段全时长累加（不含 inBlend 混融折减）+ 帧号/30fps。实证锚点：
-// lyfh02 hitbreak seg1@14/seg2@12 → 467/1067ms（官服 551/1141−RTT80）；
-// wuji_lyfh07 旋风五段 15/45/75/105/135 → 500..4500ms（官服 587..4565）。
+// lyfh02 hitbreak seg1@14/seg2@12 → 467/1067ms（外服私服 551/1141−RTT80）；
+// wuji_lyfh07 旋风五段 15/45/75/105/135 → 500..4500ms（外服私服 587..4565）。
 // 无判定帧的技能（shl08 族）回落 trigger_effect 旧口径。
 //
 // 2026-11-12 挑战.pcapng 补定：trigger_hitback 同为判定帧——太极剑舞
-// CS_wd_tjj07 官服 8 跳 = hitback×6 + hitbreak×2（hitbreak-only 只会 2 跳）；
+// CS_wd_tjj07 外服私服 8 跳 = hitback×6 + hitbreak×2（hitbreak-only 只会 2 跳）；
 // hitback 第 4 参是击退距离+受击动画（「1.3,hurt_f_1_s」），不改变判定语义。
 // 已验证 9 个 11-11 锚定技全部零 hitback，合并无回归面。判定集 =
 // hitbreak ∪ hitback（同刻去重，hitbreak 优先）。
@@ -550,7 +550,7 @@ func compileCombatSkill(skillID string, level int32, tables skillResourceTables)
 	}
 	// RushRange 是冲锋技的真实发起上限（skill_static.RushRange，全表 397
 	// 列；myjf02/03=15）。TargetShape 半径（myjf02/03=Pkg[7]"以自己为圆心
-	// 半径6米"）不是可攻击距离——官服语义（b/e.pcapng 重解码 2026-11-08）：
+	// 半径6米"）不是可攻击距离——外服私服语义（b/e.pcapng 重解码 2026-11-08）：
 	// bind 身位内直接施法，bind~RushRange 之间走冲锋链（客户端自动接近+
 	// 6.5m 内服务端 c61 冲刺），超 RushRange 拒。缺列回退 max(射程, 15m)。
 	rushRange := iniFloat(static, "RushRange")
@@ -608,8 +608,8 @@ func compileCombatSkill(skillID string, level int32, tables skillResourceTables)
 	// 公共 CD 严格走配置（varprop/skill_new AddCoolDownTime），缺配置即 0，
 	// 不回落 personalCD：无我剑诀(CS_jh_dgjj) 等无 CoolDownTeam 套路一旦
 	// 回落，会发明出 team=0/时长=personalCD 的伪公共行——客户端把 team=0
-	// 当全组生效，一招出来整条技能栏转 20s（2026-11-08 官服 FsGame 对拍
-	// 修正；官服 reg-stub 只有 cooldown_rec/nocooldown_*，CD 全由配置驱动）。
+	// 当全组生效，一招出来整条技能栏转 20s（2026-11-08 外服私服 FsGame 对拍
+	// 修正；外服私服 reg-stub 只有 cooldown_rec/nocooldown_*，CD 全由配置驱动）。
 	if damage > 0 {
 		definition.effects = append(definition.effects, combatSkillEffect{
 			kind: skillEffectDamage, amount: damage,

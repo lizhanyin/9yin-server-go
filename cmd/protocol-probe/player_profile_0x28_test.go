@@ -29,9 +29,9 @@ func profileFieldWireSize(typeCode int) int {
 }
 
 // TestPlayerProfile0x28Envelope 帧头不变量 + 逐字段走查精确落在帧尾
-//（与官服样本同一校验口径：len-1/bodylen/count/字段区按表列型走完恰尽）。
+//（与外服私服样本同一校验口径：len-1/bodylen/count/字段区按表列型走完恰尽）。
 func TestPlayerProfile0x28Envelope(t *testing.T) {
-	// 官服方言下 41 字段全量解析（fork 表家园/VIP/节日域头行缺席=11 字段
+	// 外服私服方言下 41 字段全量解析（fork 表家园/VIP/节日域头行缺席=11 字段
 	// 稀疏形，另由 TestPlayerProfile0x28ForkSparseSmoke 覆盖）。
 	clientdata.SwapPropertyTableForTest(t, "official2433")
 	pos := role.Position{X: 660.6, Y: 33.6, Z: 299.5, Orient: 1.578}
@@ -49,7 +49,7 @@ func TestPlayerProfile0x28Envelope(t *testing.T) {
 	if obj, own := binary.LittleEndian.Uint32(body[0:]), binary.LittleEndian.Uint32(body[4:]); obj != 0x1105C0E3 || own != 0x03DEfBAE {
 		t.Fatalf("obj/own = %#x/%#x", obj, own)
 	}
-	// 变换块：posA=落点、posB/scale 全零（玩家形官服方言）。
+	// 变换块：posA=落点、posB/scale 全零（玩家形外服私服方言）。
 	for i, want := range []float32{660.6, 33.6, 299.5, 1.578} {
 		if got := math.Float32frombits(binary.LittleEndian.Uint32(body[8+4*i:])); got != want {
 			t.Fatalf("posA[%d] = %g, want %g", i, got, want)
@@ -63,7 +63,7 @@ func TestPlayerProfile0x28Envelope(t *testing.T) {
 	if got := binary.LittleEndian.Uint32(body[8+4*12:]); got != 1 {
 		t.Fatalf("transform slot 12 = %#x, want 1 (尾 u32 标志位)", got)
 	}
-	// 字段区走查：count 字段按表列型走完恰落帧尾（官服样本同口径）。
+	// 字段区走查：count 字段按表列型走完恰落帧尾（外服私服样本同口径）。
 	got := binary.LittleEndian.Uint16(body[60:])
 	if int(got) != count {
 		t.Fatalf("count = %d, want %d", got, count)
@@ -105,13 +105,13 @@ func TestPlayerProfile0x28Envelope(t *testing.T) {
 		off := bytes.Index(body, binary.LittleEndian.AppendUint16(nil, entry.Index))
 		slen := int(binary.LittleEndian.Uint32(body[off+2:]))
 		if !bytes.Equal(body[off+6:off+6+slen], playerProfileNameWide) {
-			t.Fatalf("Name 官服遮蔽常量不符")
+			t.Fatalf("Name 外服私服遮蔽常量不符")
 		}
 	}
 	if entry, ok := clientdata.PlayerProperty("HomeFengShuiDate"); ok && seen["HomeFengShuiDate"] {
 		off := bytes.Index(body, binary.LittleEndian.AppendUint16(nil, entry.Index))
 		if got := math.Float64frombits(binary.LittleEndian.Uint64(body[off+2:])); got != 42952.0 {
-			t.Fatalf("HomeFengShuiDate = %g, want 42952 (8B f64 官服方言)", got)
+			t.Fatalf("HomeFengShuiDate = %g, want 42952 (8B f64 外服私服方言)", got)
 		}
 	}
 	if entry, ok := clientdata.PlayerProperty("GroupID"); ok && seen["GroupID"] {
@@ -123,7 +123,7 @@ func TestPlayerProfile0x28Envelope(t *testing.T) {
 }
 
 // TestPlayerProfile0x28FollowsActiveTable 双方言换表跟随：official2433
-// 下 Name 落官服原号 178、HomeFengShuiDate 落 6（登陆-all #132 实证位）。
+// 下 Name 落外服私服原号 178、HomeFengShuiDate 落 6（登陆-all #132 实证位）。
 func TestPlayerProfile0x28FollowsActiveTable(t *testing.T) {
 	clientdata.SwapPropertyTableForTest(t, "official2433")
 	frame, _ := playerProfile0x28Frame(1, 2, role.Position{}, nil)
@@ -153,7 +153,7 @@ func TestPlayerProfile0x28FollowsActiveTable(t *testing.T) {
 }
 
 // TestPlayerProfile0x28ForkSparseSmoke fork 表稀疏形：家园/VIP/节日域头行
-// 缺席时按官服稀疏语义跳过，帧不变量（len-1/bodylen/走查恰尽）仍成立。
+// 缺席时按外服私服稀疏语义跳过，帧不变量（len-1/bodylen/走查恰尽）仍成立。
 func TestPlayerProfile0x28ForkSparseSmoke(t *testing.T) {
 	clientdata.SwapPropertyTableForTest(t, "fork")
 	frame, count := playerProfile0x28Frame(1, 2, role.Position{}, nil)

@@ -325,7 +325,7 @@ func TestChaseCrossComponentGivesUpAndReturnsHome(t *testing.T) {
 		t.Fatalf("give-up must return home, got %+v", at)
 	}
 	// 回位移动帧 + Fighting 重置属性帧都应广播（移动=0x21 ServerAllDest，
-	// 2026-11-11 追击方言对齐：0x20 官服全程 0 次）。
+	// 2026-11-11 追击方言对齐：0x20 外服私服全程 0 次）。
 	var sawMove, sawReset bool
 	for _, frame := range conn.Frames() {
 		if frame[0] == 0x21 {
@@ -434,7 +434,7 @@ func TestChaseReplansWhenTargetShifts(t *testing.T) {
 	lifecycle.close()
 }
 
-// TestChaseEngageDualRange 追击/攻击双分位方言（2026-11-12，官服
+// TestChaseEngageDualRange 追击/攻击双分位方言（2026-11-12，外服私服
 // 技能.pcapng 实测出招距离 p50≈2.3m/p75≈6.5m）：
 //   - reach 7m（>AttackRange 6m）：只追不打——步长 min(4.5, 7-3)=4、
 //     玩家不掉血；

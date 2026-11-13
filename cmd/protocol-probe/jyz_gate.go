@@ -23,7 +23,7 @@ import (
 // git 3d1df4a「新增九阴志全服阶段门控」，docs/ninjiuzhi-gating.md）。
 // Go 差异（其余语义逐条照录）：
 //   - 初始缺省阶段 6 而非 Java 的 1：保住登录 419/414 gamestep 帧与
-//     官服 c.pcapng #111 gamestep=6 逐字节一致的性质（2026-11-08
+//     外服私服 c.pcapng #111 gamestep=6 逐字节一致的性质（2026-11-08
 //     用户拍板）；
 //   - 五类门控覆写（features/tasks/npcs/scenes/inner_books）只装载
 //     并提供 isOpen 查询，尚未接线到场景/任务/NPC 过滤（Java 的五处
@@ -34,7 +34,7 @@ import (
 //     CWD 相对 data/；Go 随 NINEYIN_SERVER_ROOT 锚定，沙箱天然隔离），
 //     字段与 Java 及 data-import 同构。
 const (
-	// jyzGateDefaultStage 初始缺省阶段（官服 #111 gamestep=6）。
+	// jyzGateDefaultStage 初始缺省阶段（外服私服 #111 gamestep=6）。
 	jyzGateDefaultStage = 6
 )
 

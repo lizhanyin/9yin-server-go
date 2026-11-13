@@ -11,7 +11,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// 杀怪掉落双形态（官服方言，e.pcapng 实证 + 客户端 lua 考据 2026-11-08）：
+// 杀怪掉落双形态（外服私服方言，e.pcapng 实证 + 客户端 lua 考据 2026-11-08）：
 //   - 普通怪 = 掉落挂尸体（attachLootToCorpseLocked）：不生成新实体，
 //     掉落运行时挂在尸体本身；客户端冒光/拾取光标由 0x10 属性
 //     CanPick@76=1 + PickMember@1592=击杀者名 驱动（scene_obj_prop.lua
@@ -43,7 +43,7 @@ var (
 )
 
 // lootBoxRuntime 是一份在场掉落的共享状态（挂 sceneRun，多连接共见；
-// 拾取互斥经 run.mu 下的 taken 标记结算）。官服双形态：
+// 拾取互斥经 run.mu 下的 taken 标记结算）。外服私服双形态：
 //   - standalone=false：普通怪掉落挂尸体（键=尸体 id，点击尸体开窗，
 //     CanPick/PickMember 属性驱动客户端冒光+拾取光标，懒加载方言）；
 //   - standalone=true：宝箱怪（AIEditorPackID 生箱事件）或 GM 世界宝箱
@@ -149,7 +149,7 @@ func rollLootForNPC(npc npcSpawn) []grantItem {
 	return currentDropPacks().roll(dropID, 1, itemUseRandom())
 }
 
-// attachLootToCorpseLocked 普通怪掉落挂尸体（官服懒加载方言）：掉落
+// attachLootToCorpseLocked 普通怪掉落挂尸体（外服私服懒加载方言）：掉落
 // 运行时挂在尸体实体本身（键=尸体 id，不生成新实体），玩家点击尸体
 // 开 View 80，客户端冒光/拾取光标由 CanPick/PickMember 属性驱动（死亡
 // 中继时补发）。roll 为空=无掉落，尸体走普通 corpse TTL。调用方必须
@@ -311,7 +311,7 @@ func (r *sceneRun) removeLootBoxLocked(out *refreshTickOutcome, id, ownerID uint
 	}
 }
 
-// relayCorpsePickFrames 挂尸掉落的冒光属性下发（官服方言）：死亡时
+// relayCorpsePickFrames 挂尸掉落的冒光属性下发（外服私服方言）：死亡时
 // 补发尸体 CanPick@76=1 + PickMember@1592=击杀者名（宽串）。客户端
 // scene_obj_prop.lua on_change_pick_state 据此挂 DeadPickup 特效并
 // 切拾取光标。击杀者首发（致死 0x10 的 link.WriteFrame 不含这两帧）、

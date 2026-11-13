@@ -84,9 +84,9 @@ func init() {
 //
 //	fork         官方 2370 项快照（场景域头块 0..173 + 共享域），与全部
 //	             硬编码 prop* 常量配对自洽，现网方言——换表工程
-//	             （分支 official-2433-table，docs/官服登录帧对照与缺口
+//	             （分支 official-2433-table，docs/外服私服登录帧对照与缺口
 //	             清单.md §14.3）完成前的默认。
-//	official2433 官服 7074 线 2433 项真表（头块换血为家园/帮会/VIP 域，
+//	official2433 外服私服 7074 线 2433 项真表（头块换血为家园/帮会/VIP 域，
 //	             64 名缺席、共享域 +2/+7 插入漂移）——启用后 SceneProperty/
 //	             PlayerProperty/0x09 下发帧全部按官表解析；场景域硬编码
 //	             与 BufferListStr/NpcNickName 通道在 P3/P4 完成前会断，
@@ -103,15 +103,15 @@ func activePropertyTableText() (string, string) {
 }
 
 // hybridPropertyTableText 拼接混合表：fork 快照的场景域头块（0..173 行）
-// + 官服 2433 真表的共享域（174..2432 行）。
+// + 外服私服 2433 真表的共享域（174..2432 行）。
 //
 // 背景（2026-11-11 真机实验矩阵定向）：fork 客户端的 NPC 视觉管线消费
 // 属性块里的对象头行（Type@0/Sex@1/Photo@2/ConfigID@7/Resource@8/
 // PosiX@9/PosiY@10/PosiZ@11/Orient@12…），fork 表方言下 NPC 0x0D 携带
-// 这些头行（83 字段）渲染正常；官服整表头块换血为家园/帮会/VIP 域后
+// 这些头行（83 字段）渲染正常；外服私服整表头块换血为家园/帮会/VIP 域后
 // 这 35 个头行名无行可落（OrderedProperties 静默丢弃 → 48 字段），
 // 客户端拿不到对象头数据 → NPC 添加成功但不渲染。混合表把 fork 头块
-// 还给客户端、共享域保持官服 2433 行号，两全。
+// 还给客户端、共享域保持外服私服 2433 行号，两全。
 func hybridPropertyTableText() string {
 	hybridOnce.Do(func() {
 		hybridText = splicePropertyTables(officialPropertyTableText, officialPropertyTable2433Text, 174)

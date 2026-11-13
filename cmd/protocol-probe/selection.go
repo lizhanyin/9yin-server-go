@@ -17,16 +17,16 @@ import (
 const clientCustomSelectTarget int32 = 431
 
 // CLIENT_CUSTOMMSG_ATTACK_TARGET（298）：客户端请求自动攻击/接近目标。
-// 官服应答 msg209 [接近距离15, obj(目标), 0]（a.pcapng 14.258/46.489
+// 外服私服应答 msg209 [接近距离15, obj(目标), 0]（a.pcapng 14.258/46.489
 // 双样本）——这是客户端「自动战斗接近」的授权帧：点怪后客户端自动跑向
 // 目标、跑入射程自动出招都依赖它；缺 209 时客户端发完 211 不起跑
-// （2026-11-08 全天回归的最终根因：官服的"跑"是自动攻击接近系统，
+// （2026-11-08 全天回归的最终根因：外服私服的"跑"是自动攻击接近系统，
 // 不是冲锋链独有行为）。
 const clientCustomAttackTarget int32 = 298
 
 // handleAttackTargetCustom 处理 msg298 自动攻击目标请求：
 // [298, i32 0, obj(目标)] → 回 msg209 [15, obj(目标), 0] 授权。
-// 官服应答后续的 LogicState/移速帧（463/386/390）跟随各自系统，
+// 外服私服应答后续的 LogicState/移速帧（463/386/390）跟随各自系统，
 // 不随 209 固定下发。
 func handleAttackTargetCustom(world *sceneLifecycle, custom clientCustomMessage, remote string) error {
 	if len(custom.Values) < 3 || custom.Values[0].Type != 2 || custom.Values[0].Int32 != clientCustomAttackTarget {
@@ -69,7 +69,7 @@ func handleAttackTargetCustom(world *sceneLifecycle, custom clientCustomMessage,
 }
 
 // AutoSelectObject 与 LastObject 配对：每次选择目标回两帧属性（按名
-// 解析——fork 414/415，官服 2433 表天然落 416/417=官服 m431 应答原号
+// 解析——fork 414/415，外服私服 2433 表天然落 416/417=外服私服 m431 应答原号
 // §四-5）。
 var propAutoSelectObject = clientdata.MustPlayerProperty("AutoSelectObject").Index // fork=415
 
@@ -115,11 +115,11 @@ func handleSelectTargetCustom(world *sceneLifecycle, custom clientCustomMessage,
 	}
 	world.selectedObject = entity.id
 	world.selectedOwner = entity.ownerID
-	// 选靶 msg25 暂存授权恢复（2026-11-12 深夜）：官服 b.pcapng 双样本实证
+	// 选靶 msg25 暂存授权恢复（2026-11-12 深夜）：外服私服 b.pcapng 双样本实证
 	// msg431 应答=选中双帧之外再发 msg25[30000]，客户端等这帧才启动自动
 	// 接近；缺 msg25 时客户端不跑、连发 211+212 完事（55981/62096 会话
 	// 实证）。曾按技能.pcapng（7072 线选靶无 m25）撤成裸双帧——但同客户
-	// 端在官服发令牌版 m54、在本服发 0/1 版（2026-11-12 对照实证），
+	// 端在外服私服发令牌版 m54、在本服发 0/1 版（2026-11-12 对照实证），
 	// 本服客户端处于 fork 协议模式，7072 线方言不适用；fork/b 线的
 	// select→m25 才是本客户端的武装前提。锁内只补写一帧（skillPauseFrame
 	// 纯编码，无锁竞争）。
@@ -141,7 +141,7 @@ func handleSelectTargetCustom(world *sceneLifecycle, custom clientCustomMessage,
 // 属性帧（fork scene_lifecycle.go:1090-1094 writePlayerTargetLocked；
 // 49840 抓包 s2c 0x10 双帧逐字节对应）。
 func (s *sceneLifecycle) writePlayerTargetLocked(targetID, targetOwner uint32) error {
-	// LastObject 按名解析：fork=414、官服=416。
+	// LastObject 按名解析：fork=414、外服私服=416。
 	if err := s.conn.WriteFrame(sceneObjectObjectProperty(playerObjectID, playerOwnerID, uint32(clientdata.MustPlayerProperty("LastObject").Index), targetID, targetOwner)); err != nil {
 		return err
 	}

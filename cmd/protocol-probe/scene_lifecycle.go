@@ -637,8 +637,8 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		if err := s.conn.WriteFrame(payload); err != nil {
 			return fmt.Errorf("add scene object %d: %w", id, err)
 		}
-		// 对象-主人绑定伴生帧（op 0x31 ServerLinkPair，2026-11-11 官服
-		// 差集定版）：[op][u16 n][n×(obj u32, owner u32)]——官服与 0x28/
+		// 对象-主人绑定伴生帧（op 0x31 ServerLinkPair，2026-11-11 外服私服
+		// 差集定版）：[op][u16 n][n×(obj u32, owner u32)]——外服私服与 0x28/
 		// 0x0D 物化强相关交错（jn 179 条 vs 0x28 279 条；npc.pcapng n=4
 		// 批量=0x0E 对象段×0x0A5 玩家 owner 段），是客户端实体-主人表的
 		// 喂养通道，本服此前零下发——技能接近引擎的目标校验疑依赖此表
@@ -648,10 +648,10 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 				return fmt.Errorf("link pair %d: %w", id, err)
 			}
 		}
-		// 0x28 详情记录（官服方言 NPC 渲染必需，sparse 二分定案）：
+		// 0x28 详情记录（外服私服方言 NPC 渲染必需，sparse 二分定案）：
 		// NINEYIN_NPC_DETAIL_0X28=1，物化（0x0D）之后下发——两代生成器
 		//（=3 模板身份 / v2 本服身份+精确切片）在 0x0D 前下发均真机崩溃，
-		// 身份策略迥异故共同点排除身份串、指向时序；官服 #1776→#1777
+		// 身份策略迥异故共同点排除身份串、指向时序；外服私服 #1776→#1777
 		// 先 0x28 配对疑为 op29 批量预载对象特例，新对象应先物化后详情
 		//（=1 探针首测同教训 c1cd1b9）。
 		if npcDetail0x28Enabled() {
@@ -660,7 +660,7 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 			// 客户端全会话字典状态，见 docs/op28-fxnet2-lz-decoder.md）；
 			// 官方 l.pcapng 自有 6 帧 0x46 纯拷贝先例，任何会话状态安全。
 			props := officialNPCEntityProperties(entity.properties, entity.model, entity.configID)
-			// 走动物化 posB=段末目的地（npc.pcapng 官服 8/8 帧 A≠B）；
+			// 走动物化 posB=段末目的地（npc.pcapng 外服私服 8/8 帧 A≠B）；
 			// 停留/静立保持 A=B。
 			var target *worldcore.Transform
 			if entity.schedule != nil {
@@ -739,7 +739,7 @@ func (s *sceneLifecycle) objectRequest(request clientObjectRequest) (string, err
 		return entity.description, nil
 	}
 	// 选靶查询应答补 0x28 目标详情（技能.pcapng 30.282→30.456 实证：
-	// 客户端 op 0x07 查询后官服回 f#0187 mode=0x47 详情帧——客户端接近
+	// 客户端 op 0x07 查询后外服私服回 f#0187 mode=0x47 详情帧——客户端接近
 	// AI 读目标详情（CollideRadius/位姿等）计算走近停靠，缺此帧即 431
 	// 连发重查且冲锋受理后不自走；物化时发过的详情会过期，按需重发，
 	// 位置取当前权威 Transform，序=详情先于 LastObject 对）。

@@ -39,7 +39,7 @@ func TestStarterSkillViewUsesNativeSkillContainer(t *testing.T) {
 			{byte(propTotalFillValue & 0xff), byte(propTotalFillValue >> 8)},
 			{byte(propPauseTime & 0xff), byte(propPauseTime >> 8)},
 			{byte(propSkillCanUse & 0xff), byte(propSkillCanUse >> 8), 1},
-			{byte(propWuXing & 0xff), byte(propWuXing >> 8)}, // WuXing@2243:官服 55866 每行实证
+			{byte(propWuXing & 0xff), byte(propWuXing >> 8)}, // WuXing@2243:外服私服 55866 每行实证
 		} {
 			if !bytes.Contains(frame, expected) {
 				t.Fatalf("%s ViewAdd lacks %x: %x", skill.configID, expected, frame)
@@ -48,7 +48,7 @@ func TestStarterSkillViewUsesNativeSkillContainer(t *testing.T) {
 	}
 }
 
-// 基础武学→三脚猫招式五件套（bug.txt：官服全角色默认已学，
+// 基础武学→三脚猫招式五件套（bug.txt：外服私服全角色默认已学，
 // Java DefaultBasicSkillsTest.QUINTET 对拍）：官方观测序居 View40 队首。
 func TestStarterSkillViewCarriesDefaultBasicQuintet(t *testing.T) {
 	quintet := []struct {

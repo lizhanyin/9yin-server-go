@@ -130,19 +130,19 @@ func (v *Vitals) RecoverBruisedHPWhileFighting(amount int32) bool {
 
 // SitcrossSettlement 记录一次打坐恢复的逐层结算结果，供出帧层
 // 按官方形态拆帧：HP 层产 n=1 属性帧对 + msg24 c1=16 治疗飘字、
-// MP 层产属性帧对 + c1=18 回蓝飘字（官服补满末跳 (实际, 溢出)
+// MP 层产属性帧对 + c1=18 回蓝飘字（外服私服补满末跳 (实际, 溢出)
 // 拆分实证），HitHP 层产自己的属性帧对。
 type SitcrossSettlement struct {
 	// HPApplied 是本跳实际落入 HP 的量（飘字帧第 2 值；未触顶跳
 	// 等于名义回复量）。
 	HPApplied int32
-	// HPWasted 是被上限截断的溢出量（飘字帧第 3 值；官服末跳
+	// HPWasted 是被上限截断的溢出量（飘字帧第 3 值；外服私服末跳
 	// 162+1478=名义1640）。
 	HPWasted int32
 	// HitHPChanged 表示瘀血层 HitHP 被抬升到新 HP（回复追平受击
-	// 血条的那一跳，官服 00:11:54.833 双 Ratio+双值四帧实证）。
+	// 血条的那一跳，外服私服 00:11:54.833 双 Ratio+双值四帧实证）。
 	HitHPChanged bool
-	// MPApplied/MPWasted 与 HP 层同口径（官服 c1=18 回蓝飘字：
+	// MPApplied/MPWasted 与 HP 层同口径（外服私服 c1=18 回蓝飘字：
 	// 49.4.14.150:7074 实时实证每跳 +519 飘字，心搏 +100 无飘字）。
 	MPApplied int32
 	MPWasted  int32
@@ -273,7 +273,7 @@ type Brain struct {
 	AttackRange float32
 	// EngageRange 追击停靠分位（米）：reach 超过它就继续逼近，进入它
 	// 才站定输出。与 AttackRange（命中有效距，Java NpcCombatAi
-	// ATTACK_RANGE_METERS=6 的反击循环语义）分离——官服野怪实测出招
+	// ATTACK_RANGE_METERS=6 的反击循环语义）分离——外服私服野怪实测出招
 	// 距离 p50≈2.3m（技能.pcapng 双源新鲜坐标），单用 6m 当停靠线会
 	// 让怪在六米外站桩隔空挥击（2026-11-12）。
 	EngageRange  float32

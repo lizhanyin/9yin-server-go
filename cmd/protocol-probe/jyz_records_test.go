@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// 官服 c.pcapng #111 的 414 gamestep 步骤帧逐字节（step=6）：
+// 外服私服 c.pcapng #111 的 414 gamestep 步骤帧逐字节（step=6）：
 // 1e 04 00 02 9e010000 06 09..gamestep\0 02 06000000 02 01000000。
 func TestJyzStepFrameMatchesOfficialCapture(t *testing.T) {
 	frame, err := jyzStepFrame(defaultJyzConfig())
@@ -61,7 +61,7 @@ func TestPushJyzRecordsWritesQuestClusterStepAndPackedRows(t *testing.T) {
 			t.Fatalf("ride %d pack=%d want=%d", k, pack, wantPack)
 		}
 	}
-	// m416 域声明（官服 c.pcapng 4.71s，419 前置）：["DomainJiuYinZhi", step]
+	// m416 域声明（外服私服 c.pcapng 4.71s，419 前置）：["DomainJiuYinZhi", step]
 	want416 := []byte{
 		0x1e, 0x03, 0x00, // 0x1E 壳 + 3 值
 		0x02, 0xa0, 0x01, 0x00, 0x00, // int 416
@@ -118,7 +118,7 @@ func TestPushJyzGameStepFinalMatchesOfficialCapture(t *testing.T) {
 	}
 }
 
-// 官服 #2026：770 明细应答 [0, (id,0,1,state)×8] 逐字节前缀。
+// 外服私服 #2026：770 明细应答 [0, (id,0,1,state)×8] 逐字节前缀。
 func TestJyzDetailFrameMatchesOfficialCapture(t *testing.T) {
 	frame, err := jyzDetailFrame()
 	if err != nil {
@@ -136,7 +136,7 @@ func TestJyzDetailFrameMatchesOfficialCapture(t *testing.T) {
 		t.Fatalf("jyz detail frame=% X, want prefix % X", frame, want)
 	}
 	if len(frame) != 3+5*(2+4*len(jyzDetailEntries)) {
-		t.Fatalf("detail frame len=%d want=173 (官服 #2026 同长)", len(frame))
+		t.Fatalf("detail frame len=%d want=173 (外服私服 #2026 同长)", len(frame))
 	}
 }
 

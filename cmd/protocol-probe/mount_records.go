@@ -30,7 +30,7 @@ import (
 //     NewRideID/CurRiderType（Java「重登即步行」口径）。
 //
 // 存档 = role_mounts.snapshot（JSON 数组，元素即 NewRideRec 列镜像：
-// ConfigID/StaticID/UsedDate/ValidTime/Selected——role 618 官服迁移形态）。
+// ConfigID/StaticID/UsedDate/ValidTime/Selected——role 618 外服私服迁移形态）。
 // 无存档零帧。目录（CurRiderType 查表）：tool_item.ini script=Mount 段
 // （MountType/ArtPack）+ itemartstatic.ini MaleModel（npc\ride_XXX，无模型
 // 不可骑）+ share/ride/new_ride.ini MountType 兜底（Java MountCatalog 同序）。

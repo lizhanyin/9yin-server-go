@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// 官服 c.pcapng 0.128s 原始帧（tmp/pcap_analysis/pcaplib 重解码）：
-// obj/owner 是官服对象号，本服帧差异仅在 2..10 字段；10 起的
+// 外服私服 c.pcapng 0.128s 原始帧（tmp/pcap_analysis/pcaplib 重解码）：
+// obj/owner 是外服私服对象号，本服帧差异仅在 2..10 字段；10 起的
 // rec/起始行/行数/行数据必须逐字节一致。整串机器生成原样粘贴——
 // 手工分段曾两次引入错位（行 6-8），勿再人工切分。
 const officialOpenMapTail = "330000001800feff037a282a81e1f600000410fe0100000000000000000000eefe4c4052004e7b003d40002300002012041cc3f00080007d04000000be00000000000000000000ee3b1f8001289800005c782000085454010000000005000000e00701000000"
@@ -41,10 +41,10 @@ func unhexNibble(t *testing.T, c byte) byte {
 	return 0
 }
 
-// OpenMapRec 帧必须与官服 0.128s 抓包字节级同形（本服对象号段除外）。
+// OpenMapRec 帧必须与外服私服 0.128s 抓包字节级同形（本服对象号段除外）。
 func TestOpenMapRecFrameMatchesOfficial(t *testing.T) {
 	frame := openMapRecFrame(officialOpenMapBits)
-	if len(frame) != 112 { // 官服 len=112（16 头 + 24×4）
+	if len(frame) != 112 { // 外服私服 len=112（16 头 + 24×4）
 		t.Fatalf("frame length = %d, want 112", len(frame))
 	}
 	if got := frame[10:]; !bytes.Equal(got, hexBytes(t, officialOpenMapTail)) {
@@ -58,10 +58,10 @@ func TestOpenMapRecFrameMatchesOfficial(t *testing.T) {
 	}
 }
 
-// MapMaskRec 行（366, "scene22", 1）与官服帧逐字节一致。
+// MapMaskRec 行（366, "scene22", 1）与外服私服帧逐字节一致。
 func TestMapMaskRecFrameMatchesOfficial(t *testing.T) {
 	frame := mustMapMaskFrame(366, "scene22")
-	if len(frame) != 36 { // 官服 len=36
+	if len(frame) != 36 { // 外服私服 len=36
 		t.Fatalf("frame length = %d, want 36", len(frame))
 	}
 	if got := frame[10:]; !bytes.Equal(got, hexBytes(t, officialMapMaskTail)) {
@@ -70,7 +70,7 @@ func TestMapMaskRecFrameMatchesOfficial(t *testing.T) {
 }
 
 // grantMapRecords 输出两帧（迷雾行在前、位图在后），位图叠加当前场景位。
-// scenes.ini 资源树缺席时注入样本索引表（scene22→366 官服锚点）。
+// scenes.ini 资源树缺席时注入样本索引表（scene22→366 外服私服锚点）。
 func TestGrantMapRecordsOrderAndOverlay(t *testing.T) {
 	original := sceneGlobalIndexLookup
 	sceneGlobalIndexLookup = func(resource string) (uint32, bool) {
@@ -95,7 +95,7 @@ func TestGrantMapRecordsOrderAndOverlay(t *testing.T) {
 	if got := frames[0][10:]; !bytes.Equal(got, hexBytes(t, officialMapMaskTail)) {
 		t.Fatalf("MapMaskRec frame tail mismatch:\n got %x", got)
 	}
-	// scene22 位（行11 bit14）在官服样本里已点亮，叠加后帧不变。
+	// scene22 位（行11 bit14）在外服私服样本里已点亮，叠加后帧不变。
 	if got := frames[1][10:]; !bytes.Equal(got, hexBytes(t, officialOpenMapTail)) {
 		t.Fatalf("OpenMapRec frame tail mismatch after overlay:\n got %x", got)
 	}

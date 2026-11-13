@@ -2,14 +2,14 @@ package main
 
 // 玩家档案 0x28 全量帧——mode=0x46 明文生成器（2026-11-12 定版）。
 //
-// 权威规范：docs/官服玩家档案0x28全量帧.md。官服登录进场簇在 0x0B 进场、
+// 权威规范：docs/外服私服玩家档案0x28全量帧.md。外服私服登录进场簇在 0x0B 进场、
 // 0x14/0x11 对与 0x29 记录批之后，向玩家下发一条 5KB 级 mode=0x47（LZ）
 // 的 0x28 全量档案帧（count 292~393），obj/own=玩家实体，紧随其后才是
 // 玩家 0x14/0x11 视图行爆发；换景时整帧重发（k.pcapng #1978 实证）。
 // 本生成器以 mode=0x46 纯 memcpy 明文方言程序化构造（与 npcDetail0x28V3Frame
 // 同族，官方 l.pcapng 自有 0x46 先例，任何会话字典状态安全）。
 //
-// 帧布局（官服 #132/#1978 逐字节定版）：
+// 帧布局（外服私服 #132/#1978 逐字节定版）：
 //
 //	[0]=0x28 [1]=0x46 [2:6]=len-1 u32 [6:10]=明文体长 u32
 //	[10:]=[obj u32][own u32][13×f32 变换块 52B][u16 字段数][字段×N]
@@ -20,12 +20,12 @@ package main
 //
 // 官读 LZ 编码器四捷径（len=0→cstring、[idx_lo][FF] flag、[00跑+01 00]
 // 分节标记、NUL 槽增量续段）全部不复刻——纯标准编码，字段稀疏可缺席
-// 是官方语义（k#1978 相对 k#15 即少 idx162）。BaseFace（官服 len=0 变体）
+// 是官方语义（k#1978 相对 k#15 即少 idx162）。BaseFace（外服私服 len=0 变体）
 // 与 ShortcutKey（176B 主段后接增量续段，单发主段为未经官方验证的截断
 // 形态；键位另有 0x10 快捷配置通道）v1 均省略。
 //
 // 值来源：六包（c/k/登陆/登陆2/登陆-all）独立会话恒定值——Name/Face 为
-// 官服遮蔽占位（跨角色恒定，非真名）；LastLineTask 族/复活点表为登录
+// 外服私服遮蔽占位（跨角色恒定，非真名）；LastLineTask 族/复活点表为登录
 // 场景常量。真机验证渲染通过后再接技能行（ConfigID+16 列模板）与本服
 // 真值（复活点/键位）。门控：NINEYIN_PLAYER_PROFILE_0X28=1（默认关）。
 
@@ -43,7 +43,7 @@ func playerProfile0x28Enabled() bool {
 	return os.Getenv("NINEYIN_PLAYER_PROFILE_0X28") == "1"
 }
 
-// 官服恒定字节值（六包跨会话逐字节一致；Name/Face 为遮蔽占位，见文件头）。
+// 外服私服恒定字节值（六包跨会话逐字节一致；Name/Face 为遮蔽占位，见文件头）。
 var (
 	playerProfileNameWide = []byte{0x90, 0x5f, 0xa0, 0x50, 0xc3, 0x56, 0xad, 0x8f, 0x7c, 0x77, 0x00, 0x00}
 	playerProfileFaceBlob = []byte("22222$22,\x106<\x01d\x00\x00\x002dddddd)\x00\x00\x00\x002)4T(!=)OEI\x01\x1dM'\x05\x17\x00")
@@ -65,7 +65,7 @@ type profileProp struct {
 }
 
 // playerProfilePropSpecs v1 字段清单（41 项，官方 idx 序；省略 BaseFace/
-// ShortcutKey，见文件头）。值=六包恒定官服常量。
+// ShortcutKey，见文件头）。值=六包恒定外服私服常量。
 var playerProfilePropSpecs = []profileProp{
 	{"Name", 0, playerProfileNameWide},
 	{"GroupID", 0xFFFFFFFF, nil},
@@ -110,13 +110,13 @@ var playerProfilePropSpecs = []profileProp{
 	{"DongHaiRelivePositon", 0, playerProfileDongHaiRelive},
 }
 
-// playerProfileFengShuiDate 官服 HomeFengShuiDate 恒值（f64 日期序列，
+// playerProfileFengShuiDate 外服私服 HomeFengShuiDate 恒值（f64 日期序列，
 // k/c/登陆 三包同值 42952.0）。
 const playerProfileFengShuiDate = 42952.0
 
 // profilePropEntry 按名解析档案字段条目。t6（f64 日期族）行被按名映射
 // 排除（线型不可编码镜像 Java 语义，property_table.go:217），但档案帧
-// 官服方言实发 8B——回落全表扫（末现，与 PlayerProperty 同语义）。
+// 外服私服方言实发 8B——回落全表扫（末现，与 PlayerProperty 同语义）。
 func profilePropEntry(name string) (clientdata.PropertyEntry, bool) {
 	if entry, ok := clientdata.PlayerProperty(name); ok {
 		return entry, true
@@ -131,8 +131,8 @@ func profilePropEntry(name string) (clientdata.PropertyEntry, bool) {
 	return found, ok
 }
 
-// playerProfileSkillRowNames 技能行 17 列（官服 k#1978 模板序：ConfigID
-// 打头、四倍率收尾）。同一 idx 帧内重复合法（每技能一组）——官服档案
+// playerProfileSkillRowNames 技能行 17 列（外服私服 k#1978 模板序：ConfigID
+// 打头、四倍率收尾）。同一 idx 帧内重复合法（每技能一组）——外服私服档案
 // 帧计数含行字段实例（count 393 ≈ 44 基础 + 17×行 + 尾区）。
 var playerProfileSkillRowNames = []string{
 	"ConfigID", "CanUse", "StaticData", "Level", "VarPropNo", "PauseTime",
@@ -141,10 +141,10 @@ var playerProfileSkillRowNames = []string{
 	"PhyDamageMul", "StiDamageMul",
 }
 
-// appendProfileSkillRows 按官服模板逐技能追加行字段，返回追加字段数。
+// appendProfileSkillRows 按外服私服模板逐技能追加行字段，返回追加字段数。
 // 真值来源与 View40 skillRowProperties 同源：learnedSkillView 档值 +
 // combatSkillCatalog 补集（VarPropNo/CD/消耗/射程）；Quality/倍率固定族
-// 对齐 View40（=1；官服 k#1978 样本 Quality=2 系该技能个案，全行取 1 与
+// 对齐 View40（=1；外服私服 k#1978 样本 Quality=2 系该技能个案，全行取 1 与
 // 本服 View40 行自洽）。行字段在当前表缺席时整行跳过该列（稀疏语义）。
 func appendProfileSkillRows(body []byte, skills []learnedSkillView) ([]byte, int) {
 	entries := make([]clientdata.PropertyEntry, len(playerProfileSkillRowNames))
@@ -237,9 +237,9 @@ func clampU8(v int) int {
 }
 
 // playerProfile0x28Frame 生成玩家档案 mode=0x46 明文帧，返回 (帧, 字段数)。
-// pos=登录落点（posA）；scale/posB 按官服玩家形恒零。skills=已学集合
-// （View40 merge 集同源），逐技能附官服模板 17 列行。当前表缺席的字段名
-// 静默跳过（fork 表兼容，字段数按实际写入计——官服稀疏语义）。
+// pos=登录落点（posA）；scale/posB 按外服私服玩家形恒零。skills=已学集合
+// （View40 merge 集同源），逐技能附外服私服模板 17 列行。当前表缺席的字段名
+// 静默跳过（fork 表兼容，字段数按实际写入计——外服私服稀疏语义）。
 func playerProfile0x28Frame(objectID, ownerID uint32, pos role.Position, skills []learnedSkillView) ([]byte, int) {
 	body := make([]byte, 0, 640)
 	body = binary.LittleEndian.AppendUint32(body, objectID)
@@ -280,7 +280,7 @@ func playerProfile0x28Frame(objectID, ownerID uint32, pos role.Position, skills 
 }
 
 // appendProfileNumeric 按官方表列型码写数值。t6（f64 日期族）特殊：
-// OfficialWireTypeOf 映射为不可编码 0，但档案帧官服方言实发 8B f64
+// OfficialWireTypeOf 映射为不可编码 0，但档案帧外服私服方言实发 8B f64
 // （HomeFengShuiDate=42952.0 实证），此处按线型直写。
 func appendProfileNumeric(out []byte, typeCode int, spec profileProp) []byte {
 	switch typeCode {

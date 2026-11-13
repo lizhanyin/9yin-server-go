@@ -305,7 +305,7 @@ func serverModernCustomIntMessage(messageID int32, values ...serverCustomValue) 
 }
 
 func serverCustomIntMessageWithOpcode(opcode byte, messageID int32, values ...serverCustomValue) ([]byte, error) {
-	// 上限不设：官服 c.pcapng 实发 770（九阴志明细）/772 等高位 ID，
+	// 上限不设：外服私服 c.pcapng 实发 770（九阴志明细）/772 等高位 ID，
 	// 此前 [1,764] 上限是 Java 侧假设，已被抓包证伪。
 	if messageID < 1 {
 		return nil, fmt.Errorf("custom message id %d must be positive", messageID)
@@ -488,7 +488,7 @@ func heartbeatReply(ping []byte) []byte {
 
 // fileTimeEpochOffsetMs 是 1601-01-01 相对 1970-01-01 的毫秒差（Windows
 // FILETIME 纪元）。msg294 对钟 i64 与 cooldown_rec（rec109）col1/col2
-// 起止毫秒同为 FILETIME 纪元——g 14.660 官服对拍：CD 起=13438617363446
+// 起止毫秒同为 FILETIME 纪元——g 14.660 外服私服对拍：CD 起=13438617363446
 // = UnixMilli+本偏移，逐位吻合（止-起 个人 6000/公共 7000ms）。
 // （2026-11-12 P0a：旧 Java 方言 1Hz 自推 timeSyncFrame 已删，m294 全场
 // 唯一来源=officialTimeSyncReplyFrame 对 m924 的应答。）

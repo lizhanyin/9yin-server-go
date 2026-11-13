@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""官服 NPC 出招距离探针：msg337(施法者坐标)×msg20(NPC 出招)×受害者位置 → 出招时水平距离分布。
+"""外服私服 NPC 出招距离探针：msg337(施法者坐标)×msg20(NPC 出招)×受害者位置 → 出招时水平距离分布。
 
 受害者坐标双源：
   1) S2C 0x21 ServerAllDest 逐帧回显（每实体 44B = [obj u32][owner u32][9×f32]，
@@ -10,7 +10,7 @@
     「怪逼近玩家」其实是玩家自己在走。
 
 用法: python -I npc_attack_distance_probe.py <pcapng> [pcapng ...]
-产出: 每近战怪 n/min/p25/p50/max + 全体分布（官服野怪 ≈ min0.8/p50 2.3/p75 6.5m，
+产出: 每近战怪 n/min/p25/p50/max + 全体分布（外服私服野怪 ≈ min0.8/p50 2.3/p75 6.5m，
 即停靠 ~3m、命中有效 ~6m 的双分位模型）。
 """
 import math

@@ -1,25 +1,25 @@
 package main
 
-// 官服登录时间线对齐帧簇（docs/官服登录帧对照与缺口清单.md §二/§八/§十）。
+// 外服私服登录时间线对齐帧簇（docs/外服私服登录帧对照与缺口清单.md §二/§八/§十）。
 //
-// c.pcapng（官服 7074 线）登录窗口实证的三个补充位：
+// c.pcapng（外服私服 7074 线）登录窗口实证的三个补充位：
 //
 //  0.1s  位（0x0A 记录表后、EntryScene 前）：m366 客户端 IP 回显、
 //        m623 [0,0,3]、m655 服务器/账号信息（引擎级登录信息栏数据源）。
 //  4.8s  位（ClientReady 技能视图簇后）：m607 账号+角色名声明、
-//        m52 服务器时间 [1,unix]、m586 [5] 状态推送簇首（官服登录
+//        m52 服务器时间 [1,unix]、m586 [5] 状态推送簇首（外服私服登录
 //        尾单发一次，此后只随走停迁移发四连）。
-//  4.8s  位（背包视图行后、View46 前）：战斗属性全量 0x10——官服
+//  4.8s  位（背包视图行后、View46 前）：战斗属性全量 0x10——外服私服
 //        逐项单帧下发人物面板数值（StrAdd/Power/Def/Damage 等 ~110
 //        帧）；本服按 progress.properties() 可计算子集对齐（其余项
 //        无数据源，见对照文档 §十一 未处理清单）。
 //
-// m924→m294 对钟应答：官服对每条 C2S m924 回 m294
+// m924→m294 对钟应答：外服私服对每条 C2S m924 回 m294
 // [client_ms 回显, obj(玩家), unix 秒, uptime 秒(f64)]（c.pcapng ×139
 // 逐对实证）；本服保留 1s 周期推（fork 52905 方言，CD 对钟依赖），
-// 叠加官服形态的逐条应答，两方言共存互不干扰。
+// 叠加外服私服形态的逐条应答，两方言共存互不干扰。
 //
-// m327 任务消息应答：官服对 C2S m327[6,"任务ID串"]（CLIENT_CUSTOMMSG_
+// m327 任务消息应答：外服私服对 C2S m327[6,"任务ID串"]（CLIENT_CUSTOMMSG_
 // TASK_MSG，lua64 定名）回 0x13 Task_Accepted#29 位图写格 ×9 两轮幂等
 // 重推；本服以已授予的接受任务行等价回放（幂等，客户端行已存在则覆写
 // 同值）。
@@ -48,7 +48,7 @@ const (
 	officialMsgJyzDomain      int32 = 416 // 九阴志域声明 ["DomainJiuYinZhi", step]
 )
 
-// C2S 0x0A 信封新增处理的官服消息号（lua64 client_custom_define.lua）。
+// C2S 0x0A 信封新增处理的外服私服消息号（lua64 client_custom_define.lua）。
 const (
 	clientCustomMsgDelay int32 = 924 // CLIENT_CUSTOMMSG_MSG_DELAY（引擎 MessageDelay 直发）
 	clientCustomTaskMsg  int32 = 327 // CLIENT_CUSTOMMSG_TASK_MSG（send_task_msg 等）
@@ -56,7 +56,7 @@ const (
 
 // activityCustomMsgKnown 是 0x0A 活动信封的 msgId 已知集：原内联白名单
 // 全集 + m924/m327。集合外不再静默丢弃——main.go 记一条 unhandled 日志
-// （对照文档 §五-C：官服登录期 27 种 UI 上报此前完全不可见）。
+// （对照文档 §五-C：外服私服登录期 27 种 UI 上报此前完全不可见）。
 func activityCustomMsgKnown(id int32) bool {
 	switch id {
 	case clientCustomSetShortcut, clientCustomRemoveShortcut, clientCustomSitCross,
@@ -82,7 +82,7 @@ func activityCustomMsgKnown(id int32) bool {
 
 // officialServerIdentity 返回 m655 服务器标识四元组：服务器 ID/名称可经
 // NINEYIN_OFFICIAL_SERVER_ID / NINEYIN_OFFICIAL_SERVER_NAME 覆盖（默认取
-// c.pcapng 官服值 7100037/侠骨丹心——登录信息栏显示源，客户端不校验）。
+// c.pcapng 外服私服值 7100037/侠骨丹心——登录信息栏显示源，客户端不校验）。
 func officialServerIdentity() (serverID int32, serverName string) {
 	serverID = 7100037
 	if v := strings.TrimSpace(os.Getenv("NINEYIN_OFFICIAL_SERVER_ID")); v != "" {
@@ -162,8 +162,8 @@ func writeOfficialReadyInfoFrames(link sceneMessageConnection, remote, account s
 }
 
 // writeOfficialCombatAttributeFrames 战斗属性全量：progress.properties() 的
-// 战斗面板子集逐项单帧 0x10（官服 4.82-4.84s 形态：单属性帧，非大批）。
-// 位置：背包视图行之后、View46 之前；官服含 ~110 项，本服仅发可计算项
+// 战斗面板子集逐项单帧 0x10（外服私服 4.82-4.84s 形态：单属性帧，非大批）。
+// 位置：背包视图行之后、View46 之前；外服私服含 ~110 项，本服仅发可计算项
 // （五维/Power/Hit/Dodge/Va/Def/Parry/Damage/HP·MP 上限加成等 ~45 项，
 // 其余 AI*/Mul 系无数据源——对照文档 §十一）。
 func writeOfficialCombatAttributeFrames(link sceneMessageConnection, player *playerActor, remote string) {
@@ -192,7 +192,7 @@ func writeOfficialCombatAttributeFrames(link sceneMessageConnection, player *pla
 
 // officialCombatPanelProp 圈定 progress.properties() 中的战斗面板子集
 // （player_progress.go 索引常量；StrAdd 系面板显示值由五维主值承担同位
-// 语义：官服面板 Add 列与主值独立下发，本服无独立加成数据源时跳过）。
+// 语义：外服私服面板 Add 列与主值独立下发，本服无独立加成数据源时跳过）。
 func officialCombatPanelProp(index uint16) bool {
 	switch index {
 	case propStr, propSta, propDex, propIng, propSpi,
@@ -234,7 +234,7 @@ func combatPanelSnapshot(player *playerActor) map[uint16][]byte {
 	return snapshot
 }
 
-// pushCombatAttributeDelta 换装后的战斗属性增量推送（官服运行期模型，
+// pushCombatAttributeDelta 换装后的战斗属性增量推送（外服私服运行期模型，
 // c.pcapng 战斗期实证：单属性 0x10 小帧、只推变化项，从不重推全量——
 // 全量仅在登录/对象新建时下发）。与快照逐项字节比对，变化/新增项以
 // 单属性帧下发；消失项跳过（保留旧值，等待下次登录全量收敛）。
@@ -262,14 +262,14 @@ func pushCombatAttributeDelta(link sceneMessageConnection, player *playerActor, 
 	}
 }
 
-// officialTimeSyncReplyFrame m924→m294 官服形态应答（2026-11-12 P0a
+// officialTimeSyncReplyFrame m924→m294 外服私服形态应答（2026-11-12 P0a
 // 按技能.pcapng 帧级复核修正）：
 //
 //	[294, client_ms 回显(i64), reqid(i64), unix 秒(i64), uptime 天(f64 常量)]
 //
-// reqid = 应答时刻的 FILETIME 毫秒（官服样本 0xc38f0e0xxxx 逐位吻合
+// reqid = 应答时刻的 FILETIME 毫秒（外服私服样本 0xc38f0e0xxxx 逐位吻合
 // UnixMilli+1601 纪元偏移，与 CD 行 col1/col2 同口径；解码器把它显示成
-// obj 是 8B 值的误读）；uptime 为官服全场**位恒定**的「世界天数」常量
+// obj 是 8B 值的误读）；uptime 为外服私服全场**位恒定**的「世界天数」常量
 // （样本 46335.831 整场不变），客户端不消费其活值——本服直接镜像常量。
 func officialTimeSyncReplyFrame(clientMs int64, now time.Time) ([]byte, error) {
 	return serverCustomIntMessage(officialMsgTimeSync,
@@ -280,13 +280,13 @@ func officialTimeSyncReplyFrame(clientMs int64, now time.Time) ([]byte, error) {
 	)
 }
 
-// officialUptimeDays m294 尾值常量：官服样本（技能.pcapng 全程
+// officialUptimeDays m294 尾值常量：外服私服样本（技能.pcapng 全程
 // 1289 帧恒 46335.831）。语义疑为服务器世界年龄天数，客户端无活值消费
 // 证据——按原样镜像。
 const officialUptimeDays = 46335.831
 
 // repushAcceptedTaskFrames m327 应答：重放已授予的 Task_Accepted 行
-// （官服对 m327[6] 回 0x13 位图写格 ×9 两轮；本服等价物 = 接受任务
+// （外服私服对 m327[6] 回 0x13 位图写格 ×9 两轮；本服等价物 = 接受任务
 // 行重写，幂等——客户端行已存在时覆写同值）。
 func repushAcceptedTaskFrames(link sceneMessageConnection, remote string) error {
 	for _, taskID := range facultyAcceptedTaskIDs() {
@@ -325,7 +325,7 @@ func splitHostPort(addr string) (string, string, error) {
 //
 // 数据源 wuxuebaseinfo.ini nWuXing（neigong_effects.go 目录）；目录
 // 不可用时全零（技能不走 skillWuXing 的缺行回退 5——回退会误入太极桶，
-// 桶计算只认目录原值，0 跳过）。官服 1089/623/299 的精确构成无样本，
+// 桶计算只认目录原值，0 跳过）。外服私服 1089/623/299 的精确构成无样本，
 // 公式为语义推导（2026-11-10 注）。
 func wuxingLevelBuckets(books []learnedNeiGong, skills map[string]int32) (yin, yang, taiji int32) {
 	catalog, err := loadModernNeiGongCatalog()
@@ -372,11 +372,11 @@ func envInt32OrDefault(key string, fallback int32) int32 {
 	return fallback
 }
 
-// writeOfficialLoginBuffFrames 官服登录期 m169 buff（两值形态 [169,
+// writeOfficialLoginBuffFrames 外服私服登录期 m169 buff（两值形态 [169,
 // buff名, obj(玩家)]，c.pcapng 0.1s/4.7s 实证）：公共 buff 组标志
 // buff_group_flag_101（BufferGroupPublicRec#59 同域，永久）+ 当前装备
 // 内功的可见 buff（buf_ng_*，learnedNeiGong.buffID 表源，永久）。
-// 限时 buff（官服 buf_baosd_02 等）无存档数据源，未发（对照文档 §11.2）。
+// 限时 buff（外服私服 buf_baosd_02 等）无存档数据源，未发（对照文档 §11.2）。
 func writeOfficialLoginBuffFrames(link sceneMessageConnection, player *playerActor, remote string) {
 	if player == nil {
 		return

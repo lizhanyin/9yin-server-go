@@ -47,15 +47,15 @@ func encodeGBK(text string) ([]byte, error) {
 }
 
 // npcDetail0x28BaseScale 变换块 scale 槽基线。npc.pcapng（2026-11-11
-// 官服 0x46 帧）实测非常量：NPC/怪 1.25、玩家形 1.28、Boss 形 5.0——
+// 外服私服 0x46 帧）实测非常量：NPC/怪 1.25、玩家形 1.28、Boss 形 5.0——
 // 该槽疑为客户端模型底缩放（xmod 内烘）的服务端回显，模板表 Scale 列
-// （"1.2,1.2,1.2" 三元组）与官服槽值无公式关系（boss 模板 1.2 vs 槽
+// （"1.2,1.2,1.2" 三元组）与外服私服槽值无公式关系（boss 模板 1.2 vs 槽
 // 5.0），服务端无数据源，故保持 NPC 基线 1.25。
 const npcDetail0x28BaseScale = float32(1.25)
 
 // npcDetail0x28V3Frame 生成 mode=0x46 明文 0x28 NPC 详情帧。
-// target 非 nil 时 posB=目标位（官服走动物化 A=当前位/B=段末目的地，
-// npc.pcapng 8/8 帧均 A≠B；静立/停留 NPC 官服 A=B，传 nil 即同值）。
+// target 非 nil 时 posB=目标位（外服私服走动物化 A=当前位/B=段末目的地，
+// npc.pcapng 8/8 帧均 A≠B；静立/停留 NPC 外服私服 A=B，传 nil 即同值）。
 // props 需按官方语义排好序（见 officialNPCEntityProperties），列型编码
 // 以各 Value.Type 为准（officialNPCIntProp 族已按当前表分派）。
 func npcDetail0x28V3Frame(objectID, ownerID uint32, transform worldcore.Transform, target *worldcore.Transform, props []clientdata.IndexedProperty) []byte {
@@ -130,14 +130,14 @@ func gbkBytes(text string) []byte {
 //
 //	#0 普通NPC（26 字段）：Photo 在场；NpcType 后插 CursorShape、
 //	  HPRatio 后插 MPRatio、尾随 HasKarma/Character/KarmaLevel/
-//	  OriginPara1-3 官服常量族；
+//	  OriginPara1-3 外服私服常量族；
 //	#1 带武器NPC（23 字段）：判据=schema WeaponName 非空；CollideRadius
 //	  后插 Fixed（schema>0 才发）、WeaponMode 前插 WeaponName、其后
-//	  FixedBeHitAct/SelfForceID（schema Force>0 优先，缺省官服 999）；
+//	  FixedBeHitAct/SelfForceID（schema Force>0 优先，缺省外服私服 999）；
 //	 不发 Photo/CursorShape/MPRatio/karma/origin 族。
 //	  BufferInfo1/2 为活 buff 槽 CSV（P4 方言）——物化期 NPC 无 buff，省略。
 //
-// Level/BossLevel/NpcType/RotatePara/State 取 schema 真值，其余为官服
+// Level/BossLevel/NpcType/RotatePara/State 取 schema 真值，其余为外服私服
 // 常量——与 officialNPCProperties 同源语义，但面向 sceneEntity 数据形状。
 // model 为空时省略 Resource/ConfigID（#0 形连同 Photo）三行。
 func officialNPCEntityProperties(schema []clientdata.IndexedProperty, model, configID string) []clientdata.IndexedProperty {
@@ -251,7 +251,7 @@ func officialNPCEntityProperties(schema []clientdata.IndexedProperty, model, con
 	props = append(props, clientdata.IndexedProperty{Index: weaponMode.Index, Name: weaponMode.Name, Value: clientdata.StringValue(weaponModeValue)})
 	if armed {
 		// 官方 #1：WeaponMode 后 FixedBeHitAct=1（固定受击动作）+ SelfForceID
-		//（阵营；schema Force>0 优先，缺省官服样本 999）。
+		//（阵营；schema Force>0 优先，缺省外服私服样本 999）。
 		if entry, ok := clientdata.PlayerProperty("FixedBeHitAct"); ok {
 			props = append(props, officialNPCIntProp(entry, 1))
 		}
@@ -298,7 +298,7 @@ func schemaString(lookup func(string) (clientdata.Value, bool), name, fallback s
 	return fallback
 }
 
-// schemaInt 整数行 schema 真值优先（>0），缺省回落官服常量。
+// schemaInt 整数行 schema 真值优先（>0），缺省回落外服私服常量。
 func schemaInt(lookup func(string) (clientdata.Value, bool), name string, fallback int32) int32 {
 	if value, ok := lookup(name); ok && value.I32 > 0 {
 		return value.I32

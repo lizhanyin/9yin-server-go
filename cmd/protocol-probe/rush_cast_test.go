@@ -38,7 +38,7 @@ func movementUploadMessage(x, y, z, orient float32) clientCustomMessage {
 	return clientCustomMessage{Opcode: 0x1E, Values: values}
 }
 
-// 冲锋链帧字节钉死（官服 7071/7074 线值序，0x1E 外壳）：
+// 冲锋链帧字节钉死（外服私服 7071/7074 线值序，0x1E 外壳）：
 // msg25=[25,30000,"skill_pause"]；msg26=[26]；
 // msg337=[337,obj,x,y,z,orient,0]；msg24 c61=[24,obj,61,dest,档1,冲刺动画]。
 func TestRushFrameBuildersMatchJavaLayouts(t *testing.T) {
@@ -146,7 +146,7 @@ func TestStageRushCastStagesPendingAndMarksInFlight(t *testing.T) {
 		t.Fatalf("staging spent MP: %d", got)
 	}
 
-	// 暂存期再次按下（重受理）：官服 f/g 定版 7 帧——CurSkillID="" +
+	// 暂存期再次按下（重受理）：外服私服 f/g 定版 7 帧——CurSkillID="" +
 	// msg26 + PauseSkill="" + CurSkillID + msg25 + PauseSkill + msg707，
 	// 不重发 CurSkillTarget。
 	if handled, err := stageRushCast(conn, player, definition, forkNPCID(91), npcTestOwner(91),
@@ -184,10 +184,10 @@ func TestStageRushCastAirborneDisabledFallsBackToGroundDialect(t *testing.T) {
 	}
 }
 
-// per-skill c61 授予方言（技能1.pcapng 2026-11-13 定版，官服 16 次授予观测）：
+// per-skill c61 授予方言（技能1.pcapng 2026-11-13 定版，外服私服 16 次授予观测）：
 // hyjf02 窗 (7.5,8.5]——6m 窗下零帧（走入直收桶）、8m 授予 G 类 flag1+
 // lock 动画；xytf07_sky 窗 (8,11] 授予 A 类 flag2+qg_fastruning_s_0h_01、
-// 终点 y=目标 y+1.0；mzjf02 上界 8——13m 零授予（220@13.8 官服零应答）。
+// 终点 y=目标 y+1.0；mzjf02 上界 8——13m 零授予（220@13.8 外服私服零应答）。
 func TestRushDashDialectPerSkill(t *testing.T) {
 	newEnv := func() (*captureMessageConnection, *playerActor, *sceneLifecycle) {
 		conn := &captureMessageConnection{}
@@ -267,7 +267,7 @@ func TestRushDashDialectPerSkill(t *testing.T) {
 	}
 }
 
-// 无暂存 212：官服零回应（b 51.4+ 连发 15 条 212[尾0] 全程静默）。
+// 无暂存 212：外服私服零回应（b 51.4+ 连发 15 条 212[尾0] 全程静默）。
 func TestDashLandingWithoutPendingIsSilent(t *testing.T) {
 	conn := &captureMessageConnection{}
 	player := newPlayerActor("冲锋侠", 0)
@@ -305,7 +305,7 @@ func TestDashLandingResumesPendingSelfSkill(t *testing.T) {
 		t.Fatalf("landing handled=%t err=%v", handled, err)
 	}
 	frames := conn.Frames()
-	if len(frames) != 18 { // 14 帧落地簇 + 状态四连（官服 416.321 实证）
+	if len(frames) != 18 { // 14 帧落地簇 + 状态四连（外服私服 416.321 实证）
 		t.Fatalf("landing frames=%d, want 18-frame dash landing cluster+state-ping", len(frames))
 	}
 	if frames[0][0] != 0x10 || binary.LittleEndian.Uint16(frames[0][12:]) != propRushCantMove {
@@ -352,7 +352,7 @@ func TestDashLandingResumesPendingSelfSkill(t *testing.T) {
 		t.Fatal("landing kept pending cast")
 	}
 
-	// 暂存已消费：第二次 212 官服零回应。
+	// 暂存已消费：第二次 212 外服私服零回应。
 	if handled, err := handleCastDashLanding(conn, player, nil, dashLandingMessage(6, 0, 7, 0), "test"); err != nil || !handled {
 		t.Fatalf("repeat landing handled=%t err=%v", handled, err)
 	}
@@ -445,7 +445,7 @@ func TestOutOfRangeStagedRushFamilySkillStagesViaSkill211(t *testing.T) {
 	}
 
 	// 直收带内（≤max(bind+2,3.5)）：executeRushDirect——首帧 0x10
-	// CurSkillID（官服 g 直收簇，无 0x11/CD 首帧、无暂存）。
+	// CurSkillID（外服私服 g 直收簇，无 0x11/CD 首帧、无暂存）。
 	conn, player, world = build(float32(math.Max(0.5, nearCast-1)))
 	base = len(conn.Frames())
 	if handled, err := handleSkillCustom(conn, player, world, nil, useSkillMessageAt(definition.id, 0, 0, 0), "test"); err != nil || !handled {
@@ -569,8 +569,8 @@ func TestMovementUploadDrivesRushArrival(t *testing.T) {
 	}
 	base := len(conn.Frames()) // 受理簇 5 帧为基数。
 
-	// 距目标 8m（>6.5m 窗口上界）：官服方言——客户端自走（65210 会话
-	// 23:02:27 官服簇下客户端实发 state7 实证），服务端零帧；旧的
+	// 距目标 8m（>6.5m 窗口上界）：外服私服方言——客户端自走（65210 会话
+	// 23:02:27 外服私服簇下客户端实发 state7 实证），服务端零帧；旧的
 	// c61/0x1F 服务端驱动已撤（瞬移根因）。
 	if handled, err := handleMovementUpload(conn, player, world, movementUploadMessage(2, 0, 0, 0), "test"); err != nil || !handled {
 		t.Fatalf("far movement handled=%t err=%v", handled, err)
@@ -581,7 +581,7 @@ func TestMovementUploadDrivesRushArrival(t *testing.T) {
 		t.Fatalf("far movement emitted %d frames=%x, want 0 (client self-approach)", len(frames), frames)
 	}
 
-	// 窗口下界以下（距目标 4m ≤5.0）：零帧——官服走近直接 212[尾0] 落地，
+	// 窗口下界以下（距目标 4m ≤5.0）：零帧——外服私服走近直接 212[尾0] 落地，
 	// 不发 c61（b 4.41m 样本 3.61m 上报不触发实证）。
 	if handled, err := handleMovementUpload(conn, player, world, movementUploadMessage(6, 0, 0, 0), "test"); err != nil || !handled {
 		t.Fatalf("below-window movement handled=%t err=%v", handled, err)
@@ -664,7 +664,7 @@ func TestMovementUploadDrivesRushArrival(t *testing.T) {
 		t.Fatalf("in-dash movement emitted %d frames, want 0", got)
 	}
 
-	// 212 冲刺落地：14 帧官服簇（定义未习得 → 伤害链不启动）。
+	// 212 冲刺落地：14 帧外服私服簇（定义未习得 → 伤害链不启动）。
 	if handled, err := handleCastDashLanding(conn, player, world, dashLandingMessage(8.5, 0, 0, 0.5), "test"); err != nil || !handled {
 		t.Fatalf("landing handled=%t err=%v", handled, err)
 	}
@@ -748,7 +748,7 @@ func TestRushMovementUpload220DrivesArrival(t *testing.T) {
 		t.Fatalf("in-dash 220 emitted %d frames, want 0", got)
 	}
 
-	// 212 冲刺落地：14 帧官服簇（同 msg15 链）。
+	// 212 冲刺落地：14 帧外服私服簇（同 msg15 链）。
 	if handled, err := handleCastDashLanding(conn, player, world, dashLandingMessage(8.5, 0, 0, 0.5), "test"); err != nil || !handled {
 		t.Fatalf("landing after 220 handled=%t err=%v", handled, err)
 	}
@@ -768,7 +768,7 @@ func packTestObject(objectID, ownerID uint32) [8]byte {
 }
 
 // movementUploadOrient：仅 state7 长式 idx9 是绝对朝向；state4 停帧 idx6
-// 为增量、跳帧无朝向——一律 0（技能.pcapng：官服 state7 [15,id,7,x,y,z,
+// 为增量、跳帧无朝向——一律 0（技能.pcapng：外服私服 state7 [15,id,7,x,y,z,
 // destx,desty,4.50,orient,clock]，旧实现取 idx6=destx 属字段错位）。
 func TestMovementUploadOrientExtraction(t *testing.T) {
 	walk := []clientCustomValue{
@@ -822,7 +822,7 @@ func TestUseSkillGroundPointTransform(t *testing.T) {
 // c61）；3.5<d≤6.5 c61 档1 qg_fastrun（1216@5.52/+48ms、1275@3.96）；
 // >6.5 档2 qg_fastruning_s（b/e 8.2）。簇=0x1F 锚 + c61（无
 // CantMove/CantParry——那是锁定 c61 专属）；+400ms 落地三件套
-// msg26+0x1F+337（近似官服 1216.720）。
+// msg26+0x1F+337（近似外服私服 1216.720）。
 func TestAreaGroundRushDashTierSelection(t *testing.T) {
 	definition := combatSkillDefinition{
 		id: "CS_jh_hyjf07", canRush: true, castRange: 15,
@@ -849,7 +849,7 @@ func TestAreaGroundRushDashTierSelection(t *testing.T) {
 		int32(binary.LittleEndian.Uint32(frames[1][38:])) != 1 {
 		t.Fatalf("tier1 frames=%x, want 0x1F + c61 tier1", frames)
 	}
-	// c61 终点 = ground 身前 bind（官服 1216 dash=dist-1.5）。
+	// c61 终点 = ground 身前 bind（外服私服 1216 dash=dist-1.5）。
 	destX := binary.LittleEndian.Uint32(frames[1][23:])
 	if math.Abs(float64(math.Float32frombits(destX)-3.5)) > 0.01 {
 		t.Fatalf("tier1 dest x = %v, want 3.5 (ground 5 - bind 1.5)", math.Float32frombits(destX))

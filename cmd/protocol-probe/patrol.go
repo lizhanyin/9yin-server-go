@@ -584,13 +584,13 @@ func serverAllDest(entries []allDestEntry) []byte {
 	return payload
 }
 
-// playerMoveEcho 官服玩家自身移动回显条目（技能.pcapng §一，30+ 样本
+// playerMoveEcho 外服私服玩家自身移动回显条目（技能.pcapng §一，30+ 样本
 // 逐位定版）：与巡逻 NPC 条目同为 44B，但语义换轨——slot5=移动角
 // atan2(destX−x, destZ−z) 归一 [0,2π)（停帧=朝向增量 idx6）、slot6=速度、
 // slot7=绝对朝向（停帧 0）、尾三槽=5.5f|9.9f|msg15 id（NPC 条目为
 // 0|0|flags）。寻路族（id 高 16 位 0xA000）与 WASD 族（0x0000/0x3000）
 // 的 state7/4/6/8 逐帧回显，state5 跳跃双帧不回显——这是客户端执行
-// 点击移动的前置应答（官服节奏：状态四连 +0~80ms、0x21 +50~200ms）。
+// 点击移动的前置应答（外服私服节奏：状态四连 +0~80ms、0x21 +50~200ms）。
 type playerMoveEcho struct {
 	objectID, ownerID    uint32
 	destX, destY, destZ  float32
@@ -598,7 +598,7 @@ type playerMoveEcho struct {
 	intentID             uint32
 }
 
-// serverAllDestPlayerEcho 编码单条目 0x21 玩家回显帧（47B 官服同形）。
+// serverAllDestPlayerEcho 编码单条目 0x21 玩家回显帧（47B 外服私服同形）。
 func serverAllDestPlayerEcho(echo playerMoveEcho) []byte {
 	payload := make([]byte, 3, 47)
 	payload[0] = 0x21
@@ -611,7 +611,7 @@ func serverAllDestPlayerEcho(echo playerMoveEcho) []byte {
 	payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(echo.angle))
 	payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(echo.speed))
 	payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(echo.orient))
-	// 官服尾双槽全样本恒定（5.5/9.9，语义未定位——疑似模板速度对），
+	// 外服私服尾双槽全样本恒定（5.5/9.9，语义未定位——疑似模板速度对），
 	// 按原样镜像策略钉死。
 	payload = binary.LittleEndian.AppendUint32(payload, 0x40B00000)
 	payload = binary.LittleEndian.AppendUint32(payload, 0x411CCCCD)
@@ -670,7 +670,7 @@ func (r *sceneRun) patrolTick(now time.Time) {
 		position := meta.schedule.positionAt(nowMs)
 		r.writeNpcTransform(entityID, worldcore.Transform{X: position.x, Y: position.y, Z: position.z, Orient: position.orient})
 		// 行为状态翻转（含首拍）：0x10 State(183)="walk"/"stand"，
-		// 与 0x21 同可见性下发（官服 e.pcapng 实证 §13.5）。
+		// 与 0x21 同可见性下发（外服私服 e.pcapng 实证 §13.5）。
 		if last, seen := r.npcMoveState[id]; !seen || last != motion.moving {
 			r.npcMoveState[id] = motion.moving
 			if frame, err := npcStatePropertyFrame(meta.id, meta.ownerID, motion.moving); err == nil {
@@ -743,12 +743,12 @@ func (r *sceneRun) patrolTick(now time.Time) {
 }
 
 // npcStatePropertyIndex 是 State 属性在 0x09 表中的索引（按名解析，
-// fork/官服两表 0–306 段无漂移均为 183，线型 7 字符串）。
+// fork/外服私服两表 0–306 段无漂移均为 183，线型 7 字符串）。
 var npcStatePropertyIndex = clientdata.MustPlayerProperty("State").Index // fork=183
 
 // npcStatePropertyFrame 生成 NPC 行为状态帧：0x10 单属性
-// State(183)="walk"/"stand"。官服 NPC 行为通道（2026-11-10 定版，
-// docs/官服登录帧对照与缺口清单.md §13.5）：全 pcap 值域
+// State(183)="walk"/"stand"。外服私服 NPC 行为通道（2026-11-10 定版，
+// docs/外服私服登录帧对照与缺口清单.md §13.5）：全 pcap 值域
 // stand×81 / walk×80 / ty_talk3×1，与 0x21 路点帧成对——起走发
 // walk、驻停发 stand；字节形态 e.pcapng 实证
 // `10 00 <obj> <owner> 0100 b700 06000000 "stand\0"`。

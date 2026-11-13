@@ -159,13 +159,13 @@ type StanceCycle struct {
 }
 
 // ChannelSpec 是 M.compile 的 channel 指令（通道型引导技参数，挑战
-// .pcapng 2026-11-12 官服定版语义；消费方 cmd/protocol-probe 的
+// .pcapng 2026-11-12 外服私服定版语义；消费方 cmd/protocol-probe 的
 // channelSkillSpec——SP 逐波扣、m169 挂/摘对由波次引擎按此驱动）。
 type ChannelSpec struct {
-	Waves          int64  // 波数上限（官服 8）
-	FirstWaveMS    int64  // 首波延迟（官服 180ms）
-	IntervalMS     int64  // 波间隔（官服 440ms）
-	SpPerWave      int64  // 每波扣怒（官服 10；0=免费波）
+	Waves          int64  // 波数上限（外服私服 8）
+	FirstWaveMS    int64  // 首波延迟（外服私服 180ms）
+	IntervalMS     int64  // 波间隔（外服私服 440ms）
+	SpPerWave      int64  // 每波扣怒（外服私服 10；0=免费波）
 	VictimBuff     string // 每波瞬挂瞬摘的受害者 m169 buff（buf_<技能ID>）
 	SelfBuff       string // 自身 m169 buff 对（buf_<技能ID>_03）
 	SelfBuffStatic int64  // BufferInfo 槽 CSV 首段 StaticData（9019=0x233B 实证）

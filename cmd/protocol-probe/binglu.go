@@ -7,8 +7,8 @@ package main
 // 数据下发：12 行密集（行号=槽位，槽序=binglubaseinfo.ini 节序：徒手/
 // 单刀/单剑/匕首/双刀/双剑/双刺/长棍/短棍/笛(ditze，UI 跳过但行保留)/
 // 暗器/奇门），列 [CurLevel,FillValue,MaxLevel]。零进度（全默认行）
-// 0 帧——官服对拍口径：零进度角色捕获无兵录行。面板域 MaxBingLuLevel@
-// 2154 = 各槽 cur 最大值；BingLuType@2153 恒 0（官服未观测到非零下发）。
+// 0 帧——外服私服对拍口径：零进度角色捕获无兵录行。面板域 MaxBingLuLevel@
+// 2154 = 各槽 cur 最大值；BingLuType@2153 恒 0（外服私服未观测到非零下发）。
 //
 // 使用链（C2S）：
 //   - 943 MODIFY_BINGLU(sub, item_id, binglu_type, add_num)：sub=0
@@ -95,7 +95,7 @@ func bingluDefaults() []bingluRow {
 	return rows
 }
 
-// bingluHasProgress 零进度判定（全默认行=0 帧，官服对拍口径）。
+// bingluHasProgress 零进度判定（全默认行=0 帧，外服私服对拍口径）。
 func bingluHasProgress(rows []bingluRow) bool {
 	for _, row := range rows {
 		if row.Cur > 0 || row.Fill > 0 || row.Max != bingluDefaultMaxLevel {

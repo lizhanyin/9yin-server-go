@@ -54,7 +54,7 @@ func TestNeiGongRageCapAddTiers(t *testing.T) {
 
 // TestRageCapFollowsEquippedNeiGong 换书改变有效上限:饱和、初始满值
 // 与 wire 上的 MaxSP(折算最终值 = 基础 80 + 档位加成)同步切换;
-// MaxSPAdd(583) 按官服口径从不出帧。
+// MaxSPAdd(583) 按外服私服口径从不出帧。
 func TestRageCapFollowsEquippedNeiGong(t *testing.T) {
 	player := newPlayerActor("tester", 0)
 	// 默认 ng_wd_001(一内+10):登录即满 90,wire MaxSP=90。

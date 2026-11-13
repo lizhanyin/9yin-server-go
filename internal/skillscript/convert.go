@@ -129,7 +129,7 @@ func (s *Scripts) convertChannelSpec(skillID string, value vm.Value) (*ChannelSp
 	victimBuff := modulevm.Field(table, "victim_buff").AsString()
 	selfBuff := modulevm.Field(table, "self_buff").AsString()
 	staticData, staticOK := modulevm.LuaInt(modulevm.Field(table, "self_buff_static"))
-	// 上限 32 波/60s：官服定版 8 波 440ms，留出调参余量同时拦截把
+	// 上限 32 波/60s：外服私服定版 8 波 440ms，留出调参余量同时拦截把
 	// AfterFunc 队列灌爆的笔误（waves=8000 之类）。
 	if !wavesOK || waves < 1 || waves > 32 {
 		s.host.WarnOnce(skillID+":channel", "skillscript: %s channel.waves %s 须为 1..32，整条丢弃",

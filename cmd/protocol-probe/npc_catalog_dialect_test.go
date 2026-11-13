@@ -10,10 +10,10 @@ import (
 
 // TestNPCCatalogLoadsUnderBothDialects 换表工程回归闸（§14.3-P3）：
 // NPC 目录在两种 0x09 表方言下都必须可建。2026-11-10 真机教训——
-// 官服方言下 VisibleNPCSpawnDefaultsCompatV1 的 ActionSoundMode(int32)
-// 撞官服表唯一现 string、placement 层 PosiX/Y/Z/Orient 为 fork-only 名，
+// 外服私服方言下 VisibleNPCSpawnDefaultsCompatV1 的 ActionSoundMode(int32)
+// 撞外服私服表唯一现 string、placement 层 PosiX/Y/Z/Orient 为 fork-only 名，
 // 两层硬错令 5413/5413 creator 实例尽没→选角链断连；修复后按当前表
-// 场景域过滤注入。fork 基线与官服模式均须 spawns>0。
+// 场景域过滤注入。fork 基线与外服私服模式均须 spawns>0。
 func TestNPCCatalogLoadsUnderBothDialects(t *testing.T) {
 	reg, err := newSceneNPCRegistry(defaultNPCTableDir, filepath.Dir(defaultNPCCreatorDir))
 	if err != nil {

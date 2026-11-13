@@ -11,7 +11,7 @@ serverRecordAddCells/serverRecordDelRow/serverRecordGridCell 互证 + c.pcapng
   - 0x12 行号在 @12（此前误读 @10 = rec 字段）；
   - 0x13 列在 @16、值在 @17（此前列=@12 格数低字节、值=@13:17 头字段）。
 旧 events/*.json 与由此生成的时间线 md 中相关读数引用时按此换算
-（docs/官服登录帧对照与缺口清单.md §四-9）。
+（docs/外服私服登录帧对照与缺口清单.md §四-9）。
 """
 import json
 import os
@@ -203,7 +203,7 @@ class Table09:
     """0x09 属性表：idx → (name, wire_type)。每个会话独立。
 
     无 0x09 帧的中途开抓会话，回退到 testdata/official_property_table_09_7074.txt
-    （自 c.pcapng 抽取的官服现行表，文档实证 7071/7074 双线一致）。
+    （自 c.pcapng 抽取的外服私服现行表，文档实证 7071/7074 双线一致）。
     """
 
     FALLBACK = r'E:\Workspace\project\game\9yin-go-server1\testdata\official_property_table_09_7074.txt'

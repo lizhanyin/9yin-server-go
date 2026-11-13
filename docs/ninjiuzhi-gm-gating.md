@@ -14,7 +14,7 @@
 
 `data/ninjiuzhi.json` 存档 > env `NINEYIN_JYZ_STEP`（>0 生效，钳 1..9）> requirements `initial_stage` > **6**。
 
-**Go 差异 ①**：缺省 6 而非 Java 的 1——保住登录 419/414 gamestep 帧与官服 c.pcapng #111（gamestep=6）逐字节一致的性质（2026-11-08 拍板）。要测 1..5 低阶段：设 env 或 requirements，再 reset 回落。
+**Go 差异 ①**：缺省 6 而非 Java 的 1——保住登录 419/414 gamestep 帧与外服私服 c.pcapng #111（gamestep=6）逐字节一致的性质（2026-11-08 拍板）。要测 1..5 低阶段：设 env 或 requirements，再 reset 回落。
 
 ## 数据源（均容缺，缺省 = 阶段 6、全部开放）
 
@@ -39,7 +39,7 @@
 
 ## 协议：阶段帧的三处下发
 
-- **登录链**（既有）：quest49 簇 → 419 步骤（`jyzGate.config()` 取当前阶段）→ data_record 58 行 → switch sync → 414 'gamestep' 收尾（帧序铁律不变，逐字节与官服对齐的基线 = 阶段 6）。
+- **登录链**（既有）：quest49 簇 → 419 步骤（`jyzGate.config()` 取当前阶段）→ data_record 58 行 → switch sync → 414 'gamestep' 收尾（帧序铁律不变，逐字节与外服私服对齐的基线 = 阶段 6）。
 - **GM 阶段生效**：发起连接内联写 419 → 414 gamestep → `worldInfo(0, "九阴志推进：阶段 N（name），江湖暗流涌动")` → `worldInfo(0, 状态文本)`（Java broadcastNinJiuZhiStage + GmActions 同源帧）。
 - **其他在线连接**：**Go 差异 ③**——不跨 goroutine 写连接（单写者纪律），由各会话 1s ticker 的 `stageRevision` 漂移检查补推同组帧（≤1s 延迟；`jyzGameStepSent` 门槛保证不会抢在 switch sync 前发 gamestep）。晚接入一致性由登录链天然保证。
 

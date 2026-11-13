@@ -1,8 +1,8 @@
 # rush_gap —— 冲锋自走差集取证工具链（2026-11-12）
 
-官服 `技能.pcapng` + `登陆-all.pcapng` 与本服对照的帧级取证工具。定版结论与
-差集清单见 `docs/冲锋自走触发链官服定版与差集.md`；背景文档
-`docs/技能pcapng移动交互与冲锋官服分析.md`、`docs/官服玩家档案0x28全量帧.md`。
+外服私服 `技能.pcapng` + `登陆-all.pcapng` 与本服对照的帧级取证工具。定版结论与
+差集清单见 `docs/冲锋自走触发链外服私服定版与差集.md`；背景文档
+`docs/技能pcapng移动交互与冲锋外服私服分析.md`、`docs/外服私服玩家档案0x28全量帧.md`。
 
 复用：`tools/pcap_analysis/`（pcaplib 帧解码 + decode 描述器）、`tools/op28/`
 （lzdec LZ 解压器）。全部脚本 `python -I` 运行、路径自举（不依赖 cwd）。

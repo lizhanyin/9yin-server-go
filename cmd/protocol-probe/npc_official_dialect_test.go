@@ -9,10 +9,10 @@ import (
 
 // TestOfficialNPCPropertiesFollowActiveTable 换表跟随实证：officialNPCProperties
 // 全部按名解析（PlayerProperty 末现），fork 模式落 fork 位（1590/1595/469…），
-// official2433 模式自动落官服位（1597/1602/471…，c.pcapng #1777 原号）。
+// official2433 模式自动落外服私服位（1597/1602/471…，c.pcapng #1777 原号）。
 func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 	// 本测试自带双方言断言：fork 段先显式切回 fork（进程可能以
-	// NINEYIN_PROPERTY_TABLE=official2433 启动做官服模式冒烟）。
+	// NINEYIN_PROPERTY_TABLE=official2433 启动做外服私服模式冒烟）。
 	clientdata.SwapPropertyTableForTest(t, "fork")
 	npc := testNPCSpawn()
 
@@ -36,7 +36,7 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 	for _, p := range officialProps {
 		officialIdx[p.Name] = p.Index
 	}
-	// 官服 #1777 16-prop 原号（NpcType 不发：fork schema 场景位已携带）。
+	// 外服私服 #1777 16-prop 原号（NpcType 不发：fork schema 场景位已携带）。
 	for name, want := range map[string]uint16{
 		"CollideRadius": 179, "State": 183, "Type": 181, "ActionSpeed": 214,
 		"BossLevel": 1597, "IDCard": 1602,
@@ -48,7 +48,7 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 		}
 	}
 
-	// 官服模式下 0x0D 帧逐字节可对官服表重解：IDCard 行原号 1602=0x0642。
+	// 外服私服模式下 0x0D 帧逐字节可对外服私服表重解：IDCard 行原号 1602=0x0642。
 	msg, err := npcAddObject(2, npc, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -57,12 +57,12 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 	if !bytes.Contains(msg, idcard) {
 		t.Fatal("official2433 NPC AddObject missing IDCard row at official index 1602")
 	}
-	// 官服模式下 schema 场景行数随头块换血缩水（OrderedProperties 按首现
-	// 解析，fork 场景域名在官服表缺席）——总计数不固定，只断言官服位行在。
+	// 外服私服模式下 schema 场景行数随头块换血缩水（OrderedProperties 按首现
+	// 解析，fork 场景域名在外服私服表缺席）——总计数不固定，只断言外服私服位行在。
 }
 
 // TestOfficialNPCPropertiesBoxGatherCollideGate 宝箱/采集族碰撞方言
-// （npc.pcapng 2026-11-11 官服 0x0D 定版）：NpcType=161/153 不发
+// （npc.pcapng 2026-11-11 外服私服 0x0D 定版）：NpcType=161/153 不发
 // CollideRadius，改发尾行 OpenRange=2.0/GatherRange=3.0；ConfigID 前缀
 // 兜底判族；常规 NPC 保留 collide 首行且 schema 真值直通。
 func TestOfficialNPCPropertiesBoxGatherCollideGate(t *testing.T) {
@@ -99,12 +99,12 @@ func TestOfficialNPCPropertiesBoxGatherCollideGate(t *testing.T) {
 		t.Fatalf("采集族应尾行 GatherRange=3.0, got ok=%v v=%v", ok, p.Value.F32)
 	}
 
-	// 常规 NPC：collide 保持首行且读 schema 真值（官服 0.5 档）。
+	// 常规 NPC：collide 保持首行且读 schema 真值（外服私服 0.5 档）。
 	normal := testNPCSpawn()
 	normal.resolved.Properties["CollideRadius"] = clientdata.PropertyValue{Value: clientdata.Float32Value(0.5)}
 	props = officialNPCProperties(normal)
 	if len(props) == 0 || props[0].Name != "CollideRadius" {
-		t.Fatal("常规 NPC 的 CollideRadius 应保持官服位块首行")
+		t.Fatal("常规 NPC 的 CollideRadius 应保持外服私服位块首行")
 	}
 	if props[0].Value.F32 != 0.5 {
 		t.Fatalf("CollideRadius schema 真值未直通: %v", props[0].Value.F32)

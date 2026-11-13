@@ -1,6 +1,6 @@
 package main
 
-// 冲锋全链官服帧级定版（f/g/b.pcapng 实证重写，2026-11-08，
+// 冲锋全链外服私服帧级定版（f/g/b.pcapng 实证重写，2026-11-08，
 // canonical 文档 §3.2.2——距离四桶模型）：
 //
 //	① 直收带 ≤ max(bind+2, 3.5)m：不走暂存链。直接执行簇 =
@@ -23,8 +23,8 @@ package main
 // 打击点2xyz]；朝向 = atan2(dx,dz) 指向目标；两打击点 = 玩家沿目标反方向
 // 距目标恒 4.04m/4.55m 处（f/g 四样本 r+dist 逐位拟合）。
 //
-// 已知历史误判（详见 canonical 文档 §四/§五）不赘述；官服路径上的兜底
-// （212 三分/6s 安全阀/过期释放）保留为静默兜底，仅客户端偏离官服方言
+// 已知历史误判（详见 canonical 文档 §四/§五）不赘述；外服私服路径上的兜底
+// （212 三分/6s 安全阀/过期释放）保留为静默兜底，仅客户端偏离外服私服方言
 // 时触发并打日志。
 
 import (
@@ -46,7 +46,7 @@ const (
 	clientCustomRushMoveUpload  int32 = 220 // 冲锋在途位移上报（4×f32，无 state 前缀）
 	clientCustomCastDashLanding int32 = 212 // RESUME_SKILL 冲锋落地（尾值 1=冲刺 / 0=步行）
 	clientCustomChangeWarning   int32 = 292 // CLIENT_CUSTOMMSG_CHANGEWARNING 预警切换
-	clientCustomRushHitConfirm  int32 = 915 // 冲锋命中确认上报（官服无回应，静默消费）
+	clientCustomRushHitConfirm  int32 = 915 // 冲锋命中确认上报（外服私服无回应，静默消费）
 	clientCustomCorpseQuery     int32 = 990 // 尸体拾取查询（同上，g 战后实证）
 	clientCustomMapNavigate     int32 = 266 // 地图寻路标记（技能.pcapng：起跑前 ~73ms 一次，S2C 零回应）
 
@@ -55,14 +55,14 @@ const (
 	rushStageMaxMeters          = 15.0               // RushRange 缺列时的回落（skill_catalog 引用，仅存档参考）
 	rushArrivalRadiusMeters     = 3.0                // 落地到达半径（212 上报距目标 ≤3m = 落地）
 	rushDirectCastSlackMeters   = 2.0                // bind 之上的直收余量
-	rushPendingWindow           = 30 * time.Second   // 暂存出招有效期（官服 msg25 窗口=30000ms）
+	rushPendingWindow           = 30 * time.Second   // 暂存出招有效期（外服私服 msg25 窗口=30000ms）
 	defaultRushBindDistance     = float32(1.5)       // skill_lock_data 缺行时的身前绑定距离
-	defaultGroundRushAction     = "qg_fastrun_2h_01" // 官服地面锁定冲锋动画
-	convertDashLevel            = 1                  // 冲刺档位（官服锁定冲锋 c61=1）
+	defaultGroundRushAction     = "qg_fastrun_2h_01" // 外服私服地面锁定冲锋动画
+	convertDashLevel            = 1                  // 冲刺档位（外服私服锁定冲锋 c61=1）
 	msgRushCommand              = 61                 // msg24 c1=61 冲刺/疾跑指令
 	// rushDashLiftMeters：c61 终点在玩家上报 y 之上的抬升（恒 +1.0 小跳弧线）。
 	rushDashLiftMeters = float32(1.0)
-	// rushDashTimeout：c61 发出后等待 212 的静默安全阀（官服无此机制）。
+	// rushDashTimeout：c61 发出后等待 212 的静默安全阀（外服私服无此机制）。
 	rushDashTimeout = 6 * time.Second
 	// rushAirborneYDeltaMeters：空中冲锋判定（world 内部 NPC y 口径未校准，
 	// 禁用中——一律走地面链）。
@@ -92,8 +92,8 @@ func rushDirectCastMeters(definition combatSkillDefinition) float64 {
 	return near
 }
 
-// rushWalkBandAcceptMeters：212 走带认可半径。官服 walk-in 直收的 212
-// 可落在 castRange+1 内任意点（技能.pcapng：hyjf02 212@5.81/5.58 官服
+// rushWalkBandAcceptMeters：212 走带认可半径。外服私服 walk-in 直收的 212
+// 可落在 castRange+1 内任意点（技能.pcapng：hyjf02 212@5.81/5.58 外服私服
 // 认可落地——原走带全宽 5.0 对 6 米技能过窄，会把合法步行落地误判成
 // 窗口外而驱动接近/取消）。
 func rushWalkBandAcceptMeters(pending *pendingCastState) float64 {
@@ -105,8 +105,8 @@ func rushWalkBandAcceptMeters(pending *pendingCastState) float64 {
 }
 
 // rushDashDialect：per-skill c61 授予方言（技能1.pcapng 16 次授予观测，
-// 2026-11-13 定版，docs/技能1pcapng多套路冲锋官服方言.md §1.2/§1.3）。
-// c61 是服务端指令，官服在 m220 上报距目标进入该技能授予窗时 +30~90ms
+// 2026-11-13 定版，docs/技能1pcapng多套路冲锋外服私服方言.md §1.2/§1.3）。
+// c61 是服务端指令，外服私服在 m220 上报距目标进入该技能授予窗时 +30~90ms
 // 下发；flag/动画随技能冲刺类别——lock 表三类动作 G=qg_fastrun(flag1)/
 // A=qg_fastruning_s(flag2)/W=swim_rush，0h/2h 后缀=空手/持械。观测窗=各
 // 技能 220 上报距目标带；未列技能回落 G 类（skill_lock_data
@@ -139,7 +139,7 @@ func rushDashDialectFor(skillID string) rushDashDialect {
 	return rushDashDialect{windowLo: rushDashWindowLoMeters(), windowHi: rushDashTriggerMeters()}
 }
 
-// 冲锋簇属性索引（按名映射自本服表；官服现行表同名字 +2 偏移）。
+// 冲锋簇属性索引（按名映射自本服表；外服私服现行表同名字 +2 偏移）。
 var (
 	propRushCantMove        = clientdata.MustPlayerProperty("CantMove").Index        // CantMove Byte（fork=203）
 	propRushPauseSkill      = clientdata.MustPlayerProperty("PauseSkill").Index      // PauseSkill String（fork=220）
@@ -266,7 +266,7 @@ func (p *playerActor) resumeSettleSkipSnapshot() bool {
 // rushPressGate 冲锋族按压入口闸：beginSkillUse 非 settled 分支的锁招/
 // 个人 CD / 公共 GCD 三闸只读版。冲锋链在 211 入口提前分叉（直收 return /
 // 暂存挂起），不补这道闸则四个结算点均无 CD 校验（commitRushDashCosts
-// 只写不查）。MP/SP/轻功不在此查——仍按官服模型留在执行提交点。
+// 只写不查）。MP/SP/轻功不在此查——仍按外服私服模型留在执行提交点。
 func (p *playerActor) rushPressGate(definition combatSkillDefinition, now time.Time) (bool, string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -285,7 +285,7 @@ func (p *playerActor) rushPressGate(definition combatSkillDefinition, now time.T
 
 // commitRushDashCosts 在执行提交点（c61 / 直收簇 / 步行落地簇）结算
 // CD/MP/SP 并做出招簿记；includeQingGong 仅冲刺路径为真（近距直收与步行
-// 落地官服均不扣轻功点——g 直收簇无 QingGongPoint 帧、b 步行落地同）。
+// 落地外服私服均不扣轻功点——g 直收簇无 QingGongPoint 帧、b 步行落地同）。
 func (p *playerActor) commitRushDashCosts(pending *pendingCastState, now time.Time, includeQingGong bool) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -301,7 +301,7 @@ func (p *playerActor) commitRushDashCosts(pending *pendingCastState, now time.Ti
 	}
 	if includeQingGong && pending.qgCost > 0 {
 		// 轻功点不足不硬闸（65533 会话实证：QG<10 时整条冲锋链被拒）——
-		// 尽力扣，扣不动跳过。官服 c61 簇的 QG 扣是表现帧，无不足拒绝样本。
+		// 尽力扣，扣不动跳过。外服私服 c61 簇的 QG 扣是表现帧，无不足拒绝样本。
 		_, _ = p.qinggong.Use(pending.qgCost, now)
 	}
 	if !p.vitals.SpendMP(pending.mpCost) {
@@ -355,7 +355,7 @@ func curSkillIDFrame(skillID string) ([]byte, error) {
 	return objectSingleProperty(playerObjectID, playerOwnerID, propCurSkillID, "CurSkillID", clientdata.StringValue(skillID))
 }
 
-// objectSingleProperty 任意对象的 n=1 单属性 0x10 帧（官服簇逐帧单属性，
+// objectSingleProperty 任意对象的 n=1 单属性 0x10 帧（外服私服簇逐帧单属性，
 // 绝不整帧重推——坐姿/冲锋态下整帧重推会重入动画）。
 func objectSingleProperty(objectID, ownerID uint32, index uint16, name string, value clientdata.Value) ([]byte, error) {
 	return sceneObjectProperties(objectID, ownerID, 0, []clientdata.IndexedProperty{
@@ -380,7 +380,7 @@ func rushBindPoint(target worldcore.Transform, x, z float32, bind float32) (floa
 	return target.X + float32(float64(dx)/horiz)*bind, target.Y, target.Z + float32(float64(dz)/horiz)*bind
 }
 
-// orientTowardTarget 官服朝向公式：atan2(dx, dz) 指向目标（msg337/msg19
+// orientTowardTarget 外服私服朝向公式：atan2(dx, dz) 指向目标（msg337/msg19
 // 共用；f 3.758 / g 2.84/2.414 / b 1.638 四样本逐位验证）。
 func orientTowardTarget(x, z, targetX, targetZ float32) float32 {
 	return float32(math.Atan2(float64(targetX-x), float64(targetZ-z)))
@@ -395,12 +395,12 @@ func rushTargetHitPrecastFrame(targetID, targetOwner uint32) ([]byte, error) {
 	)
 }
 
-// segmentDamageOpenFrame 即 msg19 段伤害起始帧（官服 14 值）：
+// segmentDamageOpenFrame 即 msg19 段伤害起始帧（外服私服 14 值）：
 //
 //	[19, obj(攻), obj(目), str 技能, i32 v, i32 v,
 //	 f32 打击点1 x,y,z, f32 朝向, f32 -2.5, f32 打击点2 x,y,z]
 //
-// 打击点=玩家沿「目标→玩家」延长线、距目标恒 4.04/4.55m（官服拟合常数）。
+// 打击点=玩家沿「目标→玩家」延长线、距目标恒 4.04/4.55m（外服私服拟合常数）。
 func segmentDamageOpenFrame(targetID, targetOwner uint32, skillID string, value int32,
 	x, y, z, orient float32, distance float64) ([]byte, error) {
 	sin, cos := math.Sin(float64(orient)), math.Cos(float64(orient))
@@ -477,7 +477,7 @@ func rushCastStateFrame() ([]byte, error) {
 
 // ---- 211 暂存受理（桶②③④） ----
 
-// stageRushCast 冲锋暂存受理（官服序，g/f 实证）：
+// stageRushCast 冲锋暂存受理（外服私服序，g/f 实证）：
 //
 //	首发：[0x12 清扫过期 CD 行] + CurSkillID + CurSkillTarget + msg25 +
 //	      PauseSkill + msg707[15]
@@ -529,7 +529,7 @@ func stageRushCast(link sceneMessageConnection, player *playerActor, definition 
 			}},
 		)
 	}
-	// 惰性清扫过期 CD 行（官服在受理簇头发 0x12，f 7.764/15.649 实证）。
+	// 惰性清扫过期 CD 行（外服私服在受理簇头发 0x12，f 7.764/15.649 实证）。
 	for _, sweep := range player.sweepExpiredCooldownRows(now) {
 		builders = append(builders, frameBuilder{"cd-sweep", func() ([]byte, error) { return sweep, nil }})
 	}
@@ -553,10 +553,10 @@ func stageRushCast(link sceneMessageConnection, player *playerActor, definition 
 	}
 	// msg25[30000,'skill_pause']（P0f 鉴别实验结论：撤除后 64006 轮仍零武装
 	// 且体验更差，已回滚恢复）。
-	// **stage 期不发 m24 c61**（技能1.pcapng 2026-11-13 定版：官服受理簇
+	// **stage 期不发 m24 c61**（技能1.pcapng 2026-11-13 定版：外服私服受理簇
 	// 零 m24；c61 是服务端指令，仅在 m220 上报进技能授予窗时由
 	// tryRushArrival→issueRushDash 下发——P0c/P0e 的受理期 stage-dash 档2
-	// 系 Java 方言误植，真机实证客户端零消费且非官服帧序）。
+	// 系 Java 方言误植，真机实证客户端零消费且非外服私服帧序）。
 	builders = append(builders,
 		frameBuilder{"msg25", func() ([]byte, error) { return skillPauseFrame(int32(rushPendingWindow / time.Millisecond)) }},
 	)
@@ -569,8 +569,8 @@ func stageRushCast(link sceneMessageConnection, player *playerActor, definition 
 	builders = append(builders, frameBuilder{"msg707", func() ([]byte, error) { return rushCastStateFrame() }})
 	// 状态四连（586/645/646/750）：恢复。此前「暂撤」的对照推理（55052
 	// 无四连会走 / 64785 有四连不自走）因果倒置——那批不自走会话处于
-	// 受理簇方言错位期。技能.pcapng 官服三证（32.642/415.577/1290.300）
-	// 钉死：官服每次受理簇后 +42ms 必发四连，且客户端同毫秒起跑——
+	// 受理簇方言错位期。技能.pcapng 外服私服三证（32.642/415.577/1290.300）
+	// 钉死：外服私服每次受理簇后 +42ms 必发四连，且客户端同毫秒起跑——
 	// 四连与自走共存，是簇的组成部分而非干扰。maybeRushStatePing 的
 	// 在途 3s 周期重发仍停用（最小变量，先验簇尾四连）。
 	for _, ping := range officialStatePingFrames() {
@@ -602,11 +602,11 @@ func stageRushCast(link sceneMessageConnection, player *playerActor, definition 
 
 // rushWalkKickFrame 冲锋走踢帧：双入口 0x21（44B playerMoveEcho 条目形，
 // 技能.pcapng f#0202 逐槽精解 2026-11-12 二轮勘误）：**两入口=同一目的
-// 地**（官服样本 947.8/947.9≈bind 点重复两次，非「当前位→目的地」——
+// 地**（外服私服样本 947.8/947.9≈bind 点重复两次，非「当前位→目的地」——
 // 一轮的 A→B 双点解读系字节错位误读），angle/speed/orient/尾槽两入口
-// 全同；speed=4.5、orient 恒 **-π**（官服两样本 -3.14，非朝向）、尾双槽
+// 全同；speed=4.5、orient 恒 **-π**（外服私服两样本 -3.14，非朝向）、尾双槽
 // 5.5/**9.8**(0x411CCCCD)、intentID 两入口均 0xa0000f01（寻路族）。
-// 官服踢后 0.485s 客户端即起走（其间 s2c 零帧）——踢帧单独触发走位。
+// 外服私服踢后 0.485s 客户端即起走（其间 s2c 零帧）——踢帧单独触发走位。
 // 注意：踢帧被客户端消费要求钟基正确（m294=m924 单路应答），错方言
 // 下踢帧被当回显吃掉不执行（凌晨三轮实证）。
 func rushWalkKickFrame(castAt, target worldcore.Transform, bind float32) []byte {
@@ -620,11 +620,11 @@ func rushWalkKickFrame(castAt, target worldcore.Transform, bind float32) []byte 
 		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(bindX))
 		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(bindY))
 		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(bindZ))
-		payload = binary.LittleEndian.AppendUint32(payload, 0x4096268F) // slot3 官服四样本恒 4.689（常量槽非角度，三轮真机+字节 diff 定版）
+		payload = binary.LittleEndian.AppendUint32(payload, 0x4096268F) // slot3 外服私服四样本恒 4.689（常量槽非角度，三轮真机+字节 diff 定版）
 		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(4.5))
-		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(-math.Pi)) // 官服恒 -π
-		payload = binary.LittleEndian.AppendUint32(payload, 0x40B00000)                // 5.5 官服恒定
-		payload = binary.LittleEndian.AppendUint32(payload, 0x411CCCCD)                // 9.8 官服恒定
+		payload = binary.LittleEndian.AppendUint32(payload, math.Float32bits(-math.Pi)) // 外服私服恒 -π
+		payload = binary.LittleEndian.AppendUint32(payload, 0x40B00000)                // 5.5 外服私服恒定
+		payload = binary.LittleEndian.AppendUint32(payload, 0x411CCCCD)                // 9.8 外服私服恒定
 		payload = binary.LittleEndian.AppendUint32(payload, 0xa0000f01)                // 寻路族 intentID 两入口同值
 	}
 	return payload
@@ -640,7 +640,7 @@ func (p *playerActor) noteRushStatePing(now time.Time) {
 
 // ---- 直收执行簇（桶①） ----
 
-// executeRushDirect 近距直收执行（官服 g 定版，无暂存链）：
+// executeRushDirect 近距直收执行（外服私服 g 定版，无暂存链）：
 // [0x12 清扫] → CurSkillID → CurSkillTarget → msg284 → NPC.LogicState=1 →
 // fight_relation 行0 → 玩家.LogicState=1 → CD 双行 → MPRatio → MP → 0x1F →
 // msg337 → LastWGAttackNpc → c1=40 → msg19 → CantMove=1 → CantParry=1。
@@ -670,7 +670,7 @@ func executeRushDirect(link sceneMessageConnection, player *playerActor, world *
 	if state.MaxMP > 0 {
 		mpRatio = state.MP * 100 / state.MaxMP
 	}
-	// 官服直收簇逐帧序（g 22.157 定版）：[0x12 清扫] → CurSkillID →
+	// 外服私服直收簇逐帧序（g 22.157 定版）：[0x12 清扫] → CurSkillID →
 	// CurSkillTarget → msg284 → NPC.LogicState → fight_relation →
 	// 玩家.LogicState → CD 双行 → MPRatio → MP → 0x1F → msg337 →
 	// LastWGAttackNpc → c1=40 → msg19 → CantMove=1 → CantParry=1。
@@ -765,7 +765,7 @@ func executeRushDirect(link sceneMessageConnection, player *playerActor, world *
 			return true, err
 		}
 	}
-	// 状态四连（官服 367.971 直收簇 → 368.020 +49ms 四连实证；与受理簇
+	// 状态四连（外服私服 367.971 直收簇 → 368.020 +49ms 四连实证；与受理簇
 	// 尾四连同源，恢复理由见 stageRushCast 注释）。
 	for _, ping := range officialStatePingFrames() {
 		if ping == nil {
@@ -790,9 +790,9 @@ func executeRushDirect(link sceneMessageConnection, player *playerActor, world *
 
 // ---- c61 冲刺簇（桶③） ----
 
-// issueRushDash 最终冲刺指令（官服 c61 簇序，f 42.948 定版）：
+// issueRushDash 最终冲刺指令（外服私服 c61 簇序，f 42.948 定版）：
 // c61 → CantMove=1 → CantParry=1 → CD 双行（官方方言）→ MPRatio → MP →
-// QingGongPoint。终点 y=玩家上报 y+1.0；此刻不发 0x1F（官服锚只在落地簇）。
+// QingGongPoint。终点 y=玩家上报 y+1.0；此刻不发 0x1F（外服私服锚只在落地簇）。
 func issueRushDash(link sceneMessageConnection, player *playerActor, target worldcore.Transform,
 	fromX, fromY, fromZ float32, remote string) error {
 	if player.rushDashIssuedSnapshot() {
@@ -917,11 +917,11 @@ func issueRushDash(link sceneMessageConnection, player *playerActor, target worl
 
 // ---- 212 落地 ----
 
-// handleCastDashLanding 官服 212 方言：
+// handleCastDashLanding 外服私服 212 方言：
 // [212, x, y, z, 朝向, 尾值]——尾 1=冲刺落地 / 0=步行落地（b 51.348 实证），
-// 两者都是落地信号（距目标 ≤3m 即落地）。无暂存 212 官服零回应（静默）。
+// 两者都是落地信号（距目标 ≤3m 即落地）。无暂存 212 外服私服零回应（静默）。
 // 212 三分（远距未冲=就地执行请求→发 c61；远距已冲=安全释放）保留为
-// 静默兜底——仅客户端偏离官服方言时触发。
+// 静默兜底——仅客户端偏离外服私服方言时触发。
 func handleCastDashLanding(link sceneMessageConnection, player *playerActor, world *sceneLifecycle,
 	custom clientCustomMessage, remote string) (bool, error) {
 	if len(custom.Values) == 0 || custom.Values[0].Type != 2 || custom.Values[0].Int32 != clientCustomCastDashLanding {
@@ -975,7 +975,7 @@ func handleCastDashLanding(link sceneMessageConnection, player *playerActor, wor
 		resumePendingCastAt(link, player, world, x, y, z, orient, "dash-landing", remote)
 		return true, nil
 	}
-	// 官服对无暂存 212 零回应（b 51.4+ 连发 15 条 212[尾0] 全程静默）；
+	// 外服私服对无暂存 212 零回应（b 51.4+ 连发 15 条 212[尾0] 全程静默）；
 	// 位置收编仍按上报对账，不发帧。
 	if world != nil && world.wireID != 0 {
 		world.run.updateMemberPosition(world.wireID, role.Position{X: x, Y: y, Z: z, Orient: orient})
@@ -1030,7 +1030,7 @@ func cancelPendingCast(link sceneMessageConnection, player *playerActor,
 	}
 }
 
-// resumePendingCastAt 落地续招本体（官服定版序，f 43.233 冲刺落地 /
+// resumePendingCastAt 落地续招本体（外服私服定版序，f 43.233 冲刺落地 /
 // b 51.387 步行落地双形态）：
 //
 //	[冲刺] CantMove=0 → CantParry=0
@@ -1047,7 +1047,7 @@ func resumePendingCastAt(link sceneMessageConnection, player *playerActor, world
 	}
 	pending := player.consumePendingCast(time.Now().UTC())
 	if pending == nil {
-		// 无暂存出招（过期/重复落地）：官服零回应（b 实证），静默对账。
+		// 无暂存出招（过期/重复落地）：外服私服零回应（b 实证），静默对账。
 		log.Printf("%s: dash landing without live pending cast (expired or none) via %s", remote, trigger)
 		return nil
 	}
@@ -1056,7 +1056,7 @@ func resumePendingCastAt(link sceneMessageConnection, player *playerActor, world
 	orientToTarget := orientTowardTarget(x, z, geometry.X, geometry.Z)
 	distance := math.Sqrt(float64(square(x-geometry.X) + square(z-geometry.Z)))
 	model, _ := world.combatNPCModel(pending.targetID)
-	// 步行落地（未结算）：CD/MP 在落地簇内结算（b 51.387 官服序）。
+	// 步行落地（未结算）：CD/MP 在落地簇内结算（b 51.387 外服私服序）。
 	// 字面/零成本定义（自增益测试目标）跳过结算与 CD 行。
 	settledNow := false
 	if !pending.settled && (pending.cooldownCategory != 0 || pending.mpCost > 0 || pending.personalCD > 0) {
@@ -1172,7 +1172,7 @@ func resumePendingCastAt(link sceneMessageConnection, player *playerActor, world
 			return err
 		}
 	}
-	// 状态四连（官服 416.162 落地簇 → 416.321 +159ms 四连实证）。
+	// 状态四连（外服私服 416.162 落地簇 → 416.321 +159ms 四连实证）。
 	for _, ping := range officialStatePingFrames() {
 		if ping == nil {
 			continue
@@ -1213,7 +1213,7 @@ func handleMovementUpload(link sceneMessageConnection, player *playerActor, worl
 	if len(values) < 6 || values[3].Type != 4 || values[4].Type != 4 || values[5].Type != 4 {
 		return true, nil
 	}
-	// 官服 msg15 全形态（走 82B / 停 67B / 跳 105B）idx3..5 恒为 x,y,z，
+	// 外服私服 msg15 全形态（走 82B / 停 67B / 跳 105B）idx3..5 恒为 x,y,z，
 	// 非冲锋在途也收编位置（技能.pcapng 定版：0x21 回显含玩家条目 =
 	// 服务端收编证据；追击 NPC 测距依赖服务端侧玩家坐标）。
 	x, y, z := values[3].Float32, values[4].Float32, values[5].Float32
@@ -1225,11 +1225,11 @@ func handleMovementUpload(link sceneMessageConnection, player *playerActor, worl
 	if player.rushInFlightSnapshot() {
 		if player.rushDashIssuedSnapshot() {
 			// c61 冲刺段在途位移：不回显，消费方为 212/c61 落地链
-			//（官服方言）。
+			//（外服私服方言）。
 			tryRushArrival(link, player, world, x, y, z, orient, remote)
 			return true, nil
 		}
-		// 受理后的技能接近段（c61 未发）：官服逐帧 0x21 玩家回显 +
+		// 受理后的技能接近段（c61 未发）：外服私服逐帧 0x21 玩家回显 +
 		// 走停迁移四连照发（jn 34.105/34.833 接近段持续 0x21 样本；
 		// 64785 实证缺四连客户端中途停滞不自走），位置照常收编进
 		// 到达检测。
@@ -1237,22 +1237,22 @@ func handleMovementUpload(link sceneMessageConnection, player *playerActor, worl
 		tryRushArrival(link, player, world, x, y, z, orient, remote)
 		return true, nil
 	}
-	// 官服移动应答方言（技能.pcapng §一）：逐帧 0x21 玩家回显 +
+	// 外服私服移动应答方言（技能.pcapng §一）：逐帧 0x21 玩家回显 +
 	// 走↔停迁移状态四连——客户端等这对帧才执行点击移动。
 	echoPlayerMoveIntent(link, player, values, x, y, z, remote)
 	return true, nil
 }
 
-// echoPlayerMoveIntent 官服移动应答（技能.pcapng §一 全样本实证）：每帧
+// echoPlayerMoveIntent 外服私服移动应答（技能.pcapng §一 全样本实证）：每帧
 // 寻路族（id 高 16 位 0xA000——点击地面/地图点击/技能接近）与 WASD 族
 // （0x0000/0x3000）的 state7/4/6/8 回显一帧单条目 0x21（走帧
 // dest=(idx6, y, idx7)、角度=atan2(destX−x, destZ−z)、速度=idx8、朝向=
 // idx9；停帧 dest=上报终点、角度=朝向增量 idx6、速度/朝向=0）；state5
-// 跳跃双帧不回显。state7↔4 走停迁移沿先补发官服状态四连
-// （586/645/646/750——官服对每次点击起跑/到位停帧 +0~80ms 必发，
-// 64785 会话实证缺它客户端停滞不自走），同态重发只回 0x21（官服追怪
+// 跳跃双帧不回显。state7↔4 走停迁移沿先补发外服私服状态四连
+// （586/645/646/750——外服私服对每次点击起跑/到位停帧 +0~80ms 必发，
+// 64785 会话实证缺它客户端停滞不自走），同态重发只回 0x21（外服私服追怪
 // 改向五连重报无 ping）。冲锋在途段不回显（消费方为 tryRushArrival，
-// 官服该段位移走 c61/212 落地链）。
+// 外服私服该段位移走 c61/212 落地链）。
 func echoPlayerMoveIntent(link sceneMessageConnection, player *playerActor, values []clientCustomValue,
 	x, y, z float32, remote string) {
 	if len(values) < 7 || values[1].Type != 2 || values[2].Type != 2 || values[6].Type != 4 {
@@ -1263,7 +1263,7 @@ func echoPlayerMoveIntent(link sceneMessageConnection, player *playerActor, valu
 	echo := playerMoveEcho{objectID: playerObjectID, ownerID: playerOwnerID, intentID: intentID}
 	walking := false
 	switch state {
-	case 7, 6, 8: // 行进态（6/8=下落/滑翔变体，官服同回显）
+	case 7, 6, 8: // 行进态（6/8=下落/滑翔变体，外服私服同回显）
 		if len(values) < 8 || values[7].Type != 4 {
 			return
 		}
@@ -1274,7 +1274,7 @@ func echoPlayerMoveIntent(link sceneMessageConnection, player *playerActor, valu
 		}
 		echo.orient = movementUploadOrient(values)
 		walking = true
-	case 4: // 停帧：官服角度槽=朝向增量（0.07→ang=0.07 三证）
+	case 4: // 停帧：外服私服角度槽=朝向增量（0.07→ang=0.07 三证）
 		echo.destX, echo.destY, echo.destZ = x, y, z
 		echo.angle = values[6].Float32
 	default:
@@ -1300,8 +1300,8 @@ func echoPlayerMoveIntent(link sceneMessageConnection, player *playerActor, valu
 	}
 }
 
-// moveEchoAngle 官服移动角：atan2(dx, dz) 归一 [0, 2π)（技能.pcapng
-// 官服样本 0.07/2.12/5.21/4.69 四证——负角补 2π，如 -1.076→5.21）。
+// moveEchoAngle 外服私服移动角：atan2(dx, dz) 归一 [0, 2π)（技能.pcapng
+// 外服私服样本 0.07/2.12/5.21/4.69 四证——负角补 2π，如 -1.076→5.21）。
 func moveEchoAngle(dx, dz float32) float32 {
 	angle := float32(math.Atan2(float64(dx), float64(dz)))
 	if angle < 0 {
@@ -1366,10 +1366,10 @@ func useSkillGroundPointTransform(custom clientCustomMessage) (worldcore.Transfo
 }
 
 // issueAreaGroundRushDash 范围型点地受理即冲刺（技能.pcapng 1216.284
-// 官服簇：0x1F 锚 → c61（+48ms），**无 CantMove/CantParry（锁定 c61
+// 外服私服簇：0x1F 锚 → c61（+48ms），**无 CantMove/CantParry（锁定 c61
 // 专属）、无 msg25/PauseSkill**；CD/MP/伤害仍由主出招路径即时结算——
-// 官服伤害在落地 212 后 ~400ms，单机无对拍方先即时，真机验证后再官服
-// 化）。~400ms 后补 msg26 + 0x1F + msg337 落地三件套（近似官服 1216.720
+// 外服私服伤害在落地 212 后 ~400ms，单机无对拍方先即时，真机验证后再外服私服
+// 化）。~400ms 后补 msg26 + 0x1F + msg337 落地三件套（近似外服私服 1216.720
 // 落地簇，位置取 c61 终点）。
 func issueAreaGroundRushDash(link sceneMessageConnection, player *playerActor,
 	definition combatSkillDefinition, castAt, ground worldcore.Transform, remote string) {
@@ -1383,7 +1383,7 @@ func issueAreaGroundRushDash(link sceneMessageConnection, player *playerActor,
 		level = 1
 		action = defaultGroundRushAction
 	}
-	// c61 终点 = 地面点身前 bind（官服 1216 dash=dist-1.5、1275 同式）。
+	// c61 终点 = 地面点身前 bind（外服私服 1216 dash=dist-1.5、1275 同式）。
 	destX, _, destZ := rushBindPoint(ground, castAt.X, castAt.Z, defaultRushBindDistance)
 	destY := castAt.Y + rushDashLiftMeters
 	if err := link.WriteFrame(serverLocation(playerObjectID, playerOwnerID, castAt)); err != nil {
@@ -1437,7 +1437,7 @@ func handleRushMovementUpload(link sceneMessageConnection, player *playerActor, 
 	if len(values) > 4 && values[4].Type == 4 {
 		orient = values[4].Float32
 	}
-	// msg220 [220, x, y, z, orient?]：位置同样收编（官服仅在接近段发出，
+	// msg220 [220, x, y, z, orient?]：位置同样收编（外服私服仅在接近段发出，
 	// 收编无害且保持与 msg15 同口径）。
 	absorbClientPosition(world, values[1].Float32, values[2].Float32, values[3].Float32, orient)
 	if player == nil || !player.rushInFlightSnapshot() {
@@ -1450,8 +1450,8 @@ func handleRushMovementUpload(link sceneMessageConnection, player *playerActor, 
 // tryRushArrival 移动上报驱动的冲刺探测：仅当距目标进入冲刺窗口
 // (GRushRange 5.0, +Add 6.5] 时发 c61（g 5.54 触发 / b 3.61 不触发钉死
 // 窗口下界）；低于下界由客户端自行走进 ≤3m 发 212[尾0] 步行落地。
-// 冲刺已发出后静默——落地只认 212。接近在途时按官服节奏 ~3s 重发
-// 状态四连（586/645/646/750——官服全程周期下发，接近段保持喂养）。
+// 冲刺已发出后静默——落地只认 212。接近在途时按外服私服节奏 ~3s 重发
+// 状态四连（586/645/646/750——外服私服全程周期下发，接近段保持喂养）。
 func (p *playerActor) maybeRushStatePing(link sceneMessageConnection, now time.Time) {
 	p.mu.Lock()
 	due := now.Sub(p.rushStatePingAt) >= 3*time.Second
@@ -1485,7 +1485,7 @@ func tryRushArrival(link sceneMessageConnection, player *playerActor, world *sce
 		}
 		return
 	}
-	// maybeRushStatePing 停用（对照构建：官服四连是行走上报的回执，
+	// maybeRushStatePing 停用（对照构建：外服私服四连是行走上报的回执，
 	// 无走不发；多余下发疑似破坏接近态——定位中）。
 	target, ok := world.combatNPCTransform(pending.targetID)
 	if !ok {
@@ -1501,7 +1501,7 @@ func tryRushArrival(link sceneMessageConnection, player *playerActor, world *sce
 	if player.rushDashIssuedSnapshot() {
 		return
 	}
-	// 授予窗 per-skill（技能1.pcapng 2026-11-13：官服对 m220 进窗应答 c61，
+	// 授予窗 per-skill（技能1.pcapng 2026-11-13：外服私服对 m220 进窗应答 c61，
 	// 窗外零应答——hyjf02 220@8.1 授予 / @6.1、7.3 走入直收；xytf_sky 窗
 	// 达 14m）。未列表回落 (GRushRange, +Add]。
 	windowLo, windowHi := pending.dashWindowLo, pending.dashWindowHi
@@ -1510,7 +1510,7 @@ func tryRushArrival(link sceneMessageConnection, player *playerActor, world *sce
 	}
 	if distance > windowHi || distance <= windowLo {
 		// 官方方言：接近段由客户端自走（jn 32.642 受理簇同毫秒 state7；
-		// 65210 会话 23:02:27 官服簇下方客户端实发自走帧实证）。旧的
+		// 65210 会话 23:02:27 外服私服簇下方客户端实发自走帧实证）。旧的
 		// 服务端 c61/0x1F 驱动（「fork 客户端从未自走」2026-11-08 定论
 		// 的产物）会把玩家一下一下瞬移（23:02 真机实证），已撤除——
 		// 等客户端走进冲刺窗口由 issueRushDash 接手。

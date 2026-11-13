@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// 骑乘技能受理簇（mount_skills.go）：官服 official_players 抓包方言。
+// 骑乘技能受理簇（mount_skills.go）：外服私服 official_players 抓包方言。
 // 表链用 scanINISections 流式内核直喂字符串夹具（绕过资源仓）；簇帧
 // 断言走 captureMessageConnection。
 
@@ -68,7 +68,7 @@ func TestWriteRideSkillCastClusterChongci(t *testing.T) {
 
 func TestWriteRideSkillCastClusterJiben(t *testing.T) {
 	conn := &captureMessageConnection{}
-	// jiben flow 1216 无 HitEffect → 官服三验均无 msg24 54 帧。
+	// jiben flow 1216 无 HitEffect → 外服私服三验均无 msg24 54 帧。
 	dialect := rideSkillDialect{cooldown: 60000, flow: 1216}
 	if err := writeRideSkillCastCluster(conn, "riding_jiben", dialect); err != nil {
 		t.Fatalf("cluster: %v", err)

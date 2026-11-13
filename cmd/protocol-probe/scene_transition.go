@@ -11,11 +11,11 @@ import (
 )
 
 // sendEntryScene 0x0B 场景档案。2026-11-10 真机教训：**0x0B 属性 idx
-// 按连接收到的 0x09 表解析**——官服样本（c/登陆.pcapng）用官服表 idx
+// 按连接收到的 0x09 表解析**——外服私服样本（c/登陆.pcapng）用外服私服表 idx
 // 1447/1448 写 ConfigID/Resource，但本服客户端收到的是本服表（idx7=
-// ConfigID/idx8=Resource）；照抄官服 idx 会把 Config 解析成 ClineNpcFile
+// ConfigID/idx8=Resource）；照抄外服私服 idx 会把 Config 解析成 ClineNpcFile
 // → 场景加载失败（真机实证，已回滚）。fork 版布局在本服表下自洽。
-// 官服版与本版的实质差异只剩：attrCount 4 vs 3（官服多 idx178 Name 常量
+// 外服私服版与本版的实质差异只剩：attrCount 4 vs 3（外服私服多 idx178 Name 常量
 // 段+idx1468 u16）、尾部 99/MaxVisuals、场景号=每次进场新流水（非查表
 // key，无害）。寻路不初始化的根因不在 0x0B 属性 idx——继续排查。
 func sendEntryScene(conn sceneMessageConnection, scene role.Scene) error {
@@ -29,7 +29,7 @@ func sendEntryScene(conn sceneMessageConnection, scene role.Scene) error {
 	binary.LittleEndian.PutUint32(entry[9:], playerOwnerID)
 	binary.LittleEndian.PutUint16(entry[13:], 3)
 	// ConfigID/Resource 按名经场景域（首现）解析：fork 表落 7/8、
-	// 官服 2433 表天然落 1447/1448（=官服 op0B 样本原号，上方注释的
+	// 外服私服 2433 表天然落 1447/1448（=外服私服 op0B 样本原号，上方注释的
 	// 真机教训由此消解——两方言各自与所发表自洽）。
 	entry = appendStringProperty(entry, clientdata.MustSceneProperty("ConfigID").Index, scene.Config)
 	entry = appendStringProperty(entry, clientdata.MustSceneProperty("Resource").Index, scene.Resource)

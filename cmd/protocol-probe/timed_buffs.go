@@ -1,13 +1,13 @@
 package main
 
-// 限时 buff 域（2026-11-10）：超长时限增益（官服登录期 buf_baosd_02 族）
+// 限时 buff 域（2026-11-10）：超长时限增益（外服私服登录期 buf_baosd_02 族）
 // 的存储、到期结算与带到期时间的下发。
 //
 //   - 存储：role_timed_buffs 快照表（migrations/0019，role_currency 族
 //     同形：role_id PK / snapshot JSON / version / updated_at），条目含
 //     到期时刻（RFC3339 UTC）——重启/断线不丢，登录按未过期集合重放。
-//   - 下发（两层，官服口径）：
-//       ① m169 九值时间形态（glideTimedBuffFrame 同构，官服 52795
+//   - 下发（两层，外服私服口径）：
+//       ① m169 九值时间形态（glideTimedBuffFrame 同构，外服私服 52795
 //          buf_qg_light 实证）：v7 = i64 到期 unix 毫秒——「数据下发中
 //          也有到期时间」的直接载体；
 //       ② BufferListStr 玩家属性（0x0D/vitals 档自带）：条目尾段即
@@ -42,7 +42,7 @@ type timedBuffEntry struct {
 	ConfigID  string `json:"configId"`
 	Level     int32  `json:"level"`
 	Category  int32  `json:"category"`
-	ExpiresAt string `json:"expiresAt"` // RFC3339 UTC（官服 m169 v7 同口径的绝对时刻）
+	ExpiresAt string `json:"expiresAt"` // RFC3339 UTC（外服私服 m169 v7 同口径的绝对时刻）
 }
 
 // timedBuffDBStore 把限时 buff 清单持久化到 role_timed_buffs 快照表。
@@ -212,7 +212,7 @@ func (p *playerActor) timedBuffActiveCount(now time.Time) int {
 	return count
 }
 
-// timedBuffGrantFrame 授予帧：m169 九值时间形态（官服 buf_qg_light 实证
+// timedBuffGrantFrame 授予帧：m169 九值时间形态（外服私服 buf_qg_light 实证
 // 布局；v7=i64 到期 unix 毫秒，v8=Category）。
 func timedBuffGrantFrame(buff timedBuffRuntime, playerName string) ([]byte, error) {
 	return serverCustomIntMessage(169,
@@ -242,7 +242,7 @@ func timedBuffRemoveFrame(configID string, endEpochMs int64, category int32, pla
 }
 
 // timedBuffLoginReplayFrames 登录/就绪重放：未过期条目逐条授予帧
-// （官服登录期 buf_baosd_02 语义的带时间形态对应物）。
+// （外服私服登录期 buf_baosd_02 语义的带时间形态对应物）。
 func (p *playerActor) timedBuffLoginReplayFrames(now time.Time) ([][]byte, error) {
 	p.mu.Lock()
 	buffs := make([]timedBuffRuntime, 0, len(p.timedBuffs))
