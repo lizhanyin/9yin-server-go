@@ -23,3 +23,5 @@ gmtest-sandbox/
 /res*.*
 env.server
 __pycache__
+tmp_*
+mitm_log
