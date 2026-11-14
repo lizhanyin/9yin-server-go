@@ -2638,6 +2638,48 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s (swapSelf=%v entry=%v avatar=%v); native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath(), swapSelf, swappedEntry, swappedAvatar)
+				// OVERLAY 档：phase A 之后补推我方物品域（与官服首爆发
+				// 记录批同相位——读条窗口客户端缓冲、加载后落账，round11
+				// 实证）。装载序=正常进场块同款（restoreSessionInventory/
+				// 镇派/随机属性先算，行后发）。
+				if swapSelf && replayNativeOverlayEnabled() {
+					bagpacks, packErr := inventory.bagpacks(ctx, activeRole.ID)
+					if packErr != nil {
+						log.Printf("%s: load bagpack anchors (skip): %v", conn.RemoteAddr(), packErr)
+					}
+					equips, equipErr := inventory.equips(ctx, activeRole.ID)
+					if equipErr != nil {
+						log.Printf("%s: load equips (skip inventory): %v", conn.RemoteAddr(), equipErr)
+					}
+					bagItems, bagErr := inventory.bagItems(ctx, activeRole.ID)
+					if bagErr != nil {
+						log.Printf("%s: load bag items (skip inventory): %v", conn.RemoteAddr(), bagErr)
+					}
+					visual = mergeVisual(visual, equips)
+					player.restoreSessionInventory(visual.sex, equips, bagItems, bagpacks)
+					player.refreshZhenpaiEquipBonuses()
+					if randomPropsStore != nil {
+						player.setEquipAttributeAdds(equipAttributeSums(equips, randomPropsStore.LoadAll(ctx, activeRole.ID)))
+					}
+					if equipErr == nil && bagErr == nil && (len(equips) > 0 || len(bagItems) > 0) {
+						frames, frameErr := inventoryFrames(activeRole.ID, visual.sex, equips, bagItems)
+						if frameErr != nil {
+							log.Printf("%s: encode inventory (skip): %v", conn.RemoteAddr(), frameErr)
+						} else {
+							for _, frame := range frames {
+								if err := link.WriteFrame(frame); err != nil {
+									log.Printf("%s: push inventory frame: %v", conn.RemoteAddr(), err)
+									return
+								}
+							}
+							log.Printf("%s: pushed inventory equips=%d bagItems=%d role=%d", conn.RemoteAddr(), len(equips), len(bagItems), activeRole.ID)
+						}
+						pushLoginRandomProps(link, randomPropsStore, ctx, activeRole.ID, equips, bagItems)
+					}
+					if err := pushEquipAppearance(link, player, equips); err != nil {
+						log.Printf("%s: push equip appearance: %v", conn.RemoteAddr(), err)
+					}
+				}
 				if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {
 					replayPhase2Armed.Store(true)
 					log.Printf("%s: phase-2 replay armed at wholesale entry", conn.RemoteAddr())
@@ -2948,6 +2990,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				continue
 			}
 			explicitSceneReady = true
+			replayExplicitReadySeen.Store(true)
 			log.Printf("%s: observed explicit stage_main ClientReady (0x09)", conn.RemoteAddr())
 			// B 线两阶段回放 Phase B（replay_phase2.go）：Phase A 的官服
 			// 0x0B 已让客户端进入新一轮读条，这个 0x09 正是官服第二爆发+

@@ -560,15 +560,22 @@ func (s *sceneLifecycle) clientActivity() error {
 	// B 线第十一轮 wholesale 模式（replay_phase2.go）：官服帧独占对象
 	// 空间——我方场景对象不物化（fork 方言 0x0D 会污染渲染判读），
 	// 旧回放 env 钩子同样跳过（Phase A 已在进场位发出）。
-	// OVERLAY 档（第十四轮）：恢复我方物化，仅跳过回放钩子。
+	// OVERLAY 档（第十四轮）：恢复我方物化，仅跳过回放钩子；但显式
+	// 0x09 之前（兼容晋升期 clientActivity 提前到达）只挂起不物化——
+	// 读条窗口发的物化帧会被客户端丢弃且记账生效，读条后 delta=0
+	// 永不重发。
 	if replayReplaceEntryEnabled() {
-		s.armed = false
-		if replayNativeOverlayEnabled() {
-			log.Printf("%s: replace-entry overlay; native materialization active, replay hook suppressed", s.remote)
-		} else {
+		if !replayNativeOverlayEnabled() {
+			s.armed = false
 			log.Printf("%s: replace-entry mode; native materialization and replay hook suppressed", s.remote)
 			return nil
 		}
+		if !replayExplicitReadySeen.Load() {
+			log.Printf("%s: replace-entry overlay; deferring materialization until explicit ClientReady", s.remote)
+			return nil
+		}
+		s.armed = false
+		log.Printf("%s: replace-entry overlay; native materialization active, replay hook suppressed", s.remote)
 	}
 	log.Printf("%s: post-ready client activity; materializing scene objects", s.remote)
 	if err := s.reconcileViewportLocked(); err != nil {

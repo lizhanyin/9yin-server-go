@@ -44,6 +44,13 @@ func replayNativeOverlayEnabled() bool {
 	return os.Getenv("NINEYIN_REPLAY_NATIVE_OVERLAY") == "1"
 }
 
+// replayExplicitReadySeen：本连接是否已观察到显式 0x09（stage_main
+// ClientReady）。overlay 档下 clientActivity 会在兼容晋升期（读条窗口，
+// m301 触发）提前到达——此时物化的帧会被客户端丢弃且「已物化」记账
+// 生效，读条后 delta=0 永不重发（15:04 会话 NPC 全丢的根因）。因此
+// 物化必须推迟到显式 0x09 之后的首个 custom。
+var replayExplicitReadySeen atomic.Bool
+
 // replayEntryFramesPath：Phase A 文件路径（wholesale 模式下即进场帧）。
 func replayEntryFramesPath() string {
 	return strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE"))
