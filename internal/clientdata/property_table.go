@@ -3,18 +3,19 @@ package clientdata
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-	"sync"
-	"testing"
 )
-
-//go:embed official_property_table.txt
-var officialPropertyTableText string
 
 //go:embed official_property_table_2433.txt
 var officialPropertyTable2433Text string
+
+// 属性表唯一方言：外服私服 7074 线 2433 项真表（2026-11-14 定案，
+// 分支 official-2433-only）。外服抓包帧与本表逐字段同方言——可直接
+// 对照/回放模拟发送，无需转译。fork 2370 项快照（场景域头块 0..173
+// 语义）与 hybrid2433 混合表同日退役：fork 客户端 NPC 视觉管线吃
+// 头行而本表头块为家园/帮会/VIP 域，NPC 渲染在 fork 客户端是定案
+// 死局（docs/外服模式NPC渲染收束.md），测试工作流以帧级对照为主。
 
 // SCENE_EXTENSION_FLOOR 是商店/运动扩展块在官方表中的起始位置:
 // 扩展块名字按「首现且 index >= 99」解析(镜像 Java PropertyTable 语义)。
@@ -69,116 +70,14 @@ func (t propertyTable) byNameScene(name string, minIndex int) (PropertyEntry, bo
 	return PropertyEntry{}, false
 }
 
-var (
-	officialTable          propertyTable
-	activePropertyTableMde string
-)
+var officialTable propertyTable
 
 func init() {
-	text, mode := activePropertyTableText()
-	officialTable = parsePropertyTable(text, mode)
-	activePropertyTableMde = mode
-}
-
-// 属性表方言档位（NINEYIN_PROPERTY_TABLE，默认 fork）：
-//
-//	fork         官方 2370 项快照（场景域头块 0..173 + 共享域），与全部
-//	             硬编码 prop* 常量配对自洽，现网方言——换表工程
-//	             （分支 official-2433-table，docs/外服私服登录帧对照与缺口
-//	             清单.md §14.3）完成前的默认。
-//	official2433 外服私服 7074 线 2433 项真表（头块换血为家园/帮会/VIP 域，
-//	             64 名缺席、共享域 +2/+7 插入漂移）——启用后 SceneProperty/
-//	             PlayerProperty/0x09 下发帧全部按官表解析；场景域硬编码
-//	             与 BufferListStr/NpcNickName 通道在 P3/P4 完成前会断，
-//	             仅限换表分支联调。
-func activePropertyTableText() (string, string) {
-	switch strings.TrimSpace(os.Getenv("NINEYIN_PROPERTY_TABLE")) {
-	case "official2433":
-		return officialPropertyTable2433Text, "official2433"
-	case "hybrid2433":
-		return hybridPropertyTableText(), "hybrid2433"
-	default:
-		return officialPropertyTableText, "fork"
-	}
-}
-
-// hybridPropertyTableText 拼接混合表：fork 快照的场景域头块（0..173 行）
-// + 外服私服 2433 真表的共享域（174..2432 行）。
-//
-// 背景（2026-11-11 真机实验矩阵定向）：fork 客户端的 NPC 视觉管线消费
-// 属性块里的对象头行（Type@0/Sex@1/Photo@2/ConfigID@7/Resource@8/
-// PosiX@9/PosiY@10/PosiZ@11/Orient@12…），fork 表方言下 NPC 0x0D 携带
-// 这些头行（83 字段）渲染正常；外服私服整表头块换血为家园/帮会/VIP 域后
-// 这 35 个头行名无行可落（OrderedProperties 静默丢弃 → 48 字段），
-// 客户端拿不到对象头数据 → NPC 添加成功但不渲染。混合表把 fork 头块
-// 还给客户端、共享域保持外服私服 2433 行号，两全。
-func hybridPropertyTableText() string {
-	hybridOnce.Do(func() {
-		hybridText = splicePropertyTables(officialPropertyTableText, officialPropertyTable2433Text, 174)
-	})
-	return hybridText
-}
-
-var (
-	hybridOnce sync.Once
-	hybridText string
-)
-
-// splicePropertyTables 取 head 表 idx<headFloor 的行 + tail 表 idx>=headFloor
-// 的行（跳过注释/坏行），保持升序拼接。
-func splicePropertyTables(head, tail string, headFloor int) string {
-	var out []string
-	for _, ln := range strings.Split(strings.TrimRight(head, "\r\n"), "\n") {
-		if idx, ok := propertyTableRowIndex(ln); ok && idx < headFloor {
-			out = append(out, ln)
-		}
-	}
-	for _, ln := range strings.Split(strings.TrimRight(tail, "\r\n"), "\n") {
-		if idx, ok := propertyTableRowIndex(ln); ok && idx >= headFloor {
-			out = append(out, ln)
-		}
-	}
-	return strings.Join(out, "\n") + "\n"
-}
-
-func propertyTableRowIndex(line string) (int, bool) {
-	parts := strings.Split(line, "\t")
-	if len(parts) < 3 {
-		return 0, false
-	}
-	idx, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, false
-	}
-	return idx, true
+	officialTable = parsePropertyTable(officialPropertyTable2433Text, "official2433")
 }
 
 // ActivePropertyTableMode 返回当前生效的属性表方言（日志/诊断用）。
-func ActivePropertyTableMode() string { return activePropertyTableMde }
-
-// SwapPropertyTableForTest 在测试内切换属性表方言并在测试结束后恢复。
-// 必须在任意 SceneProperty/PlayerProperty 查询前调用。
-func SwapPropertyTableForTest(t testing.TB, mode string) {
-	t.Helper()
-	var text string
-	switch mode {
-	case "official2433":
-		text = officialPropertyTable2433Text
-	case "fork":
-		text = officialPropertyTableText
-	case "hybrid2433":
-		text = hybridPropertyTableText()
-	default:
-		t.Fatalf("unknown property table mode %q", mode)
-	}
-	prev, prevMode := officialTable, activePropertyTableMde
-	officialTable = parsePropertyTable(text, mode)
-	activePropertyTableMde = mode
-	t.Cleanup(func() {
-		officialTable = prev
-		activePropertyTableMde = prevMode
-	})
-}
+func ActivePropertyTableMode() string { return "official2433" }
 
 func parsePropertyTable(text, mode string) propertyTable {
 	table := propertyTable{

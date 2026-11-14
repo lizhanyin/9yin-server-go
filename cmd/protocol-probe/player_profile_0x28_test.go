@@ -33,7 +33,6 @@ func profileFieldWireSize(typeCode int) int {
 func TestPlayerProfile0x28Envelope(t *testing.T) {
 	// 外服私服方言下 41 字段全量解析（fork 表家园/VIP/节日域头行缺席=11 字段
 	// 稀疏形，另由 TestPlayerProfile0x28ForkSparseSmoke 覆盖）。
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	pos := role.Position{X: 660.6, Y: 33.6, Z: 299.5, Orient: 1.578}
 	frame, count := playerProfile0x28Frame(0x1105C0E3, 0x03DEfBAE, pos, nil)
 	if frame[0] != 0x28 || frame[1] != 0x46 {
@@ -125,7 +124,6 @@ func TestPlayerProfile0x28Envelope(t *testing.T) {
 // TestPlayerProfile0x28FollowsActiveTable 双方言换表跟随：official2433
 // 下 Name 落外服私服原号 178、HomeFengShuiDate 落 6（登陆-all #132 实证位）。
 func TestPlayerProfile0x28FollowsActiveTable(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	frame, _ := playerProfile0x28Frame(1, 2, role.Position{}, nil)
 	body := frame[10:]
 	count := int(binary.LittleEndian.Uint16(body[60:]))
@@ -152,42 +150,9 @@ func TestPlayerProfile0x28FollowsActiveTable(t *testing.T) {
 	}
 }
 
-// TestPlayerProfile0x28ForkSparseSmoke fork 表稀疏形：家园/VIP/节日域头行
-// 缺席时按外服私服稀疏语义跳过，帧不变量（len-1/bodylen/走查恰尽）仍成立。
-func TestPlayerProfile0x28ForkSparseSmoke(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "fork")
-	frame, count := playerProfile0x28Frame(1, 2, role.Position{}, nil)
-	if count == 0 || count >= len(playerProfilePropSpecs) {
-		t.Fatalf("fork count = %d, want 1..%d 稀疏形", count, len(playerProfilePropSpecs)-1)
-	}
-	body := frame[10:]
-	got := int(binary.LittleEndian.Uint16(body[60:]))
-	if got != count {
-		t.Fatalf("count hdr = %d, want %d", got, count)
-	}
-	off := 62
-	for i := 0; i < count; i++ {
-		idx := int(binary.LittleEndian.Uint16(body[off:]))
-		entry, ok := clientdata.PropertyByIndex(idx)
-		if !ok {
-			t.Fatalf("field %d idx=%d 不在 fork 表", i, idx)
-		}
-		off += 2
-		if entry.TypeCode == 7 || entry.TypeCode == 8 {
-			off += 4 + int(binary.LittleEndian.Uint32(body[off:]))
-		} else {
-			off += profileFieldWireSize(entry.TypeCode)
-		}
-	}
-	if off != len(body) {
-		t.Fatalf("fork walk end %d, want %d", off, len(body))
-	}
-}
-
 // TestPlayerProfile0x28SkillRows 技能行 v2：每技能 17 列（当前表缺席列
 // 稀疏跳过），帧走查仍恰尽；ConfigID 行串回读、重复 idx 合法。
 func TestPlayerProfile0x28SkillRows(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	skills := []learnedSkillView{
 		{configID: "CS_sl_djgq04", staticData: 3932, level: 1, maxLevel: 4, total: 20400, pauseTime: 30000},
 		{configID: "zs_normal_02", staticData: 77, level: 3, maxLevel: 9, total: 500, pauseTime: 0},

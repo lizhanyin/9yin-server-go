@@ -32,27 +32,25 @@ func TestStarterNPCUsesClientResourceIdentity(t *testing.T) {
 	if !bytes.Contains(msg, []byte("FuncNpc01608\x00")) {
 		t.Fatal("NPC AddObject does not contain the client resource ConfigID")
 	}
-	if !bytes.Contains(msg, []byte{34, 0, 229, 0, 0, 0}) {
+	// official2433 唯一方言：NpcType 唯一行 @1566（0x061E）int32。
+	if !bytes.Contains(msg, []byte{0x1e, 0x06, 229, 0, 0, 0}) {
 		t.Fatal("NPC AddObject does not contain int32 NpcType=229")
 	}
-	// 外服私服位属性增补后：fork schema 7 项 + 外服私服固定 11 项（CollideRadius/
-	// State/Type/ActionSpeed/BossLevel/IDCard/BornAction/WeaponMode/三比例；
-	// Material/Level 缺省不追加）= 21（officialNPCProperties 外服私服 16-prop
-	// 方言对齐 c.pcapng #1777，2026-11-10）。
-	// Resource 回退（fde3fcd）：schema 无 Material 有 Resource 时外服私服位
-	// Resource/ConfigID/Photo 三行由 schema 直供 → 18+3=21。
-	if got := binary.LittleEndian.Uint16(msg[0x3d:]); got != 21 {
-		t.Fatalf("NPC property count=%d, want 21", got)
+	// 属性计数（official2433 实测锚定）：fork 方言 21 → 2433 场景域
+	// 断供一行 = 20（officialNPCProperties 外服私服 16-prop 方言对齐
+	// c.pcapng #1777 + schema 存活行）。
+	if got := binary.LittleEndian.Uint16(msg[0x3d:]); got != 20 {
+		t.Fatalf("NPC property count=%d, want 20", got)
 	}
-	// 外服私服 #1777 定版三新行：Type(fork 181)=4 / BossLevel(fork 1590)=1 /
-	// IDCard(fork 1595)="null,null,null,null,null"（0x0D 串=u32 长度+NUL）。
+	// 外服私服 #1777 定版行：Type@181=4(byte) / BossLevel@1597=1 /
+	// IDCard@1602="null,null,null,null,null"（0x0D 串=u32 长度+NUL）。
 	if !bytes.Contains(msg, []byte{0xb5, 0x00, 0x04}) {
 		t.Fatal("NPC AddObject does not contain official-position Type=4")
 	}
-	if !bytes.Contains(msg, []byte{0x36, 0x06, 0x01}) {
+	if !bytes.Contains(msg, []byte{0x3d, 0x06, 0x01}) {
 		t.Fatal("NPC AddObject does not contain BossLevel=1")
 	}
-	if !bytes.Contains(msg, append([]byte{0x3b, 0x06, 0x19, 0x00, 0x00, 0x00}, []byte("null,null,null,null,null")...)) {
+	if !bytes.Contains(msg, append([]byte{0x42, 0x06, 0x19, 0x00, 0x00, 0x00}, []byte("null,null,null,null,null")...)) {
 		t.Fatal("NPC AddObject does not contain IDCard row")
 	}
 	for offset := 0x19; offset < 0x3d; offset++ {
@@ -67,16 +65,17 @@ func TestStarterNPCUsesClientResourceIdentity(t *testing.T) {
 	}
 }
 
-// TestOfficialPropertyTableFrameIsVerbatim 官方 0x09 表(2370 项)逐行
-// 透传:计数、NpcType@34 官方即 Int32(旧 ModernV1 协商 hack 退役)、
-// 玩家域关键锚点全部按位置出现。帧内容必须与官方方言逐字节一致。
+// TestOfficialPropertyTableFrameIsVerbatim 官方 0x09 表(2433 项,
+// official2433 唯一方言)逐行透传:计数、NpcType@1566 官方即 Int32
+//(旧 ModernV1 协商 hack 退役)、玩家域关键锚点全部按位置出现。
+// 帧内容必须与官方方言逐字节一致。
 func TestOfficialPropertyTableFrameIsVerbatim(t *testing.T) {
 	msg := officialPropertyTableFrame()
 	if msg[0] != 0x09 {
 		t.Fatalf("property table opcode=%#x", msg[0])
 	}
-	if got := binary.LittleEndian.Uint16(msg[1:]); got != 2370 {
-		t.Fatalf("official property count=%d, want 2370", got)
+	if got := binary.LittleEndian.Uint16(msg[1:]); got != 2433 {
+		t.Fatalf("official property count=%d, want 2433", got)
 	}
 	npcType := append([]byte("NpcType"), 0, byte(clientdata.WireInt32))
 	if !bytes.Contains(msg, npcType) {
@@ -98,10 +97,10 @@ func TestOfficialPropertyTableFrameIsVerbatim(t *testing.T) {
 	if !bytes.Contains(msg, autoSelect) {
 		t.Fatal("official table does not declare AutoSelectObject as object")
 	}
-	// 行位置即索引:重走一遍帧体,断言第 467 项是 SP、第 463 项是
-	// LogicState(0x09 表位置绑定的硬语义)。
+	// 行位置即索引:重走一遍帧体,断言第 469 项是 SP、第 465 项是
+	// LogicState(0x09 表位置绑定的硬语义;official2433 位,fork 467/463/580)。
 	offset := 3
-	for position := 0; position < 2370; position++ {
+	for position := 0; position < 2433; position++ {
 		endByte := bytes.IndexByte(msg[offset:], 0)
 		if endByte < 0 {
 			t.Fatalf("entry %d has no NUL terminator", position)
@@ -109,17 +108,17 @@ func TestOfficialPropertyTableFrameIsVerbatim(t *testing.T) {
 		name := string(msg[offset : offset+endByte])
 		code := msg[offset+endByte+1]
 		switch position {
-		case 463:
+		case 465:
 			if name != "LogicState" || code != byte(clientdata.WireByte) {
-				t.Fatalf("entry 463 = (%q,%d), want (LogicState,byte)", name, code)
+				t.Fatalf("entry 465 = (%q,%d), want (LogicState,byte)", name, code)
 			}
-		case 467:
+		case 469:
 			if name != "SP" || code != byte(clientdata.WireInt32) {
-				t.Fatalf("entry 467 = (%q,%d), want (SP,int32)", name, code)
+				t.Fatalf("entry 469 = (%q,%d), want (SP,int32)", name, code)
 			}
-		case 580:
+		case 582:
 			if name != "MaxSP" {
-				t.Fatalf("entry 580 = %q, want MaxSP", name)
+				t.Fatalf("entry 582 = %q, want MaxSP", name)
 			}
 		}
 		offset = offset + endByte + 2
@@ -236,6 +235,10 @@ func TestSubSceneCombatNPCIsNotMaterialized(t *testing.T) {
 }
 
 func TestSceneLifecycleWaitsForPostReadyClientActivity(t *testing.T) {
+	// 关 0x28 详情帧：net.Pipe 无缓冲，物化后 0x28 伴发帧若无人读会令
+	// clientActivity 写阻塞挂死。本测试只考察 ready/activity 时序
+	//（0x28 通道有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
 	server, client := net.Pipe()
 	defer server.Close()
 	defer client.Close()
@@ -359,6 +362,9 @@ func TestServerMovingLayout(t *testing.T) {
 }
 
 func TestObjectRequestSetsPlayerLastObjectAndConfiguredTalkMenu(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {
@@ -376,7 +382,7 @@ func TestObjectRequestSetsPlayerLastObjectAndConfiguredTalkMenu(t *testing.T) {
 		t.Fatalf("selection frames=%d, want LastObject+AutoSelectObject + cinematic menu: %x", len(frames), frames)
 	}
 	frame := frames[0]
-	if len(frame) != 22 || frame[0] != 0x10 || binary.LittleEndian.Uint32(frame[2:]) != playerObjectID || binary.LittleEndian.Uint16(frame[12:]) != 414 { // LastObject(官方玩家域)
+	if len(frame) != 22 || frame[0] != 0x10 || binary.LittleEndian.Uint32(frame[2:]) != playerObjectID || binary.LittleEndian.Uint16(frame[12:]) != 416 { // LastObject(官方玩家域,official2433 位;fork 414)
 		t.Fatalf("LastObject frame=%x", frame)
 	}
 	if got := binary.LittleEndian.Uint64(frame[14:]); got != uint64(forkNPCID(3494))|uint64(npcTestOwner(3494))<<32 {
@@ -401,6 +407,9 @@ func TestObjectRequestSetsPlayerLastObjectAndConfiguredTalkMenu(t *testing.T) {
 }
 
 func TestObjectRequestSelectsCombatNPCWithoutDialogue(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {
@@ -443,6 +452,9 @@ func TestObjectRequestSelectsCombatNPCWithoutDialogue(t *testing.T) {
 }
 
 func TestObjectRequestDoesNotFabricateDialogueForUnconfiguredCivilian(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {
@@ -470,6 +482,9 @@ func TestObjectRequestDoesNotFabricateDialogueForUnconfiguredCivilian(t *testing
 }
 
 func TestObjectRequestOpensDepotViewAfterCinematicSelection(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {
@@ -502,6 +517,9 @@ func TestObjectRequestOpensDepotViewAfterCinematicSelection(t *testing.T) {
 }
 
 func TestObjectRequestOpensShopViewAfterCinematicSelection(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {
@@ -547,6 +565,9 @@ func TestObjectRequestOpensShopViewAfterCinematicSelection(t *testing.T) {
 }
 
 func TestMultiServiceNPCUsesNativeMenuThenSelectedShopView(t *testing.T) {
+	// 关 0x28 详情帧：物化伴发帧与交互帧序断言无关（0x28 有专属测试覆盖）。
+	t.Setenv("NINEYIN_NPC_DETAIL_0X28", "0")
+
 	conn := &captureMessageConnection{}
 	lifecycle := newSceneLifecycle("test", conn)
 	if err := lifecycle.begin("scene", "resource", nil); err != nil {

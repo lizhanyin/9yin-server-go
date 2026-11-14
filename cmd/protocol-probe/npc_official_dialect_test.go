@@ -7,36 +7,18 @@ import (
 	"github.com/local/9yin-go-server/internal/clientdata"
 )
 
-// TestOfficialNPCPropertiesFollowActiveTable 换表跟随实证：officialNPCProperties
-// 全部按名解析（PlayerProperty 末现），fork 模式落 fork 位（1590/1595/469…），
-// official2433 模式自动落外服私服位（1597/1602/471…，c.pcapng #1777 原号）。
+// TestOfficialNPCPropertiesFollowActiveTable 表跟随实证：officialNPCProperties
+// 全部按名解析（PlayerProperty 末现），自动落外服私服位
+// （1597/1602/471…，c.pcapng #1777 原号）——唯一 official2433 方言锚点。
 func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
-	// 本测试自带双方言断言：fork 段先显式切回 fork（进程可能以
-	// NINEYIN_PROPERTY_TABLE=official2433 启动做外服私服模式冒烟）。
-	clientdata.SwapPropertyTableForTest(t, "fork")
 	npc := testNPCSpawn()
 
-	forkProps := officialNPCProperties(npc)
-	forkIdx := map[string]uint16{}
-	for _, p := range forkProps {
-		forkIdx[p.Name] = p.Index
-	}
-	for name, want := range map[string]uint16{
-		"BossLevel": 1590, "IDCard": 1595, "HPRatio": 469,
-		"ParryRatio": 478, "HitHPRatio": 482, "State": 183, "Type": 181,
-	} {
-		if got := forkIdx[name]; got != want {
-			t.Fatalf("fork dialect %s=%d, want %d", name, got, want)
-		}
-	}
-
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	officialProps := officialNPCProperties(npc)
 	officialIdx := map[string]uint16{}
 	for _, p := range officialProps {
 		officialIdx[p.Name] = p.Index
 	}
-	// 外服私服 #1777 16-prop 原号（NpcType 不发：fork schema 场景位已携带）。
+	// 外服私服 #1777 16-prop 原号（NpcType 不发：schema 场景位已携带）。
 	for name, want := range map[string]uint16{
 		"CollideRadius": 179, "State": 183, "Type": 181, "ActionSpeed": 214,
 		"BossLevel": 1597, "IDCard": 1602,
@@ -48,7 +30,7 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 		}
 	}
 
-	// 外服私服模式下 0x0D 帧逐字节可对外服私服表重解：IDCard 行原号 1602=0x0642。
+	// 0x0D 帧逐字节可对外服私服表重解：IDCard 行原号 1602=0x0642。
 	msg, err := npcAddObject(2, npc, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -57,8 +39,8 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 	if !bytes.Contains(msg, idcard) {
 		t.Fatal("official2433 NPC AddObject missing IDCard row at official index 1602")
 	}
-	// 外服私服模式下 schema 场景行数随头块换血缩水（OrderedProperties 按首现
-	// 解析，fork 场景域名在外服私服表缺席）——总计数不固定，只断言外服私服位行在。
+	// schema 场景行数随头块换血缩水（OrderedProperties 按首现解析）——
+	// 总计数不固定，只断言外服私服位行在。
 }
 
 // TestOfficialNPCPropertiesBoxGatherCollideGate 宝箱/采集族碰撞方言
@@ -66,7 +48,6 @@ func TestOfficialNPCPropertiesFollowActiveTable(t *testing.T) {
 // CollideRadius，改发尾行 OpenRange=2.0/GatherRange=3.0；ConfigID 前缀
 // 兜底判族；常规 NPC 保留 collide 首行且 schema 真值直通。
 func TestOfficialNPCPropertiesBoxGatherCollideGate(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "fork")
 	propByName := func(props []clientdata.IndexedProperty, name string) (clientdata.IndexedProperty, bool) {
 		for _, p := range props {
 			if p.Name == name {

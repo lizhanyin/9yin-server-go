@@ -211,12 +211,16 @@ func officialNPCEntityProperties(schema []clientdata.IndexedProperty, model, con
 		npcTypeValue = value.I32
 	}
 	levelValue := int32(0)
-	if value, ok := lookup("Level"); ok && value.I32 > 0 && value.I32 < 256 {
-		levelValue = value.I32
+	if value, ok := lookup("Level"); ok {
+		if v := wireIntValue(value); v > 0 && v < 256 {
+			levelValue = v
+		}
 	}
 	bossLevelValue := int32(1)
-	if value, ok := lookup("BossLevel"); ok && value.I32 > 0 && value.I32 < 256 {
-		bossLevelValue = value.I32
+	if value, ok := lookup("BossLevel"); ok {
+		if v := wireIntValue(value); v > 0 && v < 256 {
+			bossLevelValue = v
+		}
 	}
 	// AIEffect 为可选行（官方表@84 在场、fork 表玩家域缺席——真机教训
 	// 2026-11-11：MustPlayerProperty 在 fork 表 panic 致会话静默关闭）。

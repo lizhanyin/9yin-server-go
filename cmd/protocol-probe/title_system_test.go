@@ -43,8 +43,8 @@ func TestSetTitleWritesTitleIDFrameAndPersists(t *testing.T) {
 	if frame[0] != 0x10 {
 		t.Fatalf("opcode=%#x", frame[0])
 	}
-	if got := binary.LittleEndian.Uint16(frame[12:]); got != 360 {
-		t.Fatalf("property idx=%d, want 360 (TitleID)", got)
+	if got := binary.LittleEndian.Uint16(frame[12:]); got != 362 {
+		t.Fatalf("property idx=%d, want 362 (TitleID, official2433 位)", got)
 	}
 	if got := binary.LittleEndian.Uint32(frame[14:]); got != 12345 {
 		t.Fatalf("title value=%d", got)
@@ -139,7 +139,7 @@ func TestPushTitleFramesReplaysOwnedRowsAndWornTitle(t *testing.T) {
 			t.Fatalf("record frame %d=%#x", index, frames[index][0])
 		}
 	}
-	if frames[2][0] != 0x10 || binary.LittleEndian.Uint16(frames[2][12:]) != 360 {
+	if frames[2][0] != 0x10 || binary.LittleEndian.Uint16(frames[2][12:]) != 362 {
 		t.Fatalf("worn title frame=%x", frames[2])
 	}
 }

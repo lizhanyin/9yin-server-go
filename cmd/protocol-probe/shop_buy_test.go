@@ -86,8 +86,9 @@ func TestShopBuyChargesSilverAndStacksIntoExistingRow(t *testing.T) {
 			t.Fatalf("currency frame %d=%#x", index, frames[index][0])
 		}
 	}
-	// 三币帧 idx 序：416/417/418（金/银/卡）。
-	for index, want := range []uint16{416, 417, 418} {
+	// 三币帧 idx 序：418/419/420（金/银/卡；official2433 CapitalType0-2 位，
+	// fork 为 416/417/418）。
+	for index, want := range []uint16{418, 419, 420} {
 		if got := binary.LittleEndian.Uint16(frames[3+index][12:]); got != want {
 			t.Fatalf("currency frame %d idx=%d want %d", index, got, want)
 		}

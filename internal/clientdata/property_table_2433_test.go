@@ -4,9 +4,8 @@ import "testing"
 
 // TestPropertyTableOfficial2433Structure 钉死外服私服 2433 表的结构与锚点
 // （c.pcapng 7074 线 0x09 帧提取，docs/外服私服登录帧对照与缺口清单.md §四-2
-// 第二次修正）。该表是换表工程（分支 official-2433-table §14.3）的目标
-// 方言：头块 0..173 换血为家园/帮会/VIP 域、64 名缺席、共享域 +2/+7
-// 插入漂移。锚点全部来自外服私服帧实解（0x0D #1777 / §11.4 View45）。
+// 第二次修正）。头块 0..173 换血为家园/帮会/VIP 域、64 名缺席、共享域
+// +2/+7 插入漂移。锚点全部来自外服私服帧实解（0x0D #1777 / §11.4 View45）。
 func TestPropertyTableOfficial2433Structure(t *testing.T) {
 	table := parsePropertyTable(officialPropertyTable2433Text, "official2433-test")
 	if got := len(table.entries); got != 2433 {
@@ -56,20 +55,15 @@ func TestPropertyTableOfficial2433Structure(t *testing.T) {
 	}
 }
 
-// TestPropertyTableDualDialectResolution 同名跨表解析漂移实证：
-// PlayerProperty 在两表间对共享域名字给出不同索引（fork 415 ↔ 外服私服 417），
-// 这是 officialNPCProperties 改按名解析的依据——换表自动跟随。
-func TestPropertyTableDualDialectResolution(t *testing.T) {
-	forkEntry, ok := PlayerProperty("AutoSelectObject")
-	if !ok || forkEntry.Index != 415 {
-		t.Fatalf("fork AutoSelectObject = %+v, want index 415", forkEntry)
+// TestPropertyTablePlayerDomainResolution 玩家域末现位断言
+// （原双方言漂移实证收敛为唯一表锚点）：AutoSelectObject=417
+// （fork 415 已退役）、NpcType 末现位 1566（fork 1559）——
+// officialNPCProperties 按名解析的回归依据。
+func TestPropertyTablePlayerDomainResolution(t *testing.T) {
+	entry, ok := PlayerProperty("AutoSelectObject")
+	if !ok || entry.Index != 417 {
+		t.Fatalf("official2433 AutoSelectObject = %+v, want index 417", entry)
 	}
-	SwapPropertyTableForTest(t, "official2433")
-	officialEntry, ok := PlayerProperty("AutoSelectObject")
-	if !ok || officialEntry.Index != 417 {
-		t.Fatalf("official2433 AutoSelectObject = %+v, want index 417", officialEntry)
-	}
-	// 外服私服表 NpcType 末现位 1566（fork 为 1559）——16-prop 方言的 NpcType 行。
 	if entry, _ := PlayerProperty("NpcType"); entry.Index != 1566 {
 		t.Fatalf("official2433 NpcType = %d, want 1566", entry.Index)
 	}

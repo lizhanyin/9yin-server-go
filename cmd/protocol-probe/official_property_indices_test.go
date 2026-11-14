@@ -151,24 +151,25 @@ func TestPlayerPropertyIndicesMatchOfficialTable(t *testing.T) {
 	}
 }
 
-// TestOfficialDialectMaxSPLonginOnly 官方方言下 MaxSP(580) 只在登录/切图
+// TestOfficialDialectMaxSPLonginOnly 官方方言下 MaxSP 只在登录/切图
 // 链首个权威 0x10 全量批出现一次(fork 49840 实证:全场 5181 帧仅 #16 一处,
 // 121 属性批携带),值 = 基础 80 + 运行内功档位加成折算合一(rageCapWireValue);
-// MaxSPAdd(583) 官方从未发送(2026-11-09 docs/official 复核),本服同样
+// MaxSPAdd 官方从未发送(2026-11-09 docs/official 复核),本服同样
 // 不出帧;恢复批/事件批/0x0D 归档都不得再携带二者。塞错位置会让客户端
-// 在进世界时崩溃。
+// 在进世界时崩溃。索引为 official2433 位（MaxSP@582/MaxSPAdd@585；
+// fork 580/583）。
 func TestOfficialDialectMaxSPLoginOnly(t *testing.T) {
-	for _, name := range []string{"MaxSP", "MaxSPAdd"} {
+	for name, want := range map[string]uint16{"MaxSP": 582, "MaxSPAdd": 585} {
 		entry, ok := clientdata.PlayerProperty(name)
 		if !ok {
 			t.Fatalf("official table has no %q", name)
 		}
-		if entry.Index != 580 && entry.Index != 583 {
+		if entry.Index != want {
 			t.Errorf("%q moved to %d; update this guard", name, entry.Index)
 		}
 	}
 	player := newPlayerActor("本地角色", 0)
-	// 登录批:stateProperties 大批 + MaxSP(折算最终值)一次,583 不出帧。
+	// 登录批:stateProperties 大批 + MaxSP(折算最终值)一次,MaxSPAdd 不出帧。
 	login, err := player.loginVitalUpdate()
 	if err != nil {
 		t.Fatal(err)
@@ -179,10 +180,10 @@ func TestOfficialDialectMaxSPLoginOnly(t *testing.T) {
 	}
 	maxSPCount, maxSPAddCount := 0, 0
 	for _, index := range loginIndices {
-		if index == 580 {
+		if index == 582 {
 			maxSPCount++
 		}
-		if index == 583 {
+		if index == 585 {
 			maxSPAddCount++
 		}
 	}
@@ -190,14 +191,14 @@ func TestOfficialDialectMaxSPLoginOnly(t *testing.T) {
 		t.Fatalf("login batch carries MaxSP %d times, want exactly 1", maxSPCount)
 	}
 	if maxSPAddCount != 0 {
-		t.Fatalf("login batch carries MaxSPAdd %d times, want 0 (official never sends 583)", maxSPAddCount)
+		t.Fatalf("login batch carries MaxSPAdd %d times, want 0 (official never sends 585)", maxSPAddCount)
 	}
 	// MaxSP = 基础 80 + 默认运行内功 ng_wd_001(武当一内 +10) = 90。
 	rageCap := player.rageCapWireValue()
 	if rageCap != maxPlayerSP+10 {
 		t.Fatalf("default wire MaxSP=%d, want %d", rageCap, maxPlayerSP+10)
 	}
-	maxSPNeedle := []byte{byte(580 & 0xff), byte(580 >> 8), byte(rageCap), 0, 0, 0}
+	maxSPNeedle := []byte{byte(582 & 0xff), byte(582 >> 8), byte(rageCap), 0, 0, 0}
 	if !bytes.Contains(login, maxSPNeedle) {
 		t.Fatalf("login batch MaxSP slot is not %d: %x", rageCap, login)
 	}
@@ -219,7 +220,7 @@ func TestOfficialDialectMaxSPLoginOnly(t *testing.T) {
 		t.Fatalf("walk regular 0x10 frame: %v", walkErr)
 	}
 	for _, index := range regularIndices {
-		if index == 580 || index == 583 {
+		if index == 582 || index == 585 {
 			t.Fatalf("regular vitals batch carries forbidden index %d (MaxSP/MaxSPAdd)", index)
 		}
 	}

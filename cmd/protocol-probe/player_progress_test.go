@@ -110,9 +110,9 @@ func TestPlayerVitalsIncludeMaxSPDisplayCap(t *testing.T) {
 	if !bytes.Contains(frame, spNeedle) {
 		t.Fatalf("login vital batch misses SP=%d at index %d: %x", rageCap, propSP, frame)
 	}
-	maxSPNeedle := []byte{byte(580 & 0xff), byte(580 >> 8), byte(rageCap), 0, 0, 0}
+	maxSPNeedle := []byte{byte(582 & 0xff), byte(582 >> 8), byte(rageCap), 0, 0, 0}
 	if !bytes.Contains(frame, maxSPNeedle) {
-		t.Fatalf("login vital batch misses MaxSP=%d at index 580: %x", rageCap, frame)
+		t.Fatalf("login vital batch misses MaxSP=%d at index 582: %x", rageCap, frame)
 	}
 	loginIndices, walkErr := propertyFrameIndices(frame)
 	if walkErr != nil {
@@ -126,7 +126,7 @@ func TestPlayerVitalsIncludeMaxSPDisplayCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(regularFrame, []byte{byte(580 & 0xff), byte(580 >> 8)}) {
+	if bytes.Contains(regularFrame, []byte{byte(propMaxSP & 0xff), byte(propMaxSP >> 8)}) {
 		t.Fatal("regular vitals batch must not carry MaxSP")
 	}
 }

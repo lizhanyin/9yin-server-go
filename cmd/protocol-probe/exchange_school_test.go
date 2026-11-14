@@ -142,8 +142,9 @@ func TestShopBuyExchangeChargesTrackedPropCurrency(t *testing.T) {
 			t.Fatalf("currency frame %d=%#x", index, frames[index][0])
 		}
 	}
-	if got := binary.LittleEndian.Uint16(frames[5][12:]); got != 418 {
-		t.Fatalf("card frame idx=%d, want 418", got)
+	// CapitalType2：official2433 位 420（fork 418，共享域 +2 漂移）。
+	if got := binary.LittleEndian.Uint16(frames[5][12:]); got != 420 {
+		t.Fatalf("card frame idx=%d, want 420", got)
 	}
 }
 

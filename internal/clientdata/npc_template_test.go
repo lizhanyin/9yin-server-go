@@ -154,7 +154,10 @@ func TestLoadNPCCreatorAcceptsWhitespacePaddedNumericAttributes(t *testing.T) {
 	}
 }
 
-func TestResolveNPCLayeringAndRepeatedStopTimeBinding(t *testing.T) {
+func TestResolveNPCLayeringAndForkOnlyNameDrop(t *testing.T) {
+	// official2433 唯一方言锚点：fork 场景域名（StopTime/PosiX 等）在
+	// 外服私服表头块换血后缺席，模板重复列与摆放坐标副本均不绑定/不注入
+	//（摆放权威在 resolved.Transform，0x0D 坐标走固定头）。
 	text := strings.Join([]string{
 		"编号\t脚本\t名称\t类型\t模式\t消极\t停止1\t停止2",
 		"STRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING",
@@ -186,9 +189,16 @@ func TestResolveNPCLayeringAndRepeatedStopTimeBinding(t *testing.T) {
 	}
 	assertValue("WeaponMode", "hand10_1", "creator")
 	assertValue("NotPositive", int32(0), "creator")
-	assertValue("StopTime", int32(10), "template")
 	assertValue("HP", int32(75), "persisted")
-	assertValue("PosiX", float32(1), "runtime")
+	// fork-only 名断供：重复列 StopTime 不绑定、摆放副本 PosiX 不注入。
+	for _, absent := range []string{"StopTime", "PosiX", "PosiY", "PosiZ", "Orient"} {
+		if _, bound := resolved.Properties[absent]; bound {
+			t.Fatalf("fork-only 名 %q 在 official2433 表下不应绑定", absent)
+		}
+	}
+	if resolved.Transform.X != 1 || resolved.Transform.Y != 2 || resolved.Transform.Z != 3 {
+		t.Fatalf("transform=%+v（摆放权威应保留）", resolved.Transform)
+	}
 	if resolved.ScriptClass != "CommonNpc" {
 		t.Fatalf("ScriptClass=%q", resolved.ScriptClass)
 	}
@@ -197,11 +207,13 @@ func TestResolveNPCLayeringAndRepeatedStopTimeBinding(t *testing.T) {
 	}
 }
 
-func TestResolveNPCSingleStopTimeBinding(t *testing.T) {
+// TestResolveNPCSingleColumnBinding 单列直连绑定（official2433 场景域名）：
+// State@183 string 单列模板值按线型解析直通 Properties。
+func TestResolveNPCSingleColumnBinding(t *testing.T) {
 	text := strings.Join([]string{
-		"ID\tscript\tName\tNpcType\tStopTime",
+		"ID\tscript\tName\tNpcType\tState",
 		"STRING\tSTRING\tSTRING\tSTRING\tSTRING",
-		"ID\tscript\tName\tNpcType\tStopTime",
+		"ID\tscript\tName\tNpcType\tState",
 		"city_npc\tCommonNpc\tCity NPC\t8\t25",
 	}, "\n")
 	table, err := LoadNPCTemplateTable(gbkReader(t, text), "city.tsv")
@@ -213,8 +225,9 @@ func TestResolveNPCSingleStopTimeBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := resolved.Properties["StopTime"].Value.I32; got != 25 {
-		t.Fatalf("StopTime=%d, want 25", got)
+	got, ok := resolved.Properties["State"]
+	if !ok || got.Value.Text != "25" || got.Provenance.Layer != "template" {
+		t.Fatalf("State=%+v layer=%s, want text \"25\" layer template", got.Value, got.Provenance.Layer)
 	}
 }
 

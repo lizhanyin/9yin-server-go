@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/local/9yin-go-server/internal/clientdata"
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
@@ -17,7 +16,6 @@ import (
 //
 // ③客户端法则 Go 侧预检 walker 全程走通（=4 缺的保障）。
 func TestNPCDetail0x28GeneratorV2(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	transform := worldcore.Transform{X: 12.5, Y: 2, Z: -7.25, Orient: 1.5}
 	frame := npcDetail0x28Frame(0x0A0B0C0D, 0x11223344, transform, "npc"+string(rune(92))+"worldnpc059", "gnnpc_2021zyb_001")
 	if frame[0] != 0x28 || frame[1] != 0x47 {

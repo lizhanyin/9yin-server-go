@@ -206,8 +206,8 @@ func TestQingGongPointFrameShape(t *testing.T) {
 	if len(frame) != 18 || frame[0] != 0x10 || frame[1] != 0 {
 		t.Fatalf("frame=%x", frame)
 	}
-	if got := int(frame[12]) | int(frame[13])<<8; got != 692 {
-		t.Fatalf("property index=%d, want 692", got)
+	if got := int(frame[12]) | int(frame[13])<<8; got != 694 {
+		t.Fatalf("property index=%d, want 694", got)
 	}
 	if got := int32(frame[14]) | int32(frame[15])<<8 | int32(frame[16])<<16 | int32(frame[17])<<24; got != 77 {
 		t.Fatalf("property value=%d, want 77", got)

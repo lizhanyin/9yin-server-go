@@ -152,7 +152,7 @@ func TestCurrentSkillClearEchoesCombatLogicState(t *testing.T) {
 	if got := binary.LittleEndian.Uint16(frame[10:12]); got != 8 {
 		t.Fatalf("clear frame props=%d, want 8 (六项 + CantMove/CantParry 外服私服 46.175 收尾对)", got)
 	}
-	wantIndices := []uint16{463, propCurSkillID, propCurSkillTarget, propCurSkillCanNoLimit, propCantBeSkillLocked, propCantBeSkillMustLocked, propRushCantMove, propCantParry}
+	wantIndices := []uint16{465, propCurSkillID, propCurSkillTarget, propCurSkillCanNoLimit, propCantBeSkillLocked, propCantBeSkillMustLocked, propRushCantMove, propCantParry}
 	off := 12
 	for i, want := range wantIndices {
 		if got := binary.LittleEndian.Uint16(frame[off : off+2]); got != want {
@@ -160,7 +160,7 @@ func TestCurrentSkillClearEchoesCombatLogicState(t *testing.T) {
 		}
 		off += 2
 		switch want {
-		case 463:
+		case 465:
 			if got := frame[off]; got != entity.LogicStateFighting {
 				t.Fatalf("LogicState echo=%d, want Fighting(1)", got)
 			}

@@ -10,11 +10,13 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// npcDetail0x28Enabled 控制 0x28 详情记录生成下发（NINEYIN_NPC_DETAIL_0X28=1）。
-// 2026-11-10 真机 sparse 二分定案：外服私服表方言下 NPC 渲染必需 0x28（0x0D
-// 与外服私服样本同构也不够）——本生成器是外服私服模式 NPC 渲染的载体。
+// npcDetail0x28Enabled 控制 0x28 详情记录生成下发（默认开；
+// NINEYIN_NPC_DETAIL_0X28=0 可关）。2026-11-10 真机 sparse 二分定案：
+// 外服私服表方言下 NPC 渲染必需 0x28（0x0D 与外服私服样本同构也不够）
+// ——本生成器是外服私服模式 NPC 渲染的载体。2026-11-14 属性表定案唯一
+// official2433 方言后由 opt-in 转默认开（fork 方言退役，无头块可回落）。
 func npcDetail0x28Enabled() bool {
-	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_DETAIL_0X28")) == "1"
+	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_DETAIL_0X28")) != "0"
 }
 
 // npcDetail0x28Event 为每次物化生成的事件 u32（外服私服 [38:42] 每物化事件

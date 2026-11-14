@@ -102,7 +102,8 @@ func TestRollSkillHitAppliesNPCDefense(t *testing.T) {
 	}
 	npc := testNPCSpawn()
 	npc.resolved.ScriptClass = "AttackNpc"
-	npc.resolved.Properties["Level"] = clientdata.PropertyValue{Value: clientdata.Int32Value(50)}
+	// official2433：Level 为 Byte 线型（fork 为 Int32）。
+	npc.resolved.Properties["Level"] = clientdata.PropertyValue{Value: clientdata.ByteValue(50)}
 	npc.resolved.Properties["PowerNo"] = clientdata.PropertyValue{Value: clientdata.Int32Value(1)}
 	if err := world.registerNPCOnRun(97, npc); err != nil {
 		t.Fatal(err)

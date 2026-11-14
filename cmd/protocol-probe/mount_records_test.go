@@ -77,12 +77,13 @@ func TestMountRideStateFrameMountedAndWalkStyle(t *testing.T) {
 	if frame[0] != 0x10 {
 		t.Fatalf("opcode=%#x", frame[0])
 	}
-	// 上马口径：Mount@77 模型串，NewRideID@1333=包号，CurRiderType@82。
+	// 上马口径：Mount@77 模型串，NewRideID@1338=包号（official2433 位，
+	// fork 1333），CurRiderType@82。
 	if !strings.Contains(string(frame), `npc\ride_hawk_0201`) {
 		t.Fatalf("ride state missing mount model: %x", frame)
 	}
 	raw := string(frame)
-	if !containsPropertyIndex(raw, 77) || !containsPropertyIndex(raw, 1333) || !containsPropertyIndex(raw, 82) {
+	if !containsPropertyIndex(raw, 77) || !containsPropertyIndex(raw, 1338) || !containsPropertyIndex(raw, 82) {
 		t.Fatalf("ride state missing property indices: %x", frame)
 	}
 

@@ -19,7 +19,27 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/local/9yin-go-server/internal/clientdata"
 )
+
+// wireIntValue 按值线型归一取整（byte/word/int32/int64；其余 0）。
+// official2433 下 Level/BossLevel 为 Byte 线型，直接读 .I32 恒零
+//（NPC 等级/BOSS 档位失真的根因修复，2026-11-14）。
+func wireIntValue(v clientdata.Value) int32 {
+	switch n := v.Native().(type) {
+	case uint8:
+		return int32(n)
+	case uint16:
+		return int32(n)
+	case int32:
+		return n
+	case int64:
+		return int32(n)
+	default:
+		return 0
+	}
+}
 
 // staticPropRow 是单个实力包的成长基数（每级增量）。
 type staticPropRow struct {

@@ -536,12 +536,15 @@ func (r *sceneRun) registerNPCLocked(id uint32, npc npcSpawn) error {
 				maxMP = property.Value.I32
 			}
 		case "Level":
-			if property.Value.I32 > 0 {
-				level = property.Value.I32
+			if v := wireIntValue(property.Value); v > 0 {
+				level = v
 			}
-		case "PowerNo":
-			powerNo = property.Value.I32
 		}
+	}
+	// PowerNo 是服务端内部键（official2433 表无行，OrderedProperties 必丢），
+	// 从 resolved.Properties 直读（模板列旁路绑定见 npc_resolver.go）。
+	if property, ok := npc.resolved.Properties["PowerNo"]; ok {
+		powerNo = wireIntValue(property.Value)
 	}
 	// 实力包守方数值推导（2026-11-08 NPC 属性块迁移）：Base×Level 规则
 	// 集中在 deriveNPCCombatStats；封劲暂不推导（见其注释）。

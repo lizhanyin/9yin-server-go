@@ -102,16 +102,12 @@ func (r ResolvedNPC) OrderedProperties() ([]IndexedProperty, error) {
 }
 
 type templateColumnBinding struct {
-	Name       string
-	Occurrence int
+	Name string
 }
 
 var npcTemplateAliases = map[string]templateColumnBinding{
 	"ConfigID": {Name: "ID"},
 	"Sex":      {Name: "Gender"},
-	// 新版表格中 StopTime 重复出现。NPC 战斗停止时间对应的是
-	// 第二次出现（物理列 87，从零开始计数）。
-	"StopTime": {Name: "StopTime", Occurrence: 1},
 }
 
 // npcTemplateStructuralFields 是模板表的结构列,只经由 npcTemplateAliases
@@ -168,18 +164,9 @@ func ResolveNPC(table *NPCTemplateTable, instance NPCCreatorInstance, options Re
 			// 重名需要经过人工审定的绑定。绝不猜测取第一个或最后一个。
 			continue
 		}
-		// 城市表只包含战斗 StopTime 列，而门派表
-		// 还包含一个更早出现的移动 StopTime 列。审定绑定的策略是：
-		// 第二次出现存在时选用第二次出现，
-		// 否则选用唯一的那次出现。
-		occurrence := binding.Occurrence
-		if explicit && binding.Name == "StopTime" && occurrence == 1 && len(indices) == 1 {
-			occurrence = 0
-		}
-		if occurrence < 0 || occurrence >= len(indices) {
-			return ResolvedNPC{}, fmt.Errorf("clientdata: NPC template binding %q occurrence %d not present in %s", binding.Name, binding.Occurrence, table.Source)
-		}
-		columnIndex := indices[occurrence]
+		// StopTime 双列审定（战斗/移动停止时间取第二列）随 fork 场景域名
+		// 一起退役：official2433 表无 StopTime 行，绑定循环根本不会命中。
+		columnIndex := indices[0]
 		consumedTemplate[columnIndex] = struct{}{}
 		cell := row.Cells[columnIndex]
 		if !cell.Set {
@@ -190,6 +177,18 @@ func ResolveNPC(table *NPCTemplateTable, instance NPCCreatorInstance, options Re
 			return ResolvedNPC{}, fmt.Errorf("clientdata: NPC template %s logical record %d field %s=%q: %w", row.Source, row.LogicalRecord, cell.ColumnName, cell.Raw, parseErr)
 		}
 		resolved.Properties[field.Name] = PropertyValue{Value: value, Provenance: Provenance{Layer: "template", Source: row.Source, Record: row.LogicalRecord, Field: cell.ColumnName}}
+	}
+
+	// PowerNo 是服务端内部推导键（实力包档位，deriveNPCCombatStats 消费），
+	// 从不下发客户端——official2433 表无此行（fork-only 名），模板列直读
+	// 旁路：不依赖 0x09 场景域，OrderedProperties 照旧丢弃（无需下发），
+	// 2433 唯一方言下实力档位通道保持完好。
+	if indices := table.ColumnIndices("PowerNo"); len(indices) == 1 {
+		if cell := row.Cells[indices[0]]; cell.Set {
+			if powerNo, parseErr := strconv.Atoi(strings.TrimSpace(cell.Raw)); parseErr == nil {
+				resolved.Properties["PowerNo"] = PropertyValue{Value: Int32Value(int32(powerNo)), Provenance: Provenance{Layer: "template", Source: row.Source, Record: row.LogicalRecord, Field: cell.ColumnName}}
+			}
+		}
 	}
 
 	consumedCreator := make(map[string]struct{})

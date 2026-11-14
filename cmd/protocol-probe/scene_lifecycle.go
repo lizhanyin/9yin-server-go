@@ -649,7 +649,7 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 			}
 		}
 		// 0x28 详情记录（外服私服方言 NPC 渲染必需，sparse 二分定案）：
-		// NINEYIN_NPC_DETAIL_0X28=1，物化（0x0D）之后下发——两代生成器
+		// 默认开（NINEYIN_NPC_DETAIL_0X28=0 可关），物化（0x0D）之后下发——两代生成器
 		//（=3 模板身份 / v2 本服身份+精确切片）在 0x0D 前下发均真机崩溃，
 		// 身份策略迥异故共同点排除身份串、指向时序；外服私服 #1776→#1777
 		// 先 0x28 配对疑为 op29 批量预载对象特例，新对象应先物化后详情

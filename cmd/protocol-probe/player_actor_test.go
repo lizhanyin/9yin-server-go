@@ -7,13 +7,14 @@ import (
 )
 
 func TestQingGongMotionPropertiesUseModernRushRangeConfig(t *testing.T) {
+	// official2433 位（fork 873-878 整族 +2 漂移）。
 	want := map[uint16]float32{
-		873: 5.0, // GRushRange
-		876: 1.5, // GRushRangeAdd
-		874: 8.0, // ARushRange
-		877: 6.5, // ARushRangeAdd
-		875: 8.0, // WRushRange
-		878: 6.5, // WRushRangeAdd
+		875: 5.0, // GRushRange
+		878: 1.5, // GRushRangeAdd
+		876: 8.0, // ARushRange
+		879: 6.5, // ARushRangeAdd
+		877: 8.0, // WRushRange
+		880: 6.5, // WRushRangeAdd
 	}
 	got := make(map[uint16]float32)
 	for _, property := range qinggongMotionProperties() {

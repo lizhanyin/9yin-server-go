@@ -33,7 +33,7 @@ func TestStarterSkillViewUsesNativeSkillContainer(t *testing.T) {
 			[]byte(skill.configID + "\x00"),
 			{byte(propStaticData & 0xff), byte(propStaticData >> 8)},
 			{byte(propItemType & 0xff), byte(propItemType >> 8)},
-			{byte(1465 & 0xff), byte(1465 >> 8), 1}, // Level(官方玩家域,Byte)
+			{byte(1472 & 0xff), byte(1472 >> 8), 1}, // Level(官方玩家域,Byte;official2433 位 1472,fork 1465)
 			{byte(propMaxLevel & 0xff), byte(propMaxLevel >> 8)},
 			{byte(propCurFillValue & 0xff), byte(propCurFillValue >> 8)},
 			{byte(propTotalFillValue & 0xff), byte(propTotalFillValue >> 8)},

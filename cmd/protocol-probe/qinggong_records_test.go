@@ -287,7 +287,6 @@ func TestGrantRedSuperArmorUsesNativeBufferInfoProperty(t *testing.T) {
 	if !strings.Contains(string(frame), "21EA,1105C0E3,3DEFBAE,1,") {
 		t.Fatalf("missing native BufferInfo serialization: %q", frame)
 	}
-	if !strings.Contains(string(frame), "buf_fixed_red,local-1,1,285589731-64945070,") {
-		t.Fatalf("missing native BufferListStr serialization: %q", frame)
-	}
+	// BufferListStr(fork-only@143) 在 official2433 唯一方言下停发
+	//（buff 条官方走 BufferInfo 槽，§14.5）；不再断言其串行。
 }

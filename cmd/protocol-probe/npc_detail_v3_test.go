@@ -92,7 +92,6 @@ func parseDetail0x28V3Fields(t *testing.T, frame []byte) map[uint16]struct {
 // 末槽原始 u32 1）；③字段区按表列型回走零失步；④身份/常量值逐项；
 // ⑤model 空时身份三串+RotatePara 省略仍零失步。
 func TestNPCDetail0x28V3Frame(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	schema := []clientdata.IndexedProperty{
 		{Index: clientdata.MustPlayerProperty("Level").Index, Name: "Level", Value: clientdata.Int32Value(5)},
 		{Index: clientdata.MustPlayerProperty("NpcType").Index, Name: "NpcType", Value: clientdata.Int32Value(14)},
@@ -200,7 +199,6 @@ func TestNPCDetail0x28V3Frame(t *testing.T) {
 // MPRatio/karma/origin 族不发；BufferInfo×2 活 buff 槽省略（官方 23 字段
 // −2=21）。
 func TestNPCDetail0x28V3FrameArmed(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	schema := []clientdata.IndexedProperty{
 		{Index: clientdata.MustPlayerProperty("Level").Index, Name: "Level", Value: clientdata.Int32Value(160)},
 		{Index: clientdata.MustPlayerProperty("NpcType").Index, Name: "NpcType", Value: clientdata.Int32Value(4)},
@@ -255,29 +253,7 @@ func TestNPCDetail0x28V3FrameArmed(t *testing.T) {
 	}
 }
 
-func TestNPCDetail0x28V3FrameForkTable(t *testing.T) {
-	// 2026-11-11 真机回归：fork 表 + NINEYIN_NPC_DETAIL_0X28=1 曾致首帧
-	// NPC 0x0D 后会话静默关闭（疑 v3 属性集构造 panic）。双方言都必须走通；
-	// 2026-11-11 晚补形态方言后再加全帧回走（fork 线型如 u8 也要零失步）。
-	clientdata.SwapPropertyTableForTest(t, "fork")
-	props := officialNPCEntityProperties([]clientdata.IndexedProperty{
-		{Index: clientdata.MustPlayerProperty("Level").Index, Name: "Level", Value: clientdata.Int32Value(5)},
-	}, "npc449", "sz447")
-	frame := npcDetail0x28V3Frame(1, 2, worldcore.Transform{}, nil, props)
-	if frame[1] != 0x46 {
-		t.Fatalf("mode=%#x", frame[1])
-	}
-	fields := parseDetail0x28V3Fields(t, frame)
-	for _, name := range []string{"CollideRadius", "State", "Resource", "ConfigID", "Photo", "WeaponMode", "CursorShape", "MPRatio", "OriginPara3"} {
-		entry := clientdata.MustPlayerProperty(name)
-		if _, ok := fields[entry.Index]; !ok {
-			t.Fatalf("fork 方言字段 %s 缺席", name)
-		}
-	}
-}
-
 func TestNPCDetail0x28V3FrameNoIdentity(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	props := officialNPCEntityProperties(nil, "", "")
 	frame := npcDetail0x28V3Frame(1, 2, worldcore.Transform{}, nil, props)
 	fields := parseDetail0x28V3Fields(t, frame)
@@ -295,7 +271,6 @@ func TestNPCDetail0x28V3FrameNoIdentity(t *testing.T) {
 // TestNPCDetail0x28V3CollideSchemaPassThrough 怪物/Boss 形 CollideRadius
 // 按体型的 schema 真值直通（npc.pcapng 0x46 定版：怪物 0.915/Boss 1.0）。
 func TestNPCDetail0x28V3CollideSchemaPassThrough(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	for _, want := range []float32{0.5, 0.915, 1.0} {
 		schema := []clientdata.IndexedProperty{
 			{Index: clientdata.MustPlayerProperty("CollideRadius").Index, Name: "CollideRadius", Value: clientdata.Float32Value(want)},
@@ -319,7 +294,6 @@ func TestNPCDetail0x28V3CollideSchemaPassThrough(t *testing.T) {
 // TestNPCDetail0x28V3MovingTarget 走动物化 posB=目标位（npc.pcapng 外服私服
 // 0x46 帧 8/8 A≠B，B=段末目的地）；nil target 保持 A=B（静立/停留方言）。
 func TestNPCDetail0x28V3MovingTarget(t *testing.T) {
-	clientdata.SwapPropertyTableForTest(t, "official2433")
 	props := officialNPCEntityProperties(nil, "", "")
 	transform := worldcore.Transform{X: 100, Y: 1, Z: 200, Orient: 0.5}
 	slot := func(frame []byte, i int) float32 {

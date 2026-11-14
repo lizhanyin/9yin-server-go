@@ -500,14 +500,19 @@ func TestCombatTickClearsNPCFightingAfterLeash(t *testing.T) {
 // autoSelectFrames 收集受害者连接上的 LastObject(414)/AutoSelectObject(415)
 // 单属性 0x10 帧（各 22B：n@10=1、idx@12、target@14/18），返回
 // idx→(targetID,targetOwner)。登录全量 0x10 帧属性数远大于 1，天然被过滤。
+// 索引按名解析（official2433：LastObject@416/AutoSelectObject@417）。
 func autoSelectFrames(conn *captureMessageConnection) map[uint16][2]uint32 {
+	wanted := map[uint16]bool{
+		clientdata.MustPlayerProperty("LastObject").Index:       true,
+		clientdata.MustPlayerProperty("AutoSelectObject").Index: true,
+	}
 	found := map[uint16][2]uint32{}
 	for _, frame := range conn.Frames() {
 		if len(frame) != 22 || frame[0] != 0x10 || binary.LittleEndian.Uint16(frame[10:]) != 1 {
 			continue
 		}
 		idx := binary.LittleEndian.Uint16(frame[12:])
-		if idx == 414 || idx == 415 {
+		if wanted[idx] {
 			found[idx] = [2]uint32{binary.LittleEndian.Uint32(frame[14:]), binary.LittleEndian.Uint32(frame[18:])}
 		}
 	}
@@ -524,7 +529,8 @@ func TestNPCAttackAutoSelectsAttackerForUntargetedVictim(t *testing.T) {
 	player := newPlayerActor("tester", 0)
 	lifecycle.combatTickForTest(player, role.Position{X: 1, Y: 0, Z: 0}, time.Unix(3000, 0))
 	found := autoSelectFrames(conn)
-	for _, idx := range []uint16{414, 415} {
+	// LastObject@416 + AutoSelectObject@417（official2433 位；fork 414/415）。
+	for _, idx := range []uint16{416, 417} {
 		target, ok := found[idx]
 		if !ok {
 			t.Fatalf("attacker auto-select frame idx=%d missing", idx)
@@ -579,7 +585,7 @@ func TestNPCAttackReplacesStaleSelection(t *testing.T) {
 		t.Fatalf("stale selection not replaced: %d-%d", lifecycle.selectedObject, lifecycle.selectedOwner)
 	}
 	found := autoSelectFrames(conn)
-	if _, ok := found[415]; !ok {
+	if _, ok := found[417]; !ok {
 		t.Fatal("stale selection replacement must push AutoSelectObject frame")
 	}
 	lifecycle.close()

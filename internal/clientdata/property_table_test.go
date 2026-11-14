@@ -6,86 +6,52 @@ import (
 	"testing"
 )
 
-// TestOfficialPropertyTableShape 校验嵌入表规模与关键锚点。
-// 锚点来自 F 盘新版 exe 抓包的三方比对(2026-11-06):下发表 == 官方表,
-// SP=467、玩家域 HP=465/MPRatio=470/InParry=471 等是位置绑定的硬语义。
+// TestOfficialPropertyTableShape 校验嵌入表规模与关键锚点
+// （c.pcapng 7074 线 0x09 帧提取，唯一方言 2433 真表）。
 func TestOfficialPropertyTableShape(t *testing.T) {
-	if got := OfficialPropertyCount(); got != 2370 {
-		t.Fatalf("official property table entries = %d, want 2370", got)
+	if got := OfficialPropertyCount(); got != 2433 {
+		t.Fatalf("official property table entries = %d, want 2433", got)
 	}
-	anchors := []struct {
-		index int
-		name  string
-		code  int
-	}{
-		{34, "NpcType", 3},
-		{36, "Prop36", 8},
-		{88, "InParry", 3},
-		{100, "LastObject", 9},
-		{178, "Name", 8},
-		{390, "SpeedRatio", 3},
-		{414, "LastObject", 9},
-		{415, "AutoSelectObject", 9},
-		{463, "LogicState", 1},
-		{465, "HP", 3},
-		{467, "SP", 3},
-		{470, "MPRatio", 3},
-		{471, "InParry", 3},
-		{474, "InManualParry", 3},
-		{475, "ParryValue", 3},
-		{580, "MaxSP", 3},
-		{583, "MaxSPAdd", 3},
-		{629, "BufferInfo1", 7},
-		{652, "BufferInfo24", 7},
-	}
-	for _, anchor := range anchors {
-		entry, ok := PropertyByIndex(anchor.index)
-		if !ok {
-			t.Fatalf("index %d absent from official table", anchor.index)
-		}
-		if entry.Name != anchor.name || entry.TypeCode != anchor.code {
-			t.Errorf("official table[%d] = (%q, %d), want (%q, %d)", anchor.index, entry.Name, entry.TypeCode, anchor.name, anchor.code)
-		}
+	// 头块换血实证：0=None(不可编码)、1=HomeCount（fork 场景域 0=Type 已退役）。
+	if entries := OfficialPropertyEntries(); entries[0].Name != "None" || entries[1].Name != "HomeCount" {
+		t.Fatalf("head block changed: [0]=%s [1]=%s", entries[0].Name, entries[1].Name)
 	}
 }
 
 // TestOfficialPropertyTableDomainResolution 校验同名多处的域解析:
 // 场景域首现、玩家域末现(镜像 Java PropertyTable 语义)。
+// 锚点全部来自外服私服帧实解（0x0D #1777 / §11.4 View45）。
 func TestOfficialPropertyTableDomainResolution(t *testing.T) {
-	cases := []struct {
-		name        string
-		sceneIndex  int
-		playerIndex int
-	}{
-		{"LastObject", 100, 414},
-		{"InParry", 88, 471},
-		{"HP", 32, 465},
-		{"MPRatio", 29, 470},
-		{"Name", 178, 178},       // 全表唯一
-		{"LogicState", 463, 463}, // 仅玩家块出现
-		{"SP", 467, 467},
-	}
-	for _, tc := range cases {
-		scene, ok := SceneProperty(tc.name)
-		if !ok {
-			t.Fatalf("scene property %q absent", tc.name)
-		}
-		if int(scene.Index) != tc.sceneIndex {
-			t.Errorf("scene %q index = %d, want %d", tc.name, scene.Index, tc.sceneIndex)
-		}
-		player, ok := PlayerProperty(tc.name)
-		if !ok {
-			t.Fatalf("player property %q absent", tc.name)
-		}
-		if int(player.Index) != tc.playerIndex {
-			t.Errorf("player %q index = %d, want %d", tc.name, player.Index, tc.playerIndex)
-		}
-	}
 	if _, ok := SceneProperty("NoSuchPropertyName"); ok {
 		t.Error("unknown name resolved in scene domain")
 	}
 	if _, ok := PlayerProperty("NoSuchPropertyName"); ok {
 		t.Error("unknown name resolved in player domain")
+	}
+	// 场景域首现 vs 玩家域末现漂移的实名样本。
+	playerAnchors := []struct {
+		name  string
+		index int
+	}{
+		{"AutoSelectObject", 417}, // §四-5 外服私服 m431 应答
+		{"NpcType", 1566},         // 16-prop 方言 NpcType 行（fork 末现位 1559 已退役）
+		{"IDCard", 1602},          // §13.5 外服私服 NPC 0x0D
+	}
+	for _, a := range playerAnchors {
+		entry, ok := PlayerProperty(a.name)
+		if !ok {
+			t.Fatalf("player property %q absent", a.name)
+		}
+		if int(entry.Index) != a.index {
+			t.Errorf("player %q index = %d, want %d", a.name, entry.Index, a.index)
+		}
+	}
+	// fork 场景域头行名（Type/PosiX/Orient 等）在外服私服表头块换血后缺席，
+	// 场景域只能命中共享域位——这是唯一方言下的既定语义。
+	for _, absent := range []string{"PosiX", "PosiZ", "Orient", "BufferListStr", "NpcNickName"} {
+		if _, ok := SceneProperty(absent); ok {
+			t.Errorf("fork-only scene name %q unexpectedly resolvable", absent)
+		}
 	}
 }
 
