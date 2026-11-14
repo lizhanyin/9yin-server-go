@@ -23,42 +23,36 @@ import (
 func sendEntryScene(conn sceneMessageConnection, scene role.Scene) error {
 	entry := make([]byte, 15, 96)
 	entry[0] = 0x0B
-	// fork 版布局（抓包实证）：[1:5] 场景对象ID（常量 0x1F6A3），
-	// [5:9]/[9:13] 即玩家的线缆 objectID/ownerID，与玩家 0x0D 档案、
-	// 0x1F/0x10/0x11 严格同源——三处必须一起改，否则客户端对象表断裂。
-	binary.LittleEndian.PutUint32(entry[1:], 0x1F6A3)
+	// 布局（c.pcapng 0x0B 83B 逐字节 + 步骤①真机定案）：[1:5] 场景对象ID
+	// = 进场流水号（官方 0x1521；恒 0x1F6A3 的 fork 形会破坏场景对象表，
+	// 全量回放下怪全不建——2026-11-14 单变量递进坐实），[5:9]/[9:13] 即
+	// 玩家的线缆 objectID/ownerID。
+	binary.LittleEndian.PutUint32(entry[1:], 0x1521)
 	binary.LittleEndian.PutUint32(entry[5:], playerObjectID)
 	binary.LittleEndian.PutUint32(entry[9:], playerOwnerID)
-	binary.LittleEndian.PutUint16(entry[13:], 3)
-	// ConfigID/Resource 按名经场景域（首现）解析：fork 表落 7/8、
-	// 外服私服 2433 表天然落 1447/1448（=外服私服 op0B 样本原号，上方注释的
-	// 真机教训由此消解——两方言各自与所发表自洽）。
+	// 官方 4 属性形（缺一不可，逐字节对齐官方样本）：
+	//   idx178 Name=8B 遮蔽常量、idx1468 MaxVisuals=u16 230（场景可视表
+	//   容量=AddObject 注册闸，我方历史恒缺发→对象表未开张）、
+	//   ConfigID、Resource；无 idx99 尾。
+	binary.LittleEndian.PutUint16(entry[13:], 4)
 	entryConfig, entryResource := scene.Config, scene.Resource
 	// 场景切换判别实验（B 路线，2026-11-14）：NINEYIN_SCENE_CONFIG/
-	// NINEYIN_SCENE_RESOURCE 覆盖 0x0B 场景串——外服客户端 ini.package 无
-	// ini\scene 目录，city05 配置疑缺失；换成官服原生场景（school03_
-	// JunZiTang，c.pcapng 实证）可判场景管线是否启动。
+	// NINEYIN_SCENE_RESOURCE 覆盖 0x0B 场景串。
 	if v := strings.TrimSpace(os.Getenv("NINEYIN_SCENE_CONFIG")); v != "" {
 		entryConfig = v
 	}
 	if v := strings.TrimSpace(os.Getenv("NINEYIN_SCENE_RESOURCE")); v != "" {
 		entryResource = v
 	}
+	// idx178 Name：8B 遮蔽常量（六包恒定），按表宽串编码 [len u32][字节]。
+	entry = binary.LittleEndian.AppendUint16(entry, 178)
+	entry = binary.LittleEndian.AppendUint32(entry, 8)
+	entry = append(entry, 0x1b, 0x54, 0x50, 0x5b, 0x02, 0x58, 0x00, 0x00)
+	// idx1468 MaxVisuals：u16=230。
+	entry = binary.LittleEndian.AppendUint16(entry, 1468)
+	entry = binary.LittleEndian.AppendUint16(entry, 230)
 	entry = appendStringProperty(entry, clientdata.MustSceneProperty("ConfigID").Index, entryConfig)
 	entry = appendStringProperty(entry, clientdata.MustSceneProperty("Resource").Index, entryResource)
-	// 尾属性 idx 99 的宽度按当前 0x09 表线型编码：fork 活动表该行
-	// int32（4B，旧写法恰好合法）、官方 2433 表 int64（8B）。此前恒写
-	// u32 → 官方方言下客户端按表读 8B 越出帧尾 → fxnet2 RecvProperty
-	// "Out range" → (GameReceiver::ServerEntryScene)property error
-	// （2026-11-11 06:29 真机 trace.log 三连 + 逐帧走查定案；官方
-	// l.pcapng #126 0x0B 样本为 5 属性形无 99 尾，fork 抓包带此尾且
-	// fork 方言真机可进——保留 fork 形但按表补宽）。
-	entry = binary.LittleEndian.AppendUint16(entry, 99)
-	if tail, ok := clientdata.PropertyByIndex(99); ok && tail.Type == clientdata.WireInt32 {
-		entry = binary.LittleEndian.AppendUint32(entry, 200)
-	} else {
-		entry = binary.LittleEndian.AppendUint64(entry, 200)
-	}
 	return conn.WriteFrame(entry)
 }
 
