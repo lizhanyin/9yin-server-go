@@ -1,0 +1,17 @@
+== fxgame anatomy (elevated) 2026-11-14T01:15:46.375690 ==
+pid=58840
+handle OK (QUERY_INFO|VM_READ|READ_CONTROL)
+
+-- security descriptor (SACL needs SE_SECURITY_NAME; may fail) st=0 --
+owner: BUILTIN\Administrators S-1-5-32-544
+DACL present: revision=2 ACECount=80
+  ACE0 ALLOW BUILTIN\Administrators mask=0x001FFFFF (ALL_ACCESS)
+  ACE1 ALLOW NT AUTHORITY\SYSTEM mask=0x001FFFFF (ALL_ACCESS)
+  ACE2 ALLOW NT AUTHORITY\LogonSessionId_0_394946 mask=0x00121411 (TERMINATE|VM_READ|QUERY_INFO|QUERY_LIMITED)
+Traceback (most recent call last):
+  File "G:\pojie\ai\9yin-server-go\tools\fxgame_anatomy_elevated.py", line 125, in <module>
+    mask = struct.unpack_from("<I", ctypes.string_at(p + 4, size - 4), 0)[0]
+                                    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\Users\Python\Python314\Lib\ctypes\__init__.py", line 619, in string_at
+    return _string_at(ptr, size)
+SystemError: Negative size passed to PyBytes_FromStringAndSize

@@ -1,0 +1,16 @@
+== fxgame DACL full dump 2026-11-14T01:17:40.580660 ==
+pid=58840
+GetSecurityInfo(OWNER|DACL) st=0
+GetExplicitEntriesFromAcl failed gle=122
+
+modules: 189
+protection-related modules:
+  msdmo.dll        base=0x7FF8E06D0000 C:\WINDOWS\SYSTEM32\msdmo.dll
+  FxProtect.dll    base=0x8E00000 F:\Game\Online\9yin\Age of Wushu\bin64\FxProtect.dll
+
+fxgame base=0x140000000
+PE header read OK sig=b'PE\x00\x00'
+sections=8 EP_RVA=0x977E30
+  (section table truncated at 0, e_lfanew=0x80 past read window)
+
+DONE

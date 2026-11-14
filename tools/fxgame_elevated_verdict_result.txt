@@ -1,0 +1,11 @@
+== elevated verdict probe 2026-11-14T01:13:52.728156 ==
+IsUserAnAdmin=1
+SeDebugPrivilege: lookup=True adjust=False gle=6 (1300=NOT_ALL_ASSIGNED, 0=enabled)
+target pid=58840
+OpenProcess(QUERY_LIMITED) -> OK gle=0
+OpenProcess(QUERY_INFO) -> OK gle=0
+OpenProcess(VM_READ) -> OK gle=0
+OpenProcess(VM_READ|VM_WRITE|VM_OPERATION) -> OK gle=0
+OpenProcess(PROCESS_ALL_ACCESS) -> OK gle=0
+EnumProcessModulesEx failed gle=5
+VERDICT: VM_READ_HANDLE_OK -> DACL bypassed (module enum/read skipped)
