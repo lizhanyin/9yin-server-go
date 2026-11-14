@@ -6,7 +6,7 @@ import (
 	"math"
 )
 
-// 商店购销（fork shop_buy.go 同名 handler 复刻；docs/fork-p2-shop-title-jingmai.md）。
+// 商店购销（fork shop_buy.go 同名 handler 复刻；docs/systems/fork-p2-shop-title-jingmai.md）。
 // 70 = handleShopBuyCustom：[70, str shopId, i32 page, i32 pos, i32 count]，
 //
 //	货位匹配 item.page==page+1 && item.position==pos-1（与 openShopLocked

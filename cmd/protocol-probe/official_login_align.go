@@ -1,6 +1,6 @@
 package main
 
-// 外服私服登录时间线对齐帧簇（docs/外服私服登录帧对照与缺口清单.md §二/§八/§十）。
+// 外服私服登录时间线对齐帧簇（docs/official/外服登录帧对照与缺口清单.md §二/§八/§十）。
 //
 // c.pcapng（外服私服 7074 线）登录窗口实证的三个补充位：
 //
@@ -98,7 +98,7 @@ func officialServerIdentity() (serverID int32, serverName string) {
 }
 
 // officialAccountLabel 返回 m655/m607 的账号显示名。2026-11-11 起 op02
-// 账号槽密文经 fork 域密码逆阶梯解出明文账号（docs/fork-login-crypto.md，
+// 账号槽密文经 fork 域密码逆阶梯解出明文账号（docs/fork-era/fork-login-crypto.md，
 // DecryptAccountFields 已滤非 ASCII——tag6 窄串只放 ASCII，官方/Java 同俗，
 // 中文账号名回空防账号栏乱码），即回传真实用户名；
 // NINEYIN_OFFICIAL_ACCOUNT 仍可强制覆盖。

@@ -18,7 +18,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// 玩家对象 id 方案（2026-11-12 晚修订，docs/id-system-analysis.md §5/§6
+// 玩家对象 id 方案（2026-11-12 晚修订，docs/fork-era/id-system-analysis.md §5/§6
 // 背景）：玩家 = (0x1105C0E3, 0x03DEFBAE)——登陆-all.pcapng 外服私服玩家
 // 原对。此前 fork 对 (0x11000001, 0x7A5C0B) 只被验过「可进游戏」；
 // 但本服 NPC obj 分配带 = 0x11000002..0x1100xxxx，玩家 0x11000001 恰好
@@ -96,11 +96,11 @@ const (
 	waterDriftStaticData    uint32 = 216
 	waterJumpStaticData     uint32 = 5786
 
-	// 官服登录三件套固定 buff（登陆/登陆2/c/初始账号 四包 0x10 属性帧
+	// 外服登录三件套固定 buff（登陆/登陆2/c/初始账号 四包 0x10 属性帧
 	// 实证，2433 表 idx 631/632）：槽 1=BufferInfo1 装备整合
 	// buff_group_flag_101（zhenghe_eq.png，装备特效统一聚合位）恒
 	// '6747,obj,own,1,0,0'；槽 2=BufferInfo2 饱食度 buf_baosd_02 恒
-	// '1E37,obj,own,0,0,0'。官服槽位全景=1/2 固定、3 内功、4 起动态
+	// '1E37,obj,own,0,0,0'。外服槽位全景=1/2 固定、3 内功、4 起动态
 	//（格挡 11CE/内功子 4BF9 全在 4+）。落地取「默认内容」语义：槽位
 	// 无战斗租约时显示固定 buff，租约可临时覆盖、到期自动回落——两种
 	// 表方言按名解析 BufferInfoN，槽号与客户端无关。
@@ -1444,7 +1444,7 @@ func (p *playerActor) bufferInfo(slot uint16, now time.Time) string {
 func (p *playerActor) bufferInfoLocked(slot uint16, now time.Time) string {
 	buff, ok := p.buffs[slot]
 	if !ok || !buff.expiresUTC.After(now.UTC()) {
-		// 固定 buff 默认内容（见常量块注释）：官服无租约时槽 1/2 恒显
+		// 固定 buff 默认内容（见常量块注释）：外服无租约时槽 1/2 恒显
 		// 装备整合/饱食度，战斗租约覆盖后到期回落。
 		switch slot {
 		case equipFixedBuffSlot:

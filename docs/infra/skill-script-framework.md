@@ -171,7 +171,7 @@ end
 
 ## item/&lt;configId&gt;.lua（使用物效果，msg31）
 
-> 探索取证全录（客户端右键链路/宝箱数据模型/掉落包全景/参考实现盘点/决策记录）：[item-use-msg31.md](item-use-msg31.md)
+> 探索取证全录（客户端右键链路/宝箱数据模型/掉落包全景/参考实现盘点/决策记录）：[item-use-msg31.md](../systems/item-use-msg31.md)
 
 `LoginFlow.useItemEffect`（msg31 不可穿戴/非卡片分支）调
 `LuaScriptService.itemUse(configId, ctx)`；**解析优先级：Lua 脚本 → INI 数据回退

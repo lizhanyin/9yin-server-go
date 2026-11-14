@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// encodeGraph 按逆向格式（docs/map-path-waypoint-graph.md §2）编码一张
+// encodeGraph 按逆向格式（docs/infra/map-path-waypoint-graph.md §2）编码一张
 // 合成图：int32 节点数，逐节点 float32 x/y/z + int32 边数，逐边
 // int32 目标 + float32 欧氏距离。
 func encodeGraph(t *testing.T, nodes []Node, edges [][2]int) []byte {

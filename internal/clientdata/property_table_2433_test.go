@@ -3,7 +3,7 @@ package clientdata
 import "testing"
 
 // TestPropertyTableOfficial2433Structure 钉死外服私服 2433 表的结构与锚点
-// （c.pcapng 7074 线 0x09 帧提取，docs/外服私服登录帧对照与缺口清单.md §四-2
+// （c.pcapng 7074 线 0x09 帧提取，docs/official/外服登录帧对照与缺口清单.md §四-2
 // 第二次修正）。头块 0..173 换血为家园/帮会/VIP 域、共享域 +2/+7 插入漂移。
 // 2026-11-14 表尾追：末尾追加 61 行 fork 头块缺席名（PosiX/Orient/Race…
 // 官方 2433 行零改动），fork 客户端渲染头行通道复活——锚点全部来自
@@ -47,7 +47,7 @@ func TestPropertyTableOfficial2433Structure(t *testing.T) {
 		}
 	}
 	// 尾追段断言：fork 头块缺席名落官方 2433 行之后的连续尾位
-	//（官方行零改动，官服抓包 diff/回放不受影响）。
+	//（官方行零改动，外服抓包 diff/回放不受影响）。
 	tailAnchors := []struct {
 		index int
 		name  string

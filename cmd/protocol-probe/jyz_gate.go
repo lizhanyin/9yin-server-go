@@ -20,7 +20,7 @@ import (
 // 击杀/任务事件点累计到阈值自动推进（可连跳）。
 //
 // 蓝本 = Java 参考服已被删除的 NinJiuZhi.java（G:\pojie\ai\9yin-server
-// git 3d1df4a「新增九阴志全服阶段门控」，docs/ninjiuzhi-gating.md）。
+// git 3d1df4a「新增九阴志全服阶段门控」，docs/systems/ninjiuzhi-gm-gating.md）。
 // Go 差异（其余语义逐条照录）：
 //   - 初始缺省阶段 6 而非 Java 的 1：保住登录 419/414 gamestep 帧与
 //     外服私服 c.pcapng #111 gamestep=6 逐字节一致的性质（2026-11-08

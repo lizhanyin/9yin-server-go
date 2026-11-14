@@ -11,7 +11,7 @@ import (
 	worldcore "github.com/local/9yin-go-server/internal/world"
 )
 
-// 路点图追击参数（docs/map-path-waypoint-graph.md §6.3）。
+// 路点图追击参数（docs/infra/map-path-waypoint-graph.md §6.3）。
 const (
 	// chaseReplanEvery 重规划节流：玩家持续移动时不必每拍重算 A*，
 	// 300~500ms 一次足够贴身。

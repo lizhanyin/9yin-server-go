@@ -19,7 +19,7 @@ GM 面板有两种等价形态：独立进程 `gm-panel.exe`（19064，经 inter
 启动自动生成到 env.server（`NINEYIN_GM_TOKEN`）。单独拉起/重开独立面板
 用 `server-cmd\start-gm-panel.bat`（读同一份 token；全无 token 时首次
 运行也会自动生成，但要求游戏服用同一 token 启动）。设计见
-`docs/gm-service-rpc-split-design.md`。
+`docs/infra/gm-service-rpc-split-design.md`。
 
 账号：test001
 密码：test001

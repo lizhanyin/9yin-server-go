@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"log"
 	"os"
@@ -8,11 +9,11 @@ import (
 	"sync/atomic"
 )
 
-// B 线两阶段回放（2026-11-14 第十轮）。官服抓包时序定案（c/登陆/登陆2/
+// B 线两阶段回放（2026-11-14 第十轮）。外服抓包时序定案（c/登陆/登陆2/
 // 初始账号 四份交叉验证）：0x0B+化身 0x28+首爆发在进场即发；客户端读条
 // 3~10s 完成后回发单字节 0x09，服务端 ~65ms 后发第二爆发（m561/m681 族、
 // op15 建视图 + 0x18 视图行 + 0x2A 外观），再 ~1s 起按 1s tick 推 AOI
-// 物化簇（0x28+0x0D）。把全序列在单点灌入时，Phase A 里的官服 0x0B 会
+// 物化簇（0x28+0x0D）。把全序列在单点灌入时，Phase A 里的外服 0x0B 会
 // 让客户端进入新一轮读条，其后帧全部落在读条窗口——场景对象表未建，
 // AddObject 查表失败全丢。因此拆两段对齐官方相位：
 //   Phase A = NINEYIN_REPLAY_FRAMES_FILE：现有 clientActivity 钩子发送
@@ -23,12 +24,12 @@ var replayPhase2Armed atomic.Bool
 
 // replayReplaceEntryEnabled：B 线第十一轮 wholesale 判别开关
 // （NINEYIN_REPLAY_REPLACE_ENTRY=1）。真机 trace 定案（2026-11-14
-// 13:11 会话）：我方 city05 0x0B 进场未走完时灌入官服 0x0B = 双进场
+// 13:11 会话）：我方 city05 0x0B 进场未走完时灌入外服 0x0B = 双进场
 // 结构性毒药——unload_terrain 与 entry_stage_main finish 之间的窗口
 // 吞掉化身帧，客户端报 game_visual:GetPlayer not exist。本开关让进场
-// 整体官服化：角色选定后我方进场帧（0x0B/0x0D/0x1F/0x10/背包/解锁/
+// 整体外服化：角色选定后我方进场帧（0x0B/0x0D/0x1F/0x10/背包/解锁/
 // 开图/挂件/场景对象物化）全不发，改发 NINEYIN_REPLAY_FRAMES_FILE
-// （Phase A），客户端 0x09 后只发 Phase B——复刻官服登录的单次进场
+// （Phase A），客户端 0x09 后只发 Phase B——复刻外服登录的单次进场
 // 结构。判据：通了=缺帧/相位假说终局；不通=缺口在 S2C 序列之外。
 func replayReplaceEntryEnabled() bool {
 	return os.Getenv("NINEYIN_REPLAY_REPLACE_ENTRY") == "1"
@@ -54,6 +55,27 @@ var replayExplicitReadySeen atomic.Bool
 // replayEntryFramesPath：Phase A 文件路径（wholesale 模式下即进场帧）。
 func replayEntryFramesPath() string {
 	return strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE"))
+}
+
+// officialFramePosAOffset 在外服化身 0x28 透传帧头部定位变换块 posA
+//（X/Y/Z/Orient 4×f32）的字节偏移。头部形（c#124 化身帧实测 obj@14/
+// own@18/posA@22=928.33,48.75,998.877,0.906=外服 city05 出生点）：
+// … obj u32, own u32, posA。obj/own 限定帧头 64 字节内首个紧邻匹配对，
+// 防长帧字段区的值碰撞；形不符返回 ok=false（调用方原样透传保底，
+// 零改写——身份借用的透传帧任何多余改动都是回归风险）。
+func officialFramePosAOffset(frame []byte, obj, own uint32) (int, bool) {
+	if len(frame) < 64+16 {
+		return 0, false
+	}
+	head := frame[:64]
+	objOff := bytes.Index(head, binary.LittleEndian.AppendUint32(nil, obj))
+	if objOff < 0 || objOff+8 > len(head) {
+		return 0, false
+	}
+	if binary.LittleEndian.Uint32(head[objOff+4:]) != own {
+		return 0, false
+	}
+	return objOff + 8, true
 }
 
 // replayFramesPack 原样回放 [u32 len][frame]×N 打包文件（tools 打包器

@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// 兑换目录（msg70 capitalType=3 分支；docs/fork-p3-exchange-school.md）。
+// 兑换目录（msg70 capitalType=3 分支；docs/systems/fork-p3-exchange-school.md）。
 //
 // 数据源 `share/item/exchangeitem.ini`（约 4.5 万行，GBK）：节名 = 十进制
 // exchangeID（shop.ini 商品行第 8 列引用），键：

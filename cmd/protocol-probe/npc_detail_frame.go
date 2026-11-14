@@ -34,7 +34,7 @@ var npcDetail0x28Template []byte
 //   - 寻路假设证伪：不开 0x28 时地图点击寻路正常工作——0x28 不是寻路
 //     数据挂载的触发器。
 //   结论：模板重发路线退役（探针已移除防再崩）；0x28 只能走 P3
-//   按对象生成记录块（npc_detail_frame 生成器，docs/外服私服登录帧对照
+//   按对象生成记录块（npc_detail_frame 生成器，docs/official/外服登录帧对照
 //   与缺口清单.md §14.2/§14.3-P3）。
 
 // npcDetail0x28PatchFrame 以外服私服模板为底，仅替换 [14:22] obj/owner 与

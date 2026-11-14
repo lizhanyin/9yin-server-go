@@ -1,5 +1,5 @@
 // Package mapnav 提供九阴服务端路点图(.path)的解析、空间索引、A*
-// 寻路与折线跟随。数据格式与几何性质见 docs/map-path-waypoint-graph.md：
+// 寻路与折线跟随。数据格式与几何性质见 docs/infra/map-path-waypoint-graph.md：
 // 小端、无文件头魔法，int32 节点数后逐节点 float32 x/y/z + int32 邻边数，
 // 每边 int32 目标下标 + float32 欧氏距离（邻接表双向互指）。
 //
@@ -137,7 +137,7 @@ func ParseFile(path string) (*Graph, error) {
 
 // ValidateEdgeDistances 把每条边存储的距离与两端节点坐标的欧氏距离
 // 比对（数学级格式验证）。返回 (超差边数, 最大偏差米)。557 文件实测
-// 全部零不匹配（docs/map-path-waypoint-graph.md §2.1）。
+// 全部零不匹配（docs/infra/map-path-waypoint-graph.md §2.1）。
 func (g *Graph) ValidateEdgeDistances(tolerance float32) (mismatches int, maxDeviation float32) {
 	for i, node := range g.nodes {
 		for e := g.edgeStart[i]; e < g.edgeStart[i+1]; e++ {

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestWrapObjectAddAsOp28 对照官服 l.pcapng 明文 0x28 帧定版结构
+// TestWrapObjectAddAsOp28 对照外服 l.pcapng 明文 0x28 帧定版结构
 //（帧 #2537：len-1=328/outlen=319、体=[名@0][行名@4][xyz/orient@8][值对数@0x3C][值对@0x3E]，
 // 首值对 CollideRadius@179 官方位）。
 func TestWrapObjectAddAsOp28(t *testing.T) {
@@ -36,7 +36,7 @@ func TestWrapObjectAddAsOp28(t *testing.T) {
 			t.Fatalf("body[%d]=%#x, want %#x（0x0D 平移-1）", i, body[i], plain[i+1])
 		}
 	}
-	// 体头布局锚（官服帧实证）：名@0/行名@4/坐标簇@8。
+	// 体头布局锚（外服帧实证）：名@0/行名@4/坐标簇@8。
 	name, rowname := int32(binary.LittleEndian.Uint32(body)), int32(binary.LittleEndian.Uint32(body[4:]))
 	if name == 0 || rowname == 0 {
 		t.Fatalf("name/rowname zero: %#x/%#x", name, rowname)

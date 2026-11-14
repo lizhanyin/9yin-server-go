@@ -2,7 +2,7 @@
 >
 > 🗄️ **冻结快照（2026-11-14 标记）**：本目录为 GM 客户端（盛大 res1）文本抽取知识库，2026-11-06 生成后未再更新；
 > 再生脚本 `tools/text-extract/` 已不在本仓库，数据以本快照为准。注意：下文表格中的 `res1_inventory.json`
-> 实际文件名为 `data/resourses_inventory.json`。总索引见 [docs/README.md](../README.md)。
+> 实际文件名为 `data/resourses_inventory.json`。总索引见 [docs/README.md](../../README.md)。
 > 来源：`E:/Workspace/project/game/res1/text/chineses/`（盛大GM版客户端中文文本资源，共 40 项、约 113MB）。
 > 抽取脚本：`tools/text-extract/extract_text.py`，重新生成：`python tools/text-extract/extract_text.py`。
 > res1 完整资源包（share 配置表 / ini 表现配置 / lua64 脚本 / map 场景）的整理见 [resources.md](resources.md) 与 [share-configs.md](share-configs.md)，清单脚本 `tools/text-extract/extract_res1_configs.py`。

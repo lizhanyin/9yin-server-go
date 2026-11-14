@@ -748,7 +748,7 @@ var npcStatePropertyIndex = clientdata.MustPlayerProperty("State").Index // fork
 
 // npcStatePropertyFrame 生成 NPC 行为状态帧：0x10 单属性
 // State(183)="walk"/"stand"。外服私服 NPC 行为通道（2026-11-10 定版，
-// docs/外服私服登录帧对照与缺口清单.md §13.5）：全 pcap 值域
+// docs/official/外服登录帧对照与缺口清单.md §13.5）：全 pcap 值域
 // stand×81 / walk×80 / ty_talk3×1，与 0x21 路点帧成对——起走发
 // walk、驻停发 stand；字节形态 e.pcapng 实证
 // `10 00 <obj> <owner> 0100 b700 06000000 "stand\0"`。

@@ -22,7 +22,7 @@ var (
 	propTotalFillValue = clientdata.MustPlayerProperty("TotalFillValue").Index // TotalFillValue（fork=765）
 	propCurLevel       = clientdata.MustPlayerProperty("CurLevel").Index       // CurLevel（fork=763）
 	propFillSpeed      = clientdata.MustPlayerProperty("FillSpeed").Index      // FillSpeed（fork=773）
-	// 历练层（form_faculty.lua 数据绑定源；docs/livepoint-conversion.md）：
+	// 历练层（form_faculty.lua 数据绑定源；docs/systems/livepoint-conversion.md）：
 	// 槽值毫历练（UI 显示 = 值/1000）。
 	propHoldFaculty    = clientdata.MustPlayerProperty("HoldFaculty").Index    // HoldFaculty Int32:潜能修为存量（fork=800）
 	propLiveGroove1    = clientdata.MustPlayerProperty("LiveGroove_1").Index   // LiveGroove_1..5 Int32:历练槽 1..5（fork=804）
@@ -124,7 +124,7 @@ const (
 	defaultExtraNeiGongPower    int32 = 120
 
 	// ---- 历练层常量（官方公式 form_faculty.lua:87-111 钉死；
-	// docs/livepoint-conversion.md）----
+	// docs/systems/livepoint-conversion.md）----
 	// 历练槽位数（LiveGroove_1..5@804..808）。
 	grooveCount = 5
 	// 每槽毫历练上限：999 点 × 1000（1 点历练 = 1000 毫 = 1000 修为）。
@@ -226,7 +226,7 @@ type playerProgress struct {
 	actDayValueMax  int32
 	actDayValueUsed int32
 	actDayValueLast int32
-	// 历练层（LiveGroove，毫历练单位；docs/livepoint-conversion.md）：
+	// 历练层（LiveGroove，毫历练单位；docs/systems/livepoint-conversion.md）：
 	// liveGroove 槽 1..5 = LiveGroove_1..5@804..808（客户端显示 = 值/1000）；
 	// holdFaculty 潜能修为 HoldFaculty@800（普通档转化 30% 分流，黄金按价
 	// 赎回）；liveSpeedPower 转化速度加成 % LiveSpeedPower@809（卦象等来源）；
@@ -806,7 +806,7 @@ func (p *playerProgress) advanceFaculty(now time.Time) (uint16, bool) {
 // ------------------------------------------------------------------ 历练层
 
 // livepointTick 历练层 100 秒步进结算（官方公式 form_faculty.lua:87-111
-// 钉死；docs/livepoint-conversion.md）：每步先累积后转化——累积是总历练
+// 钉死；docs/systems/livepoint-conversion.md）：每步先累积后转化——累积是总历练
 // 未达上限（5×999 点）时 +1000 毫进第一个未满槽，全满丢弃；转化是每槽
 // 独立按 full = base_i×(100+power)/100、actual = min(槽余, full) 扣毫历练
 // 产修为（1 毫历练 = 1 修为）：名俊无损进修为；普通档 70% 进修为、

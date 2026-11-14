@@ -12,7 +12,7 @@ import (
 	"github.com/local/9yin-go-server/internal/role"
 )
 
-// 称号系统（fork title_system.go 复刻；docs/fork-p2-shop-title-jingmai.md）。
+// 称号系统（fork title_system.go 复刻；docs/systems/fork-p2-shop-title-jingmai.md）。
 //
 // handleSetTitleCustom（msg295）在 fork 里极简：len>=2 → values[1].Int32
 // → playerActor.setTitleID（互斥锁直写，无所有权校验、不授予）→

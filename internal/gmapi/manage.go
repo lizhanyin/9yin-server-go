@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// 管理页「记录服务器」登记册的服务端支撑（docs/gm-service-rpc-split-design.md
+// 管理页「记录服务器」登记册的服务端支撑（docs/infra/gm-service-rpc-split-design.md
 // §实施记录）。index.html 的登记册存浏览器 localStorage（Java gm-web 同款），
 // 卡片探活经本包的同源代理打到目标游戏服的免鉴权 /internal/v1/health——
 // 浏览器跨端口会被 CORS 拦，必须由面板进程代探。

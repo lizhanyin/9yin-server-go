@@ -277,7 +277,7 @@ type DescRule struct {
 }
 
 // DescEntry 是 desc_effects.lua 的一个技能条目（旁路数据层：仅查询，
-// 不进 effects_data 优先级链；消费接线见 docs/skill-desc-ir.md 路线节）。
+// 不进 effects_data 优先级链；消费接线见 docs/infra/skill-desc-ir.md 路线节）。
 type DescEntry struct {
 	Compile      *DescCompile
 	OnHit        []*DescRule

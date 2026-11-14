@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// op28_addobject.go：0x28 明文物化帧（官服方言，B 路线）。
+// op28_addobject.go：0x28 明文物化帧（外服方言，B 路线）。
 //
-// 官服真流定版（l.pcapng 224×op28 会话解码，2026-11-14）：
+// 外服真流定版（l.pcapng 224×op28 会话解码，2026-11-14）：
 //
 //	帧 = [op 0x28][mode 0x46|0x47][帧长-1 u32][体长 u32][体]
 //	mode 0x46 = 明文体（6 帧先例：outlen==体长，免 LZ）
@@ -20,9 +20,9 @@ import (
 //	值对 = 标准 0x09 表方言（idx u16 + 表线型定宽值）——首值对
 //	      CollideRadius@179 形态与 0x0D #1777 全等。
 //
-// 官服把大属性集物化帧走 0x28（值对 26+ 起），小对象走裸 0x0D。
+// 外服把大属性集物化帧走 0x28（值对 26+ 起），小对象走裸 0x0D。
 // fork 客户端对 op 0x28 走 LZ 解压（fxnet2 分发表二级表），明文 0x46
-// 帧会被当压缩流解压失败丢弃——本通道仅供官服家族客户端
+// 帧会被当压缩流解压失败丢弃——本通道仅供外服家族客户端
 //（NINEYIN_NPC_ADD_AS_0X28=1 启用，默认关不扰 fork 会话）。
 
 // npcAddAsOp28Enabled 控制 NPC 物化帧改走 0x28 明文方言。
@@ -53,18 +53,18 @@ func npcResourceOverride() string {
 }
 
 // npcOfficial0x28Enabled：NINEYIN_NPC_0X28_OFFICIAL=1 时 NPC 物化帧按
-// 官服 AOI 簇 16-prop 模板全新生成（不再 wrap fork 0x0D 大档）。
-// 依据（c.pcapng 簇逐字节解码 + 历轮 16-prop 定版合并）：官服怪帧
+// 外服 AOI 簇 16-prop 模板全新生成（不再 wrap fork 0x0D 大档）。
+// 依据（c.pcapng 簇逐字节解码 + 历轮 16-prop 定版合并）：外服怪帧
 // #1776 = 17 字段精选（CollideRadius/State/Type/Resource/ConfigID/
 // Photo/ActionSpeed/Level/BossLevel/IDCard 族），坐标走变换块
 // [8:60]，无 fork 表尾 PosiX/Orient 字段、无 Name——fork 大档字段集
-// 官服客户端按自记录方言读不懂故不建对象（15:28 会话实证）。
+// 外服客户端按自记录方言读不懂故不建对象（15:28 会话实证）。
 func npcOfficial0x28Enabled() bool {
 	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_0X28_OFFICIAL")) == "1"
 }
 
-// officialNPC0x28Frame 按官服方言生成 mode=0x46 明文 0x28 物化帧。
-// 字段值大部分为官服静态缺省（16-prop 定版），ConfigID/Resource 用
+// officialNPC0x28Frame 按外服方言生成 mode=0x46 明文 0x28 物化帧。
+// 字段值大部分为外服静态缺省（16-prop 定版），ConfigID/Resource 用
 // 目录真值；串按 0x28 记录方言 [u32 len 含NUL][GBK+NUL]。
 func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, configID, resource string) []byte {
 	body := make([]byte, 0, 320)

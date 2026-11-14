@@ -102,7 +102,7 @@ func TestGMConsolePageServedAndAdapted(t *testing.T) {
 	}
 }
 
-// TestGMConsoleAxPageServed 验证 AXUI 重写版控制台（docs/gm-console-axui-redesign-design.md）
+// TestGMConsoleAxPageServed 验证 AXUI 重写版控制台（docs/infra/gm-console-axui-redesign-design.md）
 // 可经 /console-ax.html 取到，且入口模块/面板模块全部进入嵌入资产。旧版
 // console.html 保持不动，两页并行直至迁移完成。
 func TestGMConsoleAxPageServed(t *testing.T) {

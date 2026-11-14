@@ -2,7 +2,7 @@
 
 > 源：`F:\Game\Online\9yin\九阴资源\lua64_unpacked\lua64`（2296 个 lua，28MB，64 位客户端完整脚本）。
 > 配套生成物：[lua64-protocol-dict.md](lua64-protocol-dict.md)（710 个 custom ID 全字典 + 665 个下行 handler 名册），
-> 提取脚本 `tools/lua64_extract.py`（可重复执行：`python -I tools/lua64_extract.py <lua64根> docs/lua64-protocol-dict.md`）。
+> 提取脚本 `tools/lua64_extract.py`（可重复执行：`python -I tools/lua64_extract.py <lua64根> docs/client/lua64-protocol-dict.md`）。
 
 ## 一句话结论
 

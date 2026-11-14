@@ -449,7 +449,7 @@ func (r *sceneRun) simulateLocked(now time.Time) *combatTickOutcome {
 			// 路点图追击（mapnav_chase.go）：A* 折线推进 + 贴地插值替代
 			// 旧水平直线 stepToward——穿墙（无寻路）、穿地/悬空（y 不随
 			// 地形）、飞天追高（y 朝悬空目标插值）三个根因在此一并消除
-			//（docs/map-path-waypoint-graph.md §5/§6.3）。无图场景内部
+			//（docs/infra/map-path-waypoint-graph.md §5/§6.3）。无图场景内部
 			// 回落直线贴地。攻防分位用 3D 距离：玩家跳上柱顶/屋檐后水
 			// 平虽近但够不着，NPC 只能贴地追到下方，不再隔空平 A。
 			destination, delay, gaveUp := r.advanceChaseLocked(meta, state, transform, position, now)
@@ -768,7 +768,7 @@ func (r *sceneRun) broadcastNPCFrames(members []*sceneMember, moves []npcMoveUpd
 		// actor 瞬移到目的地而不是播放移动动作。之后
 		// 的追击目的地会在该定时器执行之前更改权威
 		// transform，从而令此次确认失效。到达延时按折线路径长/速度
-		//（docs/map-path-waypoint-graph.md §6.3：折线长于直线，固定
+		//（docs/infra/map-path-waypoint-graph.md §6.3：折线长于直线，固定
 		// 1s 会提前确认回到漂移）；重生/栓绳瞬移类保持默认 1s。
 		r.scheduleCombatMoveArrival(members, move, move.delay)
 	}

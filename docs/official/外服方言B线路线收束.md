@@ -7,8 +7,8 @@
 > 库实证渲染，生成器 19 字段定版已修齐待验）→ 我方数据 overlay。
 > 当前生产格局：**0x0B 全代码化 + 外服帧模板库喂实体 + 我方数据接管。**
 
-承接：`docs/外服模式NPC渲染收束.md`（fork 客户端 A 线）、
-`docs/外服0x29批量预载通道解析.md`、`docs/外服玩家档案0x28全量帧.md`。
+承接：`docs/official/外服模式NPC渲染收束.md`（fork 客户端 A 线）、
+`docs/official/外服0x29批量预载通道解析.md`、`docs/official/外服玩家档案0x28全量帧.md`。
 
 ---
 

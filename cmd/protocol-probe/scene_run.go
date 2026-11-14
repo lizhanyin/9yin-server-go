@@ -82,7 +82,7 @@ type sceneRun struct {
 	// npcMoveState 是 NPC 行走状态水位（patrolTick 读写）：id → 最近一次
 	// 下发的 moving 标志。检出翻转时发 0x10 State(183)="walk"/"stand"
 	// （外服私服 NPC 行为通道：起走发 walk、驻停发 stand，与 0x21 路点帧
-	// 成对出现；docs/外服私服登录帧对照与缺口清单.md §13.5）。实体注销时
+	// 成对出现；docs/official/外服登录帧对照与缺口清单.md §13.5）。实体注销时
 	// 连带清除。run.mu 保护。
 	npcMoveState map[uint32]bool
 	// 路点图导航域（mapnav_chase.go）：nav/navPlanner/navLoaded 由
@@ -263,7 +263,7 @@ func (r *sceneRun) attachMember(member *sceneMember) uint32 {
 		if r.nextWireID == 0 {
 			r.nextWireID = 2
 		}
-		// 远程玩家 wireID 留在无前缀低位空间（docs/id-system-analysis.md
+		// 远程玩家 wireID 留在无前缀低位空间（docs/fork-era/id-system-analysis.md
 		// §6.2 ID 布局）：0x11 前缀段专属玩家化身与 NPC 物化，低位段给
 		// 动态挂接成员，两空间由前缀位天然隔离、永不碰撞。
 		member.objectID = r.nextWireID
@@ -417,7 +417,7 @@ func (r *sceneRun) tickOnce(now time.Time) {
 // registerNPCLocked 注册单个 NPC：可视权威实体 + 四组件一次成型。
 // 调用方必须已持有 r.mu。
 // forkNPCID 把裸场景索引映射到 fork 对象 id 段（0x1100_0000|idx，
-// docs/fork-object-id-migration.md）。已是大号 id（宝箱实体等）直通。
+// docs/fork-era/fork-object-id-migration.md）。已是大号 id（宝箱实体等）直通。
 func forkNPCID(id uint32) uint32 {
 	if id == 0 || id >= 0x01000000 {
 		return id
@@ -439,7 +439,7 @@ func (r *sceneRun) registerNPCLocked(id uint32, npc npcSpawn) error {
 		return fmt.Errorf("NPC scene identity %d collides with reserved player identity", id)
 	}
 	// 判别实验（B 路线，2026-11-14）：强制覆盖 Resource 模型串——外服客户端
-	// 模型库为官服命名族（l.pcapng 实证 npc\monster483/npc\world<NUL>406），
+	// 模型库为外服命名族（l.pcapng 实证 npc\monster483/npc\world<NUL>406），
 	// fork 名（npc\worldnpc288）在其库中不存在，疑不渲染根因。覆盖后真机
 	// 全城同模型即坐实。
 	if override := npcResourceOverride(); override != "" {

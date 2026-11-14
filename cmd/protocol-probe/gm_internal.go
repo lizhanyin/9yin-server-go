@@ -21,7 +21,7 @@ type gmHealthInfo struct {
 	ServerRoot string // NINEYIN_SERVER_ROOT 解析结果
 }
 
-// serveGMInternal 起独立面板进程专用的 internal API（docs/gm-service-rpc-split-design.md §5）。
+// serveGMInternal 起独立面板进程专用的 internal API（docs/infra/gm-service-rpc-split-design.md §5）。
 // 刻意只应绑 loopback；鉴权 = Bearer token 常数时间比对。命令仍经由
 // hub 的会话命令通道交接，internal API handler 绝不直接写客户端帧
 // （单写者纪律）。

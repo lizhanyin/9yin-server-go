@@ -2,8 +2,8 @@
 >
 > 🗄️ **fork 方言存档（2026-11-14 标记）**：§6.5 玩家对 (0x11000001, 0x7A5C0B) 仍是 fork 客户端线的权威落地；
 > 但外服 B 线已另借官方 ID 对（NINEYIN_REPLAY_SELF_IDS），进场帧 EntryScene 的 fork 形（恒 0x1F6A3）在 B 线废弃、
-> 改官方 4 属性形（见《[外服方言B线路线收束](外服方言B线路线收束.md)》）。本文属性索引为 fork 表位，
-> official2433 唯一方言下同名位有漂移；现行权威见 [docs/README.md](README.md) 与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
+> 改官方 4 属性形（见《[外服方言B线路线收束](../official/外服方言B线路线收束.md)》）。本文属性索引为 fork 表位，
+> official2433 唯一方言下同名位有漂移；现行权威见 [docs/README.md](../README.md) 与 [docs/official/fxnet2-op-dispatch-table.md](../official/fxnet2-op-dispatch-table.md)。
 > 分析对象：`E:\Workspace\project\game\adata\fork\9yin-game-native-menu.exe`
 > （Go 1.26.5 PE64，本项目 `github.com/local/9yin-go-server/cmd/protocol-probe` 的 fork 构建，带完整 DWARF/pclntab 符号）
 > 抓包：同目录 `127-0-0-1-57378_{c2s,s2c}.bin`（该 fork 服务端与真实客户端的一次完整会话，**能正常进入游戏**）。
@@ -190,7 +190,7 @@ NPC 物化）。当晚按本文档定版补齐，全仓 `go build`、`go test ./
    的重新解读：51357=(0x11000001,**1**) 败在 owner=1 撞 NPC 专属位；
    49925=(**0x07000001**,618) 败在外服私服 0x07 段非本客户端方言；(1,1) 基线
    能进但 id 校验门全关。**fork 的精确对此前从未整体上过真机**——"obj
-   必须恒 1"的旧结论（docs/fork-object-id-migration.md 实施结果节）作废，
+   必须恒 1"的旧结论（docs/fork-era/fork-object-id-migration.md 实施结果节）作废，
    以本文档 §5/§6（fork exe 57378 抓包逐字节实证）为准。
 2. **远程玩家 wireID 回归 §6.2 低位无前缀空间**：撤销 a21d783 在
    `attachMember` 里的 `forkNPCID` 包裹（fork-object-id-migration.md 的

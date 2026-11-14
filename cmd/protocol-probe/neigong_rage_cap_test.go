@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestNeiGongRageCapAddTiers 钉死档位表(docs/neigong-beginner-guide.md §六
+// TestNeiGongRageCapAddTiers 钉死档位表(docs/guides/neigong-beginner-guide.md §六
 // × neigong_type.ini 快照;桃花岛=指南"丁氏山庄"+40 槽位,坐忘功=
 // ng_jh_001 由 stringname.idres 实证)。
 func TestNeiGongRageCapAddTiers(t *testing.T) {

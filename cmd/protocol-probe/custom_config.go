@@ -399,7 +399,7 @@ func handleOperateModeCustom(conn sceneMessageConnection, player *playerActor, c
 
 // handleNeiGongBindCustom 处理 C2S 199 内功栏绑定上传：校验 → 回推
 // 0x10 NeiGongBind 同步客户端属性缓存 → 落库。非法串静默拒（零帧）。
-// Java 参考服未实现此域（docs/lua64-protocol-dict.md 仅录得协议号），
+// Java 参考服未实现此域（docs/client/lua64-protocol-dict.md 仅录得协议号），
 // 语义按客户端 form_main_shortcut.lua 直读。
 func handleNeiGongBindCustom(conn sceneMessageConnection, player *playerActor, custom clientCustomMessage, remote string, store *keybindDBStore, roleID role.RoleID) (bool, error) {
 	if len(custom.Values) == 0 || custom.Values[0].Type != 2 || custom.Values[0].Int32 != clientCustomNeiGongBind {

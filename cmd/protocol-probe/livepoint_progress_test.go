@@ -12,7 +12,7 @@ import (
 // 逐例移植 Java LivepointProgressTest：官方转化公式（form_faculty.lua:87-111：
 // 槽速 10/20/50/100/200 ×(1+power%)，非名俊 ×0.7，1 毫历练 = 1 修为）、
 // 100 秒累积、槽位上限、旧档兼容、潜能赎回 235 GETINFO/BUY 帧序与快照
-// JSON 往返（docs/livepoint-conversion.md）。
+// JSON 往返（docs/systems/livepoint-conversion.md）。
 
 var livepointTestNow = time.Date(2026, 1, 2, 15, 4, 5, 0, time.UTC)
 
@@ -159,7 +159,7 @@ func TestLivepointLegacySnapshotFallsBackToDefaults(t *testing.T) {
 	}
 }
 
-// 离线补结算（docs/livepoint-conversion.md 边界节）：重登时对
+// 离线补结算（docs/systems/livepoint-conversion.md 边界节）：重登时对
 // last_livepoint_utc 以来的整步照结（累积+转化）。
 func TestLivepointRestoreSettlesOfflineSteps(t *testing.T) {
 	progress := newLivepointProgress()

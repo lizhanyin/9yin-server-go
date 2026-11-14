@@ -1,5 +1,5 @@
 // Package gmapi · etag.go —— 目录/会话端点 304 协商的共享工具
-// （docs/gm-console-axui-redesign-design.md §5.1 S3/S4）。游戏服 handler
+// （docs/infra/gm-console-axui-redesign-design.md §5.1 S3/S4）。游戏服 handler
 // 与独立面板代理两端都要做 If-None-Match 匹配，口径必须完全一致，故放契约层。
 package gmapi
 

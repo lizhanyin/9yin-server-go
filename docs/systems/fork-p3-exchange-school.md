@@ -3,7 +3,7 @@
 > 2026-11-07 落地。证据：fork 二进制 `go tool nm/objdump` 行号级反汇编
 > （`C:\Users\lzy\AppData\Local\Temp\fork_p3\p3.txt` 等）+ 磁盘资源实证
 > （shop.ini / exchangeitem.ini）+ lua 字典（Java 侧四消息全未实现，
-> 无参考可抄）。前情：docs/fork-p2-shop-title-jingmai.md。
+> 无参考可抄）。前情：docs/systems/fork-p2-shop-title-jingmai.md。
 
 ## 一、msg70 capitalType=3 兑换计价
 

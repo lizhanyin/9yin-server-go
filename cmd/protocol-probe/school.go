@@ -9,7 +9,7 @@ import (
 )
 
 // 门派加入（msg973 新手指南 / msg997 门派消息；fork school.go:64-99
-// 反汇编还原；docs/fork-p3-exchange-school.md）。
+// 反汇编还原；docs/systems/fork-p3-exchange-school.md）。
 //
 // fork 两个 handler 都收敛到 joinFaction = lookupFactionByID + setFaction：
 //   - 973 GUIDE_ADD_SCHOOL：`[973, str(仅窄串 tag6) schoolKey]`；

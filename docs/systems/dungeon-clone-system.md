@@ -73,7 +73,7 @@ type dungeonInstance struct {
 - **装填**：`populate` 时 `initWaveGroupsLocked` 归纳合格出生点的波次组；
   只注册首波（最小值）+ 无波次常驻 NPC（funcnpc/commonnpc 等场景设施）。
   NPC ID 沿用 `(目录下标+2)|0x11000000` 布局，`nextWireID` 已预留全场，中途
-  注册不冲突（见 [id-system-analysis.md](id-system-analysis.md) §6.2）。
+  注册不冲突（见 [id-system-analysis.md](../fork-era/id-system-analysis.md) §6.2）。
 - **在场集合**：击杀咽喉点 `recordNPCDeathLocked` 维护 `waveAlive`（删除）+
   `dungeonKills`（累计）+ 发 `dungeon_npc_killed` 事件。
 - **推进**：`tickOnce` 的 waveTick 段——当前波全灭（`waveAlive` 空）且在场
@@ -85,8 +85,8 @@ type dungeonInstance struct {
 
 ## Lua 玩法层（引擎在 Go，玩法在脚本）
 
-事件与能力回调（宿主契约见 [server-luascript.md](server-luascript.md)，
-ctx 字段见 [../scripts/README.md](../scripts/README.md)）：
+事件与能力回调（宿主契约见 [server-luascript.md](../infra/server-luascript.md)，
+ctx 字段见 [../../scripts/README.md](../../scripts/README.md)）：
 
 | 事件 | 触发点 | ctx 特有 |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ ctx 字段见 [../scripts/README.md](../scripts/README.md)）：
 | `destroy_clone` | - | `returnDungeon`：回进本前位置并销毁 |
 
 命令链不变：`gmapi.Validate` → `hub.enqueue` → 会话循环 `processGMCommand`
-（见 [gm-service-rpc-split-design.md](gm-service-rpc-split-design.md)）。
+（见 [gm-service-rpc-split-design.md](../infra/gm-service-rpc-split-design.md)）。
 
 ## 验证记录（2026-11-13, windows/amd64）
 

@@ -11,7 +11,7 @@ import (
 var officialPropertyTable2433Text string
 
 // 属性表唯一方言：外服私服 7074 线 2433 项官方真表 + 61 行尾追段
-// （2026-11-14 定案，分支 official-2433-only）。官方 2433 行与官服
+// （2026-11-14 定案，分支 official-2433-only）。官方 2433 行与外服
 // 抓包逐字段同方言——可直接对照/回放模拟发送；尾追段（2433..2493，
 // PosiX/Y/Z/Orient@2434-2437、Race/FloatingState/BufferListStr 等
 // fork 头块缺席名，StopTime 刻意排除）是 fork 客户端渲染头行通道

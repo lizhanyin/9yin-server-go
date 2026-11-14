@@ -2,7 +2,7 @@
 
 2026-11-04 整理。范围：客户端右键使用的完整语义、宝箱类物品的数据模型与掉落包全景、
 参考实现盘点、本服实现决策记录。契约脚本层见
-[skill-script-framework.md](skill-script-framework.md) §item；帧格式见
+[skill-script-framework.md](../infra/skill-script-framework.md) §item；帧格式见
 `go-source-protocol-notes.md` §7.3（该文档已不在本仓库）。
 
 ## 1. 客户端侧语义（F:\Game\Online\9yin\九阴资源\lua64_unpacked 取证）

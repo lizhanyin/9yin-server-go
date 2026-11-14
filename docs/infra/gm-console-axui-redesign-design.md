@@ -3,7 +3,7 @@
 - 日期：2026-11-12
 - 状态：**实施中**（P0 服务端加固 + P1 骨架 + P2 首批 4 组 + P3 全量迁移已落地；附录 A 45/45 板块完成，旧版下线待用户验收后执行）
 - 范围：`internal/gmweb/web`（前端全面重写）+ 游戏/面板服务端目录与轮询接口的性能加固
-- 关联：`docs/gm-service-rpc-split-design.md`（面板两种形态与 internal API 契约，本文不改其架构，只在其上加固）
+- 关联：`docs/infra/gm-service-rpc-split-design.md`（面板两种形态与 internal API 契约，本文不改其架构，只在其上加固）
 - 前端基座：`internal/gmweb/web/static/` 下已就位的 AXUI v3 三件套
   （`ax.esm.js` 41k 行运行时、`ax.css` 30k 行样式、`ax-api.ts` 1 万行 AI 友好类型声明）
 
@@ -506,9 +506,9 @@ internal/gmweb/web/
 
 | 文档 | 时机 | 内容 | 维护规则 |
 |---|---|---|---|
-| `docs/gm-console-axui-redesign-design.md`（本文） | 现在 | 设计基线 + 实施记录 | 每阶段完成追加「实施记录」小节（体例同 gm-service-rpc-split-design.md），偏差写明 |
+| `docs/infra/gm-console-axui-redesign-design.md`（本文） | 现在 | 设计基线 + 实施记录 | 每阶段完成追加「实施记录」小节（体例同 gm-service-rpc-split-design.md），偏差写明 |
 | 附录 A（本文内） | 现在 | 板块-功能-命令映射总表 = 迁移清单 | 每迁完一个板块打 ✔ |
-| `docs/gm-console-api-reference.md` | P0 落地时 | 面板 `/api/*` ↔ internal `/internal/v1/*` ↔ handler ↔ 数据源 对照表（含 ETag 语义） | 新增/改端点必须同步，PR 检查项 |
+| `docs/infra/gm-console-api-reference.md`（规划中） | P0 落地时 | 面板 `/api/*` ↔ internal `/internal/v1/*` ↔ handler ↔ 数据源 对照表（含 ETag 语义） | 新增/改端点必须同步，PR 检查项 |
 | `static/ax-api.ts` | 已就位 | AXUI 组件 API 权威声明（本地副本） | 只随 axui 升级整体替换，不手改 |
 
 写作口径：面向「下次打开本文的自己」，所有结论带 file:line 或实测数据；实施记录写偏差与原因，不重写设计。

@@ -4,7 +4,7 @@ package main
 // 装备→右键穿；皮肤卡（CardItem）→fwz 域未接；学习类 script→useSkillBook
 //（必须在效果链之前，防 itemType 撞型被当药白吃）；其余→useItemEffect 五步
 //（节流→Lua 钩子优先→INI 回退→效果落账→消耗帧对）。简化决策全部照
-// docs/item-use-msg31.md §5/§6：temp_stat 仅剩时不消耗、grants 部分失败
+// docs/systems/item-use-msg31.md §5/§6：temp_stat 仅剩时不消耗、grants 部分失败
 // 仍走消耗、不发 sysinfo。
 
 import (

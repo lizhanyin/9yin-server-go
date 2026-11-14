@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// gridCellMeters 是 XZ 均匀网格的格边长（docs/map-path-waypoint-graph.md
+// gridCellMeters 是 XZ 均匀网格的格边长（docs/infra/map-path-waypoint-graph.md
 // §6.1 建议 32m）。路点间距 ~10m，一格约含 9~11 个路点，最近点查询
 // 只需扫中心格加一环邻格。
 const gridCellMeters = float32(32)

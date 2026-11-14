@@ -1,4 +1,4 @@
-// gm-panel 是 GM 面板的独立进程形态（docs/gm-service-rpc-split-design.md）。
+// gm-panel 是 GM 面板的独立进程形态（docs/infra/gm-service-rpc-split-design.md）。
 //
 // 它自己不持有任何游戏状态：页面与静态资源来自 internal/gmweb 的
 // 编译期嵌入资产，/api 请求按契约代理到游戏服的 internal API

@@ -2266,7 +2266,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			}
 			accountKey = role.AccountKey(identity.String())
 			// 双槽密文：密码槽供 login 比对；账号槽解密出明文账号名
-			// （m655/m607 登录信息栏回传源，docs/fork-login-crypto.md）。
+			// （m655/m607 登录信息栏回传源，docs/fork-era/fork-login-crypto.md）。
 			accountCiphertext, passwordCiphertext, err := auth.ParseLoginCredentials(plain)
 			if err != nil {
 				log.Printf("session=%d remote=%s reject login credentials: %v", machine.ID(), conn.RemoteAddr(), err)
@@ -2365,12 +2365,12 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			visual := resolveRoleVisual(activeRole.Appearance.Values)
 			player = newPlayerActor(activeRole.Name, starterSilver)
 			setPlayerWireIdentity(uint32(activeRole.ID))
-			// B 线第十三轮：会话身份整体借用官服抓包对
+			// B 线第十三轮：会话身份整体借用外服抓包对
 			//（NINEYIN_REPLAY_SELF_IDS="obj,own" 十六进制）——0x0B/化身
-			// 0x28/全部后续帧同一对 id，官服化身帧原样透传即命中 self。
+			// 0x28/全部后续帧同一对 id，外服化身帧原样透传即命中 self。
 			// 绕行背景：k#1978 明文模板换 id 后客户端建主玩家失败
 			//（lua 主玩家创建失败 1706-2309，嵌套自引用归一后仍败，
-			// 疑 re-entry 态字段触发创建链校验）——官服 c#124 帧在第十
+			// 疑 re-entry 态字段触发创建链校验）——外服 c#124 帧在第十
 			// 一轮原样实证可建，故改借用其身份零改写。
 			if v := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_SELF_IDS")); v != "" {
 				if parts := strings.Split(v, ","); len(parts) == 2 {
@@ -2538,13 +2538,13 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// 建视图之前；official_login_align.go）。
 			writeOfficialLoginInfoFrames(link, conn.RemoteAddr().String(), officialAccountLabel(loginAccountName), activeRole.Name, uint32(activeRole.ID))
 			// B 线第十一轮 wholesale 判别（replay_phase2.go）：进场整体
-			// 官服化。跳过本块其余全部我方进场帧，改发官服 Phase A
+			// 外服化。跳过本块其余全部我方进场帧，改发外服 Phase A
 			//（0x0B+化身 0x28+首爆发），Phase B 等客户端显式 0x09。
 			// 第十二轮换心（NINEYIN_REPLAY_SWAP_SELF=1）：pack 走查时
-			// 官服 0x0B → 我方 sendEntryScene（我方场景/出生点）、化身
+			// 外服 0x0B → 我方 sendEntryScene（我方场景/出生点）、化身
 			// 0x28（len>1000）→ 我方 playerProfile0x28Frame（我方 id/档
-			// 案/技能行），其余帧原样透传——判「我方 id+我方场景在官服
-			// 方言下渲染」。我方 self 0x0D/0x1F 恒不发（官服形状=0x0B+
+			// 案/技能行），其余帧原样透传——判「我方 id+我方场景在外服
+			// 方言下渲染」。我方 self 0x0D/0x1F 恒不发（外服形状=0x0B+
 			// 档案 0x28，无 self 0x0D）。
 			if replayReplaceEntryEnabled() {
 				if err := world.begin(activeRole.Location.Scene.Config, activeRole.Location.Scene.Resource, sceneNPCs); err != nil {
@@ -2552,7 +2552,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					return
 				}
 				swapSelf := os.Getenv("NINEYIN_REPLAY_SWAP_SELF") == "1"
-				// SELF_IDS 借用身份时化身原样透传（官服帧 ids 已对位，
+				// SELF_IDS 借用身份时化身原样透传（外服帧 ids 已对位，
 				// 任何改写都是回归风险）。
 				selfIdsOverride := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_SELF_IDS")) != ""
 				sent, swappedEntry, swappedAvatar := 0, false, false
@@ -2587,18 +2587,34 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 								swappedEntry = true
 							}
 						case swapSelf && frame[0] == 0x28 && fl > 1000:
-							if selfIdsOverride {
-								// 借用官服身份：官服化身帧 ids 已对位 self，
-								// 原样透传（第十一轮实证可建可渲染）。
-								if err := link.WriteFrame(frame); err != nil {
-									log.Printf("%s: replay avatar passthrough: %v", conn.RemoteAddr(), err)
-									return
+						if selfIdsOverride {
+							// 借用外服身份：外服化身帧 ids 已对位 self，
+							// 原样透传（第十一轮实证可建可渲染）——唯 posA
+							// 仍是外服出生点（2026-11-14 真机「重进不在
+							// 退出位置」报障）。头部形 obj,own,X/Y/Z/Orient
+							//（c#124 实测 obj@14/own@18/posA@22=928.33,
+							// 48.75,998.877,0.906），只改写这 16 字节为
+							// 存档落点（移动 2s 节流+断线兜底落库值），其余
+							// 零改动；头部形不符则原样透传保底。
+							out := append([]byte(nil), frame...)
+							if posOff, ok := officialFramePosAOffset(out, playerObjectID, playerOwnerID); ok {
+								pos := activeRole.Location.Position
+								for i, v := range []float32{pos.X, pos.Y, pos.Z, pos.Orient} {
+									binary.LittleEndian.PutUint32(out[posOff+4*i:], math.Float32bits(v))
 								}
-								swappedAvatar = true
-								log.Printf("%s: avatar 0x28 passthrough (%d bytes, official ids)", conn.RemoteAddr(), fl)
-								break
+								log.Printf("%s: avatar 0x28 posA -> saved (%.2f, %.2f, %.2f, o=%.3f)", conn.RemoteAddr(), pos.X, pos.Y, pos.Z, pos.Orient)
+							} else {
+								log.Printf("%s: avatar 0x28 posA offset unresolved; passthrough untouched", conn.RemoteAddr())
 							}
-							// 换身两档：NINEYIN_REPLAY_AVATAR_BODY 指向官服档案
+							if err := link.WriteFrame(out); err != nil {
+								log.Printf("%s: replay avatar passthrough: %v", conn.RemoteAddr(), err)
+								return
+							}
+							swappedAvatar = true
+							log.Printf("%s: avatar 0x28 passthrough (%d bytes, official ids)", conn.RemoteAddr(), fl)
+							break
+						}
+							// 换身两档：NINEYIN_REPLAY_AVATAR_BODY 指向外服档案
 							// 明文体模板（k#1978 全 392 字段含 elmet/cloth/shoes/
 							// sword 装备外观区）——obj/own 全文替换+posA 落我方坐
 							// 标后 0x46 直发；缺省回落我方 41 字段生成器（头有身无
@@ -2651,6 +2667,33 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s (swapSelf=%v entry=%v avatar=%v); native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath(), swapSelf, swappedEntry, swappedAvatar)
+				// 内功栏绑定串进场位补发：wholesale 档无我方 self 0x0D 档
+				//（外服形状=0x0B+档案 0x28），NeiGongBind(201) 唯一载具剩
+				// ClientReady 簇 0x10——但主窗体 main_form_open 在读条末尾
+				// 即 QueryProp 快照（get_svr_ng_bind 读不到整串就回落全零，
+				// 且此后不再重读），后到帧只在重新装备武器/切换内功触发网格
+				// 重建时才显形（2026-11-14 真机「内功快捷栏登录全空」根因）。
+				// 紧跟化身 0x28 之后补发：外服 Phase A 首爆发本身就带 4 帧
+				// self 0x10（replay_p1_slim.bin #3/#4/#8/#11），该窗口的
+				// 属性帧客户端会处理。ClientReady 簇照旧重推（幂等）。
+				if bind := player.keybindSnapshot(); bind.neigongBind != "" {
+					frame, frameErr := neiGongBindPropertyFrame(bind.neigongBind)
+					if frameErr != nil {
+						log.Printf("%s: encode entry neigong bind: %v", conn.RemoteAddr(), frameErr)
+						return
+					}
+					if err := link.WriteFrame(frame); err != nil {
+						log.Printf("%s: write entry neigong bind: %v", conn.RemoteAddr(), err)
+						return
+					}
+					bound := 0
+					for _, field := range strings.Split(strings.TrimSuffix(bind.neigongBind, ";"), ";") {
+						if field != "0" {
+							bound++
+						}
+					}
+					log.Printf("%s: pushed NeiGongBind at wholesale entry (%d/%d slots bound)", conn.RemoteAddr(), bound, neiGongBindSlotCount)
+				}
 				// 每连接复位显式就绪门（包级原子跨连接残留会让下一次
 				// 登录的物化又在读条窗口抢跑）。
 				replayExplicitReadySeen.Store(false)
@@ -2742,7 +2785,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			if err := sendPlayerPhysicsLoginStream(link, player); err != nil {
 				log.Printf("%s: write player physics login stream (skip): %v", conn.RemoteAddr(), err)
 			}
-			// 玩家档案 0x28 全量帧（外服私服登录簇方言，docs/外服私服玩家档案
+			// 玩家档案 0x28 全量帧（外服私服登录簇方言，docs/official/外服玩家档案
 			// 0x28全量帧.md）：NINEYIN_PLAYER_PROFILE_0X28=1 门控。时序=
 			// 物化（0x0D）之后、面板身份/视图行爆发之前——外服私服 #132 档案
 			// 帧先于玩家 0x14/0x11 视图行，NPC 0x28 教训=先物化后详情。
@@ -2966,9 +3009,9 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			explicitSceneReady = true
 			replayExplicitReadySeen.Store(true)
 			log.Printf("%s: observed explicit stage_main ClientReady (0x09)", conn.RemoteAddr())
-			// B 线两阶段回放 Phase B（replay_phase2.go）：Phase A 的官服
-			// 0x0B 已让客户端进入新一轮读条，这个 0x09 正是官服第二爆发+
-			// AOI 物化簇的相位窗（官服实测 0x09 后 65ms 发第二爆发）。
+			// B 线两阶段回放 Phase B（replay_phase2.go）：Phase A 的外服
+			// 0x0B 已让客户端进入新一轮读条，这个 0x09 正是外服第二爆发+
+			// AOI 物化簇的相位窗（外服实测 0x09 后 65ms 发第二爆发）。
 			if replayPhase2Armed.Load() {
 				replayPhase2Armed.Store(false)
 				if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")); path != "" {
@@ -2985,7 +3028,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				if packErr != nil {
 					log.Printf("%s: load bagpack anchors (skip): %v", conn.RemoteAddr(), packErr)
 				}
-				// 背包视图容器 + 扩展页锚点：官服 op15×30 的视图集不含
+				// 背包视图容器 + 扩展页锚点：外服 op15×30 的视图集不含
 				// 我方 17 容器/8 扩展页（15:20 会话实证扩展背包空）——
 				// 容器自建，行随后挂。
 				for _, frame := range bagViewCreateFrames() {
@@ -3034,7 +3077,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					log.Printf("%s: push equip appearance: %v", conn.RemoteAddr(), err)
 				}
 			}
-			// 判别（第十四轮末）：NINEYIN_REPLAY_NPC_FILE=官服 AOI 簇
+			// 判别（第十四轮末）：NINEYIN_REPLAY_NPC_FILE=外服 AOI 簇
 			// NPC 0x28 明文重打包文件（tools/c_aoi_cluster_decode.py 产
 			// 出，0x46 零改写）——官方原帧直发判「生成器字段差 vs 相位」。
 			if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_NPC_FILE")); path != "" {
@@ -3042,10 +3085,10 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					log.Printf("%s: replayed %d official NPC frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
 				}
 			}
-			// wholesale 模式：官服帧独占会话，我方 ClientReady 推送簇
+			// wholesale 模式：外服帧独占会话，我方 ClientReady 推送簇
 			//（AutoTrace/轻功/键位/外观/坐骑/九阴志/开关树）全部跳过，
 			// 直达就绪迁移尾段。OVERLAY 档放开推送簇——我方数据后到
-			// 覆盖官服镜像数据（官服骨架+我方数据覆盖，去 bin 拐杖的
+			// 覆盖外服镜像数据（外服骨架+我方数据覆盖，去 bin 拐杖的
 			// 递进步）。
 			if replayReplaceEntryEnabled() && !replayNativeOverlayEnabled() {
 				goto readyTail
@@ -4465,7 +4508,7 @@ func sceneObjectObjectProperty(objectID, ownerID, propertyIndex, targetID, targe
 // （clientdata.ActivePropertyTableMode 恒 official2433=外服私服
 // 7074 线 2433 项真表，2026-11-14 定案唯一方言——外服抓包帧可逐字段
 // 对照/直接回放，fork/hybrid 双表门控同日退役，
-// docs/外服私服登录帧对照与缺口清单.md §14.3 换表工程）。
+// docs/official/外服登录帧对照与缺口清单.md §14.3 换表工程）。
 // 帧体 = [0x09][u16 count](name\0 u8 type)*;客户端按位置绑定索引,
 // 因此表内容必须与帧索引方言逐字节一致,不做任何删改。
 // 表来源:c.pcapng 7074 线 0x09 帧提取。

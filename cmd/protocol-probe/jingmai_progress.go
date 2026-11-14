@@ -20,7 +20,7 @@ import (
 )
 
 // 经脉修炼/激活（Java JingMaiCustomHandler/JingMaiMessages/LoginFlow
-// 授予块全链对齐；docs/fork-p2-shop-title-jingmai.md）。
+// 授予块全链对齐；docs/systems/fork-p2-shop-title-jingmai.md）。
 //
 // 已学模型（Java PlayerMeridian）：starter 14 条（starterJingMaiIDs，
 // F 盘 52795 抓包 View45 行序）进世界即学、每条 1 级；View45 只发已学
@@ -275,7 +275,7 @@ type jingMaiZhenQiPool struct {
 // capEnabled/capValue 同构）：开启后当日已获真气（ZQPLValue）达到阈值
 // 即拦截入账（被动修炼/打怪折算同一闸，超额笔按剩余额度截断、零帧
 // 静默），ZhenQiDayValue 属性随开关显示阈值/回落官方缺省 500。
-// 默认关闭（私服节奏不限量，docs/jingmai-cd-qinggong.md §二）。
+// 默认关闭（私服节奏不限量，docs/combat/jingmai-cd-qinggong.md §二）。
 type jingMaiDailyCap struct {
 	Enabled bool  `json:"enabled"`
 	Value   int32 `json:"value"` // 每日阈值 ≥1；关闭时仍保存，重开沿用

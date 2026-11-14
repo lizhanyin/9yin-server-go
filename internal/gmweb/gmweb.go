@@ -41,7 +41,7 @@ func Mount(mux *http.ServeMux) {
 }
 
 // index 直出已知页面；其余路径 404。/console-ax.html 是 AXUI 重写版
-// （docs/gm-console-axui-redesign-design.md），与旧版并行存在直至迁移完成。
+// （docs/infra/gm-console-axui-redesign-design.md），与旧版并行存在直至迁移完成。
 func index(writer http.ResponseWriter, request *http.Request) {
 	page, known := map[string]string{
 		"/":                "web/index.html",

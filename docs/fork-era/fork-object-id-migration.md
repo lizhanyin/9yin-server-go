@@ -2,10 +2,10 @@
 >
 > 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
 > official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
-> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
+> 现行权威见 [docs/README.md](../README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](../official/fxnet2-op-dispatch-table.md)。
 > 另：本文「远程成员同段」方案已被《id-system-analysis》§6.5.2 撤销（以彼文档为准）。
 > 日期：2026-11-09 凌晨　状态：**阶段 0-2 已实施落地（2026-11-09 01:4x 部署），阶段 3 真机验收待测**
-> 背景文档：docs/冲锋与打坐外服私服抓包分析及Go移植.md（§3.2.2 + 第十七/十八轮）
+> 背景文档：docs/combat/冲锋与打坐外服方言总集.md（§三 四桶模型 + §七 勘误索引；原《冲锋与打坐外服抓包分析及Go移植》已并入）
 > 本文档自包含，可独立交给任意会话执行。
 
 ## 实施结果（2026-11-09 01:4x，全套测试绿）

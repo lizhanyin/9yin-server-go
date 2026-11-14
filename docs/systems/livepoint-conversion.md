@@ -2,7 +2,7 @@
 >
 > 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
 > official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
-> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
+> 现行权威见 [docs/README.md](../README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](../official/fxnet2-op-dispatch-table.md)。
 官方机制（用户资料 + F 盘客户端源码双重钉死）：
 
 - **1 点历练 = 1000 修为**（毫历练单位存储，1 毫历练 = 1 修为）

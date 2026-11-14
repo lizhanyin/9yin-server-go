@@ -333,7 +333,7 @@ func TestViewportReconcileCorrectsCorpseForLateEntrant(t *testing.T) {
 	}
 	// 尸体 NPC 自身的修正三连必须保持 0x0D → 0x1F → 0x10 顺序（注册期
 	// 满血快照 → 权威坐标 → 死亡修正）。远程成员 wireID 在低位段
-	//（docs/id-system-analysis.md §6.2），数值序上先于 0x11 段 NPC 物化，
+	//（docs/fork-era/id-system-analysis.md §6.2），数值序上先于 0x11 段 NPC 物化，
 	// 因此按对象过滤断言，不假设三连从帧 0 开始。
 	frames := connB.Frames()
 	corpseID := forkNPCID(2)
@@ -344,7 +344,7 @@ func TestViewportReconcileCorrectsCorpseForLateEntrant(t *testing.T) {
 		switch frame[0] {
 		case 0x0D, 0x1F: // [1:5] 对象 id
 			objectID = binary.LittleEndian.Uint32(frame[1:5])
-		case 0x10: // flag@1, objectID@2（docs/id-system-analysis.md §4）
+		case 0x10: // flag@1, objectID@2（docs/fork-era/id-system-analysis.md §4）
 			objectID = binary.LittleEndian.Uint32(frame[2:6])
 		default:
 			continue

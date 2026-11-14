@@ -7,7 +7,7 @@ import (
 )
 
 // P3 第一批：exchange 商店（msg70 type-3）+ 新手选择（972）+ 门派
-//（973/997）。fork 证据见 docs/fork-p3-exchange-school.md。
+//（973/997）。fork 证据见 docs/systems/fork-p3-exchange-school.md。
 
 const testExchangeShopINI = `[Shop_ex_01]
 Type=1

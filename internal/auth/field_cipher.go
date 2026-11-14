@@ -3,7 +3,7 @@
 // 客户端 op02 登录帧的账号/密码槽是确定性加密的（同明文→同密文），客户端与
 // 服务端各自加密后比对密文即可完成身份校验——全程无需解密。本文件实现
 // fork exe internal/auth/field_cipher.go 的双域 128 位 DES 阶梯（fork oracle
-// 五组账号逐字节验证，见 field_cipher_test.go 与 docs/fork-login-crypto.md）：
+// 五组账号逐字节验证，见 field_cipher_test.go 与 docs/fork-era/fork-login-crypto.md）：
 //
 //	块结构：16 字节块 → 4×LE32 → 按块序奇偶 XOR Even/Odd 掩码 → 三级阶梯
 //	阶梯：  E(k1a) 独立加密两半 → D(k1b) 交叉混合 → E(k1a) 再独立（EDE）

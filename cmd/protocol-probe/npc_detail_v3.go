@@ -2,7 +2,7 @@ package main
 
 // 0x28 v3 生成器——mode=0x46 明文方言（2026-11-11 定版）。
 //
-// 背景与证据链见 docs/op28-fxnet2-lz-decoder.md：0x47 帧 = LZ 字典压缩流
+// 背景与证据链见 docs/official/op28-fxnet2-lz-decoder.md：0x47 帧 = LZ 字典压缩流
 // （崩溃根因=模板保真段携带池回引 token，客户端会话字典无此槽→NULL 解引用），
 // 官方自己在 l.pcapng 用了 6 帧 mode=0x46（纯 memcpy 路径，fxnet2 0x126d）。
 // v3 程序化构造明文帧——零 LZ、零字典依赖，任何会话状态下安全。

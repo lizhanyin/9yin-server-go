@@ -11,7 +11,7 @@ serverRecordAddCells/serverRecordDelRow/serverRecordGridCell 互证 + c.pcapng
   - 0x12 行号在 @12（此前误读 @10 = rec 字段）；
   - 0x13 列在 @16、值在 @17（此前列=@12 格数低字节、值=@13:17 头字段）。
 旧 events/*.json 与由此生成的时间线 md 中相关读数引用时按此换算
-（docs/外服私服登录帧对照与缺口清单.md §四-9）。
+（docs/official/外服登录帧对照与缺口清单.md §四-9）。
 """
 import json
 import os

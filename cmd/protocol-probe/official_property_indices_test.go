@@ -31,7 +31,7 @@ func TestPlayerPropertyIndicesMatchOfficialTable(t *testing.T) {
 		{"TotalFillValue", propTotalFillValue, clientdata.WireInt32},
 		{"CurLevel", propCurLevel, clientdata.WireInt32},
 		{"FillSpeed", propFillSpeed, clientdata.WireInt32},
-		// 历练层（docs/livepoint-conversion.md；修炼界面 5 条历练条数据源）
+		// 历练层（docs/systems/livepoint-conversion.md；修炼界面 5 条历练条数据源）
 		{"HoldFaculty", propHoldFaculty, clientdata.WireInt32},
 		{"LiveGroove_1", propLiveGroove1, clientdata.WireInt32},
 		{"LiveGroove_2", propLiveGroove2, clientdata.WireInt32},

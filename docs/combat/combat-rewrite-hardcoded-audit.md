@@ -2,7 +2,7 @@
 >
 > 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
 > official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
-> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
+> 现行权威见 [docs/README.md](../README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](../official/fxnet2-op-dispatch-table.md)。
 > 另：§B 索引族与「Go 方言 vs 官方表 0..98 对照」附录为 fork 表/旧官表布局，official2433 位有漂移。
 以 Java 参考服（G:\pojie\ai\9yin-server\nineyin）为权威、F:\Game\Online\9yin\9yin_server1\captures\local（bak 子目录 52905/12141/52795 等）为线上对拍基准，重写 Go 战斗链后对全部写死参数的定性审计。三类：
 

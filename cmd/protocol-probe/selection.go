@@ -12,7 +12,7 @@ import (
 
 // CLIENT_CUSTOMMSG_SELECT_TARGET：客户端每次点击目标发
 // [i32 431, raw16 packed]，取消选择发 msgId=440（空）+ 431 obj(0,0)。
-// 官方语义见 docs/fork-binary-message-inventory.md 与
+// 官方语义见 docs/fork-era/fork-binary-message-inventory.md 与
 // docs/combat-traffic-compare.md（49840 抓包钉死帧形）。
 const clientCustomSelectTarget int32 = 431
 

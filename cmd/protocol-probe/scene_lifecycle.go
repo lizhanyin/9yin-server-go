@@ -557,7 +557,7 @@ func (s *sceneLifecycle) clientActivity() error {
 	if closed || !s.armed {
 		return nil
 	}
-	// B 线第十一轮 wholesale 模式（replay_phase2.go）：官服帧独占对象
+	// B 线第十一轮 wholesale 模式（replay_phase2.go）：外服帧独占对象
 	// 空间——我方场景对象不物化（fork 方言 0x0D 会污染渲染判读），
 	// 旧回放 env 钩子同样跳过（Phase A 已在进场位发出）。
 	// OVERLAY 档（第十四轮）：恢复我方物化，仅跳过回放钩子；但显式
@@ -586,7 +586,7 @@ func (s *sceneLifecycle) clientActivity() error {
 		s.run.activateMember(s.wireID)
 	}
 	// 终极判别实验（B 路线，2026-11-14）：NINEYIN_REPLAY_FRAMES_FILE 指向
-	// 官服抓包提取的原始帧文件，物化完成后原样回放。格式：裸单帧，或
+	// 外服抓包提取的原始帧文件，物化完成后原样回放。格式：裸单帧，或
 	// [u32 len][frame]×N 多帧打包（tools 打包器产出）。
 	// 第十轮起为两阶段（见 replay_phase2.go）：本钩子只发 Phase A（0x0B+
 	// 化身 0x28+首爆发）；Phase B（第二爆发+AOI 物化簇）等客户端对回放
@@ -669,11 +669,11 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		if entity.schedule != nil {
 			patchAddObjectTransform(payload, transform)
 		}
-		// B 路线（官服家族客户端）：物化帧改走 0x28 明文方言
+		// B 路线（外服家族客户端）：物化帧改走 0x28 明文方言
 		//（mode=0x46，l.pcapng 6 帧先例；值对仍按当前 0x09 表官方位）。
 		// fork 客户端对 op 0x28 走 LZ 解压会丢弃本帧——env 门控默认关。
-		// OFFICIAL 档（NINEYIN_NPC_0X28_OFFICIAL=1）：按官服 AOI 簇
-		// 16-prop 模板全新生成（fork 大档字段集官服客户端读不懂，
+		// OFFICIAL 档（NINEYIN_NPC_0X28_OFFICIAL=1）：按外服 AOI 簇
+		// 16-prop 模板全新生成（fork 大档字段集外服客户端读不懂，
 		// 15:28 会话实证不建对象）。
 		if npcOfficial0x28Enabled() {
 			payload = officialNPC0x28Frame(uint32(id), entity.ownerID, transform.X, transform.Y, transform.Z, transform.Orient, entity.configID, entity.model)
@@ -706,7 +706,7 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		if npcDetail0x28Enabled() {
 			// v3（2026-11-11）：mode=0x46 明文方言程序化构造——0x47 LZ
 			// 模板路线四连崩定案退役（根因=模板保真段的池回引 token 依赖
-			// 客户端全会话字典状态，见 docs/op28-fxnet2-lz-decoder.md）；
+			// 客户端全会话字典状态，见 docs/official/op28-fxnet2-lz-decoder.md）；
 			// 官方 l.pcapng 自有 6 帧 0x46 纯拷贝先例，任何会话状态安全。
 			props := officialNPCEntityProperties(entity.properties, entity.model, entity.configID)
 			// 走动物化 posB=段末目的地（npc.pcapng 外服私服 8/8 帧 A≠B）；

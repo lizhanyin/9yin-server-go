@@ -8,7 +8,7 @@
 | 线索 | 方言 | 位置 | 说明 |
 |---|---|---|---|
 | **本文**：服务端脚本宿主 | Lua 5.5 | `internal/luascript` + 本仓 `scripts/` | 我们自己写的服务端玩法脚本 |
-| 客户端字节码加解密 | Lua 5.1 | `internal/luacodec` + `cmd/lua-batch` | FxCore XOR 格式逆向，见 [lua64-analysis.md](lua64-analysis.md) |
+| 客户端字节码加解密 | Lua 5.1 | `internal/luacodec` + `cmd/lua-batch` | FxCore XOR 格式逆向，见 [lua64-analysis.md](../client/lua64-analysis.md) |
 | Java 参考服技能脚本框架 | 客户端 5.1 方言 | java 侧 `scripts/` 契约 | 跑游戏自带技能脚本，见 [skill-script-framework.md](skill-script-framework.md) |
 
 ## 引擎与内嵌方式
@@ -23,7 +23,7 @@ Shopify/go-lua（能载 luac 字节码但停止维护）、cgo LuaJIT（破坏�
 - 上游在 Windows 编译不过（exec 模块无条件用 `Setpgid`/`syscall.Kill`），
   本地补丁把这 3 处拆成按构建标签区分的 `vm/process_group_{unix,windows}.go`；
   补丁只服务 exec 模块，宿主沙盒不注册该模块，运行期不触发。
-  差异与同步方法见 [../third_party/golua/FORK.md](../third_party/golua/FORK.md)。
+  差异与同步方法见 [../../third_party/golua/FORK.md](../../third_party/golua/FORK.md)。
 - 裁掉了 docs/tests/examples/bench/wontfix/cmd/check 目录（约 14MB）。
 
 ## 架构与锁纪律
@@ -60,7 +60,7 @@ Lua 5.5 语义注意：chunk 内一旦出现 `global x = 1` 声明即进入严�
 
 - `npc_service`（原生未实现的 NPC 菜单服务，markTask 0x1008 等）。处理器
   `return false` 显式交回默认"未实现"路径。
-- `dungeon_*` 副本玩法组（2026-11-13，见 [dungeon-clone-system.md](dungeon-clone-system.md)）：
+- `dungeon_*` 副本玩法组（2026-11-13，见 [dungeon-clone-system.md](../systems/dungeon-clone-system.md)）：
   `dungeon_enter` / `dungeon_npc_killed` / `dungeon_wave_cleared` /
   `dungeon_destroy` + `ctx:dungeon()` 快照与 `ctx:spawn_wave(n)` /
   `ctx:after(sec, event)` 能力回调（`dungeon_wave_cleared` 返回真值即接管
@@ -76,7 +76,7 @@ end)
 game.log("格式 %s=%d", "键", 42)            -- 服务端日志，lua: 前缀
 ```
 
-ctx 快照字段与脚本侧用法详见 [../scripts/README.md](../scripts/README.md)。
+ctx 快照字段与脚本侧用法详见 [../../scripts/README.md](../../scripts/README.md)。
 
 ## GM 面板
 
@@ -99,7 +99,7 @@ ctx 快照字段与脚本侧用法详见 [../scripts/README.md](../scripts/READM
 ## 后续方向
 
 - 事件面扩展：战斗命中钩子、物品使用（msg31 链，见
-  [item-use-msg31.md](item-use-msg31.md)）都可以走同一 `game.on` 机制
+  [item-use-msg31.md](../systems/item-use-msg31.md)）都可以走同一 `game.on` 机制
   （tick 定时器已由副本层的 `ctx:after` 落地一种形态）。
 - 若需要按 mark/config 细分事件或一次性多处理器（多副本脚本必需，
   `game.on` 单 handler 后者覆盖前者），在 `Host.Call` 之上加路由即可，
