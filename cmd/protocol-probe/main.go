@@ -2568,11 +2568,24 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 						frame := rest[4 : 4+fl]
 						switch {
 						case swapSelf && frame[0] == 0x0B:
-							if err := sendEntryScene(link, activeRole.Location.Scene); err != nil {
+							// NINEYIN_REPLAY_PASSTHROUGH_0B=1：0x0B 原样透传
+							//（步骤①真机定案=我方 0x0B 是物化破坏点；官方 4 属性
+							// 形含 idx178 Name 常量段+idx1468+场景流水号，我方 3 属
+							// 性恒 0x1F6A3 形。EntryScene 喂场景对象表=AddObject
+							// 查表源头）。透传位先定案内容归因，再回填生成器。
+							if os.Getenv("NINEYIN_REPLAY_PASSTHROUGH_0B") == "1" {
+								if err := link.WriteFrame(frame); err != nil {
+									log.Printf("%s: replay 0x0B passthrough: %v", conn.RemoteAddr(), err)
+									return
+								}
+								swappedEntry = true
+								log.Printf("%s: 0x0B passthrough (%d bytes, official)", conn.RemoteAddr(), fl)
+							} else if err := sendEntryScene(link, activeRole.Location.Scene); err != nil {
 								log.Printf("%s: write swapped entry scene: %v", conn.RemoteAddr(), err)
 								return
+							} else {
+								swappedEntry = true
 							}
-							swappedEntry = true
 						case swapSelf && frame[0] == 0x28 && fl > 1000:
 							if selfIdsOverride {
 								// 借用官服身份：官服化身帧 ids 已对位 self，
