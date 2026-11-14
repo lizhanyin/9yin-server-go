@@ -3024,6 +3024,17 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 			}
+			// 原帧判别（2026-11-14 程序反推版）：NINEYIN_REPLAY_NPC_FILE=
+			// 经 fxnet2 解析器逐帧预验证的外服原生 0x46 NPC 帧包
+			//（tools/re_inject/extract_native_npc_pack.py 产出；校验=
+			// outlen 精确/idx 全在 2433 表/字段走查贴齐体长，npc.pcapng
+			// 8 帧中 7 过 1 坏帧剔除）。零改写直发——判「生成器差异 vs
+			// 相位/时序」。上轮同位通道因半坏数据误判被撤（1a9168e）。
+			if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_NPC_FILE")); path != "" {
+				if sent := replayFramesPack(link, path); sent > 0 {
+					log.Printf("%s: replayed %d validated official NPC frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
+				}
+			}
 			// OVERLAY 档物品域：Phase B 的 op15 视图容器之后才能发行
 			//（15:17 会话实证：进场位发行的行目标视图尚不存在=全丢，
 			// 物品栏空）。装载序=正常进场块同款。

@@ -676,7 +676,17 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		// 16-prop 模板全新生成（fork 大档字段集外服客户端读不懂，
 		// 15:28 会话实证不建对象）。
 		if npcOfficial0x28Enabled() {
-			payload = officialNPC0x28Frame(uint32(id), entity.ownerID, transform.X, transform.Y, transform.Z, transform.Orient, entity.configID, entity.model)
+			// NpcType 功能分派位透传（真机+head_game.lua 定案：61~69=头顶
+			// 功能图标族，45=忽略；schema 真值优先，缺省 14=官方怪通用值）。
+			npcType := schemaInt(func(name string) (clientdata.Value, bool) {
+				for _, prop := range entity.properties {
+					if prop.Name == name {
+						return prop.Value, true
+					}
+				}
+				return clientdata.Value{}, false
+			}, "NpcType", 14)
+			payload = officialNPC0x28Frame(uint32(id), entity.ownerID, transform.X, transform.Y, transform.Z, transform.Orient, entity.configID, entity.model, npcType)
 		} else if npcAddAsOp28Enabled() && payload[0] == 0x0D {
 			payload = wrapObjectAddAsOp28(payload)
 		}
@@ -787,25 +797,13 @@ func (s *sceneLifecycle) objectRequest(request clientObjectRequest) (string, err
 		log.Printf("%s: coalesced duplicate object request sequence=%d id=%d owner=%d", s.remote, request.Sequence, entity.id, entity.ownerID)
 		return entity.description, nil
 	}
-	// 选靶查询应答补 0x28 目标详情（技能.pcapng 30.282→30.456 实证：
-	// 客户端 op 0x07 查询后外服私服回 f#0187 mode=0x47 详情帧——客户端接近
-	// AI 读目标详情（CollideRadius/位姿等）计算走近停靠，缺此帧即 431
-	// 连发重查且冲锋受理后不自走；物化时发过的详情会过期，按需重发，
-	// 位置取当前权威 Transform，序=详情先于 LastObject 对）。
-	if npcDetail0x28Enabled() {
-		if transform, transformOK := s.npcTransform(worldcore.EntityID(entity.id)); transformOK {
-			props := officialNPCEntityProperties(entity.properties, entity.model, entity.configID)
-			var detailTarget *worldcore.Transform
-			if entity.schedule != nil {
-				if motion := entity.schedule.motionAt(time.Now().UnixMilli()); motion.moving {
-					detailTarget = &worldcore.Transform{X: motion.destX, Y: motion.destY, Z: motion.destZ, Orient: motion.destOrient}
-				}
-			}
-			if err := s.conn.WriteFrame(npcDetail0x28V3Frame(uint32(entity.id), entity.ownerID, transform, detailTarget, props)); err != nil {
-				return "", fmt.Errorf("npc 0x28 detail on select %d: %w", entity.id, err)
-			}
-		}
-	}
+	// 点击不重发 0x28 详情帧（2026-11-14 真机定案：点击中立 NPC 原地复制
+	// 出第二个 NPC）。旧注释的官服依据系误判——技能.pcapng f#0187 mode=0x47
+	// 帧实为走动 NPC 的 AOI 物化帧（own=336 自持族），官方对 c2s 0x07 连点
+	// 五次（obj=0x7018099）S2C 零对象帧应答；npc.pcapng 里 NPC 形 id 的 0x28
+	// 每对象恰好一次。0x28 在客户端=第二次 AddObject（OnAddObject→
+	// SceneObjRecord::Add→CreateSceneBodyObject），fxnet2 记录层按 "%u-%u"
+	// 名合并，但可视实体链不幂等——每点一次就地再建一个可见模型。
 	// 0x07 点击与 msg431 选目标共用同一条回帧路径：
 	// LastObject(100) + AutoSelectObject(230) 双属性帧（49840 抓包
 	// 证实客户端点击后服务端回 414/415 两帧）。

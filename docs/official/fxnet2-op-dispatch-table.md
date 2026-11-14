@@ -1,6 +1,12 @@
 # fxnet2.dll 客户端帧 op 分发全表（2026-11-14 静态解码定版）
 
-来源：fxnet2.dll 磁盘静态分析（半壳 .text 原生码）+ capstone。
+> **2026-11-14 深夜勘误**：本文 RVA 系与当前分析副本（artifacts/fxgame/fxnet2_x64.dll，
+> =F: 外服家族客户端）实测对不上（壳内布局差异；0x1CF50 处为无关代码）。
+> op→函数语义结论仍有效，**函数真身地址以诊断串 xref 重建表为准**：
+> 见《注入帧数据-AddObject全链程序反推.md》§一（ServerAddObject=0xdbc0、
+> 分发器≈0x1bca0、主表@0x1c26c、RecvProperty=0xa2c0 等）+ tools/re_inject/ 工具。
+
+
 分发器 = `GameReceiver` 顶层收帧函数 **@RVA 0x1CF50**（ImageBase 0x10600000 无 ASLR，IDA 直接 `G 0x1061CF50`）。
 
 ## 结构

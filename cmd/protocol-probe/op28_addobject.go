@@ -66,11 +66,17 @@ func npcOfficial0x28Enabled() bool {
 // officialNPC0x28Frame 按外服方言生成 mode=0x46 明文 0x28 物化帧。
 // 字段值大部分为外服静态缺省（16-prop 定版），ConfigID/Resource 用
 // 目录真值；串按 0x28 记录方言 [u32 len 含NUL][GBK+NUL]。
-func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, configID, resource string) []byte {
+// npcType：功能分派位（真机+head_game.lua 定案：61~69=头顶功能图标
+// func_01~08、122=func_10、50=func_11、45=整对象忽略、官方怪缺省 14
+// =未定义通用值）——schema 真值优先，缺省 14。
+func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, configID, resource string, npcType int32) []byte {
 	body := make([]byte, 0, 320)
 	body = binary.LittleEndian.AppendUint32(body, objectID)
 	body = binary.LittleEndian.AppendUint32(body, ownerID)
-	for _, f := range []float32{x, y, z, yaw, 0, 0, 0, 0, npcDetail0x28BaseScale, 0, 0, 0} {
+	// 变换块 12×f32：posA=当前位、posB=目标位——静立形 A=B（外服样本
+	// npc.pcapng 停留 NPC 同值；posB=0 会被客户端记成「走向原点」，
+	// 程序反推 2026-11-14：ServerAddObject 把两块都写进 record+0x88/+0x98）。
+	for _, f := range []float32{x, y, z, yaw, x, y, z, yaw, npcDetail0x28BaseScale, 0, 0, 0} {
 		body = binary.LittleEndian.AppendUint32(body, math.Float32bits(f))
 	}
 	body = binary.LittleEndian.AppendUint32(body, 1)
@@ -112,7 +118,10 @@ func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, config
 	if photoRoot == "" {
 		photoRoot = configID
 	}
-	put(184, 7, "icon\funcnpc\\" + photoRoot + ".png") // Photo（官方公式 iconuncnpc\）
+	put(184, 7, "icon\\funcnpc\\" + photoRoot + ".png") // Photo（官方样本 icon\funcnpc\…）
+	put(1566, 3, uint32(npcType))          // NpcType（npc.pcapng 原生 19 字段怪帧实证：
+	//                                     //   i32 位次=Photo 后/ActionSpeed 前；
+	//                                     //   schema 真值>0 透传，缺省 14=官方怪通用值）
 	put(214, 5, float32(1.0))              // ActionSpeed
 	put(1596, 3, uint32(1))                // NotPositive（样本白名=1）
 	put(84, 7, "nil")                      // AIEffect
