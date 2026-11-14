@@ -566,16 +566,34 @@ func (s *sceneLifecycle) clientActivity() error {
 		s.run.activateMember(s.wireID)
 	}
 	// 终极判别实验（B 路线，2026-11-14）：NINEYIN_REPLAY_FRAMES_FILE 指向
-	// 官服抓包提取的原始帧文件（多帧连续二进制），物化完成后原样回放。
-	// 官服化身 0x28 帧回放后玩家外观变化=官服帧被完整消费（LZ+AddObject
-	// 全链通），NPC 不渲染的缺口在会话上下文；无变化=传输/会话态问题。
+	// 官服抓包提取的原始帧文件，物化完成后原样回放。格式：裸单帧，或
+	// [u32 len][frame]×N 多帧打包（tools 打包器产出）。
 	if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE")); path != "" {
 		if raw, err := os.ReadFile(path); err == nil {
-			if err := s.conn.WriteFrame(raw); err != nil {
-				log.Printf("%s: replay %s: %v", s.remote, path, err)
-			} else {
-				log.Printf("%s: replayed %d bytes from %s", s.remote, len(raw), path)
+			sent := 0
+			rest := raw
+			// 多帧打包格式：连续 [u32 len][frame]
+			for len(rest) >= 4 {
+				fl := int(binary.LittleEndian.Uint32(rest))
+				if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
+					break
+				}
+				if err := s.conn.WriteFrame(rest[4 : 4+fl]); err != nil {
+					log.Printf("%s: replay %s: %v", s.remote, path, err)
+					break
+				}
+				sent++
+				rest = rest[4+fl:]
 			}
+			// 兼容裸单帧文件
+			if sent == 0 {
+				if err := s.conn.WriteFrame(raw); err != nil {
+					log.Printf("%s: replay %s: %v", s.remote, path, err)
+				} else {
+					sent = 1
+				}
+			}
+			log.Printf("%s: replayed %d frame(s)/%d bytes from %s", s.remote, sent, len(raw), path)
 		} else {
 			log.Printf("%s: replay file %s unreadable: %v", s.remote, path, err)
 		}
