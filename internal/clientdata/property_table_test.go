@@ -7,10 +7,10 @@ import (
 )
 
 // TestOfficialPropertyTableShape 校验嵌入表规模与关键锚点
-// （c.pcapng 7074 线 0x09 帧提取，唯一方言 2433 真表）。
+// （c.pcapng 7074 线 0x09 帧提取 + 61 行尾追段，2026-11-14）。
 func TestOfficialPropertyTableShape(t *testing.T) {
-	if got := OfficialPropertyCount(); got != 2433 {
-		t.Fatalf("official property table entries = %d, want 2433", got)
+	if got := OfficialPropertyCount(); got != 2494 {
+		t.Fatalf("official property table entries = %d, want 2494", got)
 	}
 	// 头块换血实证：0=None(不可编码)、1=HomeCount（fork 场景域 0=Type 已退役）。
 	if entries := OfficialPropertyEntries(); entries[0].Name != "None" || entries[1].Name != "HomeCount" {
@@ -46,11 +46,12 @@ func TestOfficialPropertyTableDomainResolution(t *testing.T) {
 			t.Errorf("player %q index = %d, want %d", a.name, entry.Index, a.index)
 		}
 	}
-	// fork 场景域头行名（Type/PosiX/Orient 等）在外服私服表头块换血后缺席，
-	// 场景域只能命中共享域位——这是唯一方言下的既定语义。
-	for _, absent := range []string{"PosiX", "PosiZ", "Orient", "BufferListStr", "NpcNickName"} {
-		if _, ok := SceneProperty(absent); ok {
-			t.Errorf("fork-only scene name %q unexpectedly resolvable", absent)
+	// fork 头块缺席名（PosiX/Orient 等）经表尾追复活：场景域首现=官方
+	// 2433 行之后的尾位（官方行零改动，fork 客户端渲染头行通道）。
+	for name, want := range map[string]int{"PosiX": 2434, "PosiY": 2435, "PosiZ": 2436, "Orient": 2437} {
+		entry, ok := SceneProperty(name)
+		if !ok || int(entry.Index) != want {
+			t.Errorf("tail scene name %q = %+v, want idx %d", name, entry, want)
 		}
 	}
 }

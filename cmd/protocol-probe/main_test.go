@@ -36,11 +36,10 @@ func TestStarterNPCUsesClientResourceIdentity(t *testing.T) {
 	if !bytes.Contains(msg, []byte{0x1e, 0x06, 229, 0, 0, 0}) {
 		t.Fatal("NPC AddObject does not contain int32 NpcType=229")
 	}
-	// 属性计数（official2433 实测锚定）：fork 方言 21 → 2433 场景域
-	// 断供一行 = 20（officialNPCProperties 外服私服 16-prop 方言对齐
-	// c.pcapng #1777 + schema 存活行）。
-	if got := binary.LittleEndian.Uint16(msg[0x3d:]); got != 20 {
-		t.Fatalf("NPC property count=%d, want 20", got)
+	// 属性计数（official2433+尾追实测锚定）：2433 裸表 20 → 尾追复活
+	// mock 中唯一在场头行 PosiX = 21（真实链路 creator 摆放四行齐全）。
+	if got := binary.LittleEndian.Uint16(msg[0x3d:]); got != 21 {
+		t.Fatalf("NPC property count=%d, want 21", got)
 	}
 	// 外服私服 #1777 定版行：Type@181=4(byte) / BossLevel@1597=1 /
 	// IDCard@1602="null,null,null,null,null"（0x0D 串=u32 长度+NUL）。
@@ -65,17 +64,17 @@ func TestStarterNPCUsesClientResourceIdentity(t *testing.T) {
 	}
 }
 
-// TestOfficialPropertyTableFrameIsVerbatim 官方 0x09 表(2433 项,
-// official2433 唯一方言)逐行透传:计数、NpcType@1566 官方即 Int32
-//(旧 ModernV1 协商 hack 退役)、玩家域关键锚点全部按位置出现。
-// 帧内容必须与官方方言逐字节一致。
+// TestOfficialPropertyTableFrameIsVerbatim 官方 0x09 表(2433 官方行 +
+// 61 尾追行,official2433 唯一方言)逐行透传:计数、NpcType@1566 官方即
+// Int32(旧 ModernV1 协商 hack 退役)、玩家域关键锚点全部按位置出现。
+// 官方行内容必须与官方方言逐字节一致；尾追行在 2433 之后。
 func TestOfficialPropertyTableFrameIsVerbatim(t *testing.T) {
 	msg := officialPropertyTableFrame()
 	if msg[0] != 0x09 {
 		t.Fatalf("property table opcode=%#x", msg[0])
 	}
-	if got := binary.LittleEndian.Uint16(msg[1:]); got != 2433 {
-		t.Fatalf("official property count=%d, want 2433", got)
+	if got := binary.LittleEndian.Uint16(msg[1:]); got != 2494 {
+		t.Fatalf("official property count=%d, want 2494", got)
 	}
 	npcType := append([]byte("NpcType"), 0, byte(clientdata.WireInt32))
 	if !bytes.Contains(msg, npcType) {
@@ -100,7 +99,7 @@ func TestOfficialPropertyTableFrameIsVerbatim(t *testing.T) {
 	// 行位置即索引:重走一遍帧体,断言第 469 项是 SP、第 465 项是
 	// LogicState(0x09 表位置绑定的硬语义;official2433 位,fork 467/463/580)。
 	offset := 3
-	for position := 0; position < 2433; position++ {
+	for position := 0; position < 2494; position++ {
 		endByte := bytes.IndexByte(msg[offset:], 0)
 		if endByte < 0 {
 			t.Fatalf("entry %d has no NUL terminator", position)

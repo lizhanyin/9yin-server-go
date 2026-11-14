@@ -10,12 +10,15 @@ import (
 //go:embed official_property_table_2433.txt
 var officialPropertyTable2433Text string
 
-// 属性表唯一方言：外服私服 7074 线 2433 项真表（2026-11-14 定案，
-// 分支 official-2433-only）。外服抓包帧与本表逐字段同方言——可直接
-// 对照/回放模拟发送，无需转译。fork 2370 项快照（场景域头块 0..173
-// 语义）与 hybrid2433 混合表同日退役：fork 客户端 NPC 视觉管线吃
-// 头行而本表头块为家园/帮会/VIP 域，NPC 渲染在 fork 客户端是定案
-// 死局（docs/外服模式NPC渲染收束.md），测试工作流以帧级对照为主。
+// 属性表唯一方言：外服私服 7074 线 2433 项官方真表 + 61 行尾追段
+// （2026-11-14 定案，分支 official-2433-only）。官方 2433 行与官服
+// 抓包逐字段同方言——可直接对照/回放模拟发送；尾追段（2433..2493，
+// PosiX/Y/Z/Orient@2434-2437、Race/FloatingState/BufferListStr 等
+// fork 头块缺席名，StopTime 刻意排除）是 fork 客户端渲染头行通道
+// ——fxnet2 分发表定案（docs/official/fxnet2-op-dispatch-table.md）：
+// fork fxnet2 主表仅 0x38 项（0x46 家族无 handler、0x28 走 LZ 解压），
+// 官方式 NPC 详情通道在 fork 客户端先天不通，渲染依赖 0x0D 携带头行。
+// 表追加只许末尾（客户端按位置绑定索引，官方行零漂移）。
 
 // SCENE_EXTENSION_FLOOR 是商店/运动扩展块在官方表中的起始位置:
 // 扩展块名字按「首现且 index >= 99」解析(镜像 Java PropertyTable 语义)。

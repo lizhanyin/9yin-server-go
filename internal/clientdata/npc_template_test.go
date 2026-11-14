@@ -154,10 +154,10 @@ func TestLoadNPCCreatorAcceptsWhitespacePaddedNumericAttributes(t *testing.T) {
 	}
 }
 
-func TestResolveNPCLayeringAndForkOnlyNameDrop(t *testing.T) {
-	// official2433 唯一方言锚点：fork 场景域名（StopTime/PosiX 等）在
-	// 外服私服表头块换血后缺席，模板重复列与摆放坐标副本均不绑定/不注入
-	//（摆放权威在 resolved.Transform，0x0D 坐标走固定头）。
+func TestResolveNPCLayeringAndTailAddedPlacement(t *testing.T) {
+	// official2433+尾追方言锚点：PosiX/Y/Z/Orient 经表尾追（@2434-2437）
+	// 复活——摆放坐标副本注入 runtime 层（fork 客户端渲染头行通道）；
+	// StopTime 刻意未追加（双列审定语义已退役，保持断供）。
 	text := strings.Join([]string{
 		"编号\t脚本\t名称\t类型\t模式\t消极\t停止1\t停止2",
 		"STRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING\tSTRING",
@@ -190,11 +190,14 @@ func TestResolveNPCLayeringAndForkOnlyNameDrop(t *testing.T) {
 	assertValue("WeaponMode", "hand10_1", "creator")
 	assertValue("NotPositive", int32(0), "creator")
 	assertValue("HP", int32(75), "persisted")
-	// fork-only 名断供：重复列 StopTime 不绑定、摆放副本 PosiX 不注入。
-	for _, absent := range []string{"StopTime", "PosiX", "PosiY", "PosiZ", "Orient"} {
-		if _, bound := resolved.Properties[absent]; bound {
-			t.Fatalf("fork-only 名 %q 在 official2433 表下不应绑定", absent)
-		}
+	// 尾追复活：摆放坐标四行注入 runtime 层。
+	assertValue("PosiX", float32(1), "runtime")
+	assertValue("PosiY", float32(2), "runtime")
+	assertValue("PosiZ", float32(3), "runtime")
+	assertValue("Orient", float32(0.5), "runtime")
+	// StopTime 保持断供（刻意不追加）。
+	if _, bound := resolved.Properties["StopTime"]; bound {
+		t.Fatal("StopTime 不应绑定（尾追刻意排除）")
 	}
 	if resolved.Transform.X != 1 || resolved.Transform.Y != 2 || resolved.Transform.Z != 3 {
 		t.Fatalf("transform=%+v（摆放权威应保留）", resolved.Transform)

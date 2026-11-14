@@ -4,12 +4,14 @@ import "testing"
 
 // TestPropertyTableOfficial2433Structure 钉死外服私服 2433 表的结构与锚点
 // （c.pcapng 7074 线 0x09 帧提取，docs/外服私服登录帧对照与缺口清单.md §四-2
-// 第二次修正）。头块 0..173 换血为家园/帮会/VIP 域、64 名缺席、共享域
-// +2/+7 插入漂移。锚点全部来自外服私服帧实解（0x0D #1777 / §11.4 View45）。
+// 第二次修正）。头块 0..173 换血为家园/帮会/VIP 域、共享域 +2/+7 插入漂移。
+// 2026-11-14 表尾追：末尾追加 61 行 fork 头块缺席名（PosiX/Orient/Race…
+// 官方 2433 行零改动），fork 客户端渲染头行通道复活——锚点全部来自
+// 外服私服帧实解（0x0D #1777 / §11.4 View45）。
 func TestPropertyTableOfficial2433Structure(t *testing.T) {
 	table := parsePropertyTable(officialPropertyTable2433Text, "official2433-test")
-	if got := len(table.entries); got != 2433 {
-		t.Fatalf("official2433 entries=%d, want 2433", got)
+	if got := len(table.entries); got != 2494 {
+		t.Fatalf("official2433+tail entries=%d, want 2494", got)
 	}
 	// 头块换血实证：0=None(不可编码)、1=HomeCount；fork 场景域 0=Type。
 	if table.entries[0].Name != "None" || table.entries[1].Name != "HomeCount" {
@@ -44,14 +46,29 @@ func TestPropertyTableOfficial2433Structure(t *testing.T) {
 			t.Fatalf("official2433 anchor @%d = (%s, tc%d), want (%s, tc%d)", a.index, entry.Name, entry.TypeCode, a.name, a.tc)
 		}
 	}
-	// 64 缺名抽样：fork 场景域行在外服私服表不存在（换表断供清单）。
-	for _, absent := range []string{"BufferListStr", "NpcNickName", "Race", "PosiX", "PosiZ", "Orient", "AITemplate", "PatrolMode", "ChaseRange", "RefreshTime"} {
-		if _, ok := table.byNameScene(absent, 0); ok {
-			t.Fatalf("official2433 unexpectedly contains %q", absent)
+	// 尾追段断言：fork 头块缺席名落官方 2433 行之后的连续尾位
+	//（官方行零改动，官服抓包 diff/回放不受影响）。
+	tailAnchors := []struct {
+		index int
+		name  string
+		tc    int
+	}{
+		{2433, "Race", 3},
+		{2434, "PosiX", 5},
+		{2435, "PosiY", 5},
+		{2436, "PosiZ", 5},
+		{2437, "Orient", 5},
+		{2493, "Prop173", 7},
+	}
+	for _, a := range tailAnchors {
+		entry := table.entries[a.index]
+		if entry.Name != a.name || entry.TypeCode != a.tc {
+			t.Fatalf("tail anchor @%d = (%s, tc%d), want (%s, tc%d)", a.index, entry.Name, entry.TypeCode, a.name, a.tc)
 		}
-		if _, ok := table.player[absent]; ok {
-			t.Fatalf("official2433 unexpectedly contains %q in player domain", absent)
-		}
+	}
+	// StopTime 刻意不追加（fork 双列审定语义已退役，保持断供）。
+	if _, ok := table.byNameScene("StopTime", 0); ok {
+		t.Fatal("StopTime unexpectedly present (intentionally not tail-added)")
 	}
 }
 
