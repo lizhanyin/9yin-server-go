@@ -557,6 +557,14 @@ func (s *sceneLifecycle) clientActivity() error {
 	if closed || !s.armed {
 		return nil
 	}
+	// B 线第十一轮 wholesale 模式（replay_phase2.go）：官服帧独占对象
+	// 空间——我方场景对象不物化（fork 方言 0x0D 会污染渲染判读），
+	// 旧回放 env 钩子同样跳过（Phase A 已在进场位发出）。
+	if replayReplaceEntryEnabled() {
+		s.armed = false
+		log.Printf("%s: replace-entry mode; native materialization and replay hook suppressed", s.remote)
+		return nil
+	}
 	log.Printf("%s: post-ready client activity; materializing scene objects", s.remote)
 	if err := s.reconcileViewportLocked(); err != nil {
 		return err

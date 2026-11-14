@@ -2518,6 +2518,33 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// m655 服务器标识，c.pcapng 0.097-0.099s 同位：0x0A 之后、
 			// 建视图之前；official_login_align.go）。
 			writeOfficialLoginInfoFrames(link, conn.RemoteAddr().String(), officialAccountLabel(loginAccountName), activeRole.Name, uint32(activeRole.ID))
+			// B 线第十一轮 wholesale 判别（replay_phase2.go）：进场整体
+			// 官服化。跳过本块其余全部我方进场帧，改发官服 Phase A
+			//（0x0B+化身 0x28+首爆发），Phase B 等客户端显式 0x09。
+			if replayReplaceEntryEnabled() {
+				if err := world.begin(activeRole.Location.Scene.Config, activeRole.Location.Scene.Resource, sceneNPCs); err != nil {
+					log.Printf("%s: begin scene generation: %v", conn.RemoteAddr(), err)
+					return
+				}
+				sent := replayFramesPack(link, replayEntryFramesPath())
+				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s; native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath())
+				if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {
+					replayPhase2Armed.Store(true)
+					log.Printf("%s: phase-2 replay armed at wholesale entry", conn.RemoteAddr())
+				}
+				if err := machine.RoleChosen(); err != nil {
+					log.Printf("%s: complete choose-role transition: %v", conn.RemoteAddr(), err)
+					return
+				}
+				runtime = &sceneRuntime{
+					conn: link, world: world, machine: machine, registry: sceneRegistry,
+					staticNPCs: staticNPCs, radius: npcRadius,
+					player: player, activeRole: activeRole, npcCatalog: sceneNPCs,
+				}
+				gmSession = gm.attach(machine.ID(), conn.RemoteAddr().String(), activeRole, roleFaction(activeRole.Appearance.Values), starterSilver, player.guanYinValue(), player.goldSnapshot(), player.skillSP(), player.facultyValue())
+				log.Printf("%s: wholesale replay entry active; waiting for ClientReady", conn.RemoteAddr())
+				continue
+			}
 			// 三期官方方言：17 视图容器（8 主页 BaseCap=18 + 8 扩展页 +
 			// View1 纸娃娃），随后按 DB 扩容锚点行下发扩展槽位。
 			for _, frame := range bagViewCreateFrames() {
@@ -2823,6 +2850,12 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 			}
+			// wholesale 模式：官服帧独占会话，我方 ClientReady 推送簇
+			//（AutoTrace/轻功/键位/外观/坐骑/九阴志/开关树）全部跳过，
+			// 直达就绪迁移尾段。
+			if replayReplaceEntryEnabled() {
+				goto readyTail
+			}
 			// AutoTrace=1（外服私服 4.81s ClientReady 簇，m144 后 m52 前）：
 			// 自动寻路开关——大地图点击寻路的引擎闸门，登录缺发则点击
 			// 无反应（msg266 都不发起）。
@@ -3005,6 +3038,7 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// （例如在较晚的 UI/stage 回调之后）。
 			// 这不是创建新场景世代的请求；拒绝它会拆掉一个
 			// 本来健康的连接。
+readyTail:
 			if machine.Phase() == session.PhaseInWorld {
 				log.Printf("%s: ignored duplicate ClientReady in active scene", conn.RemoteAddr())
 				continue
