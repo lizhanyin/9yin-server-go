@@ -2812,6 +2812,17 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			}
 			explicitSceneReady = true
 			log.Printf("%s: observed explicit stage_main ClientReady (0x09)", conn.RemoteAddr())
+			// B 线两阶段回放 Phase B（replay_phase2.go）：Phase A 的官服
+			// 0x0B 已让客户端进入新一轮读条，这个 0x09 正是官服第二爆发+
+			// AOI 物化簇的相位窗（官服实测 0x09 后 65ms 发第二爆发）。
+			if replayPhase2Armed.Load() {
+				replayPhase2Armed.Store(false)
+				if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")); path != "" {
+					if sent := replayFramesPack(link, path); sent > 0 {
+						log.Printf("%s: replayed %d phase-2 frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
+					}
+				}
+			}
 			// AutoTrace=1（外服私服 4.81s ClientReady 簇，m144 后 m52 前）：
 			// 自动寻路开关——大地图点击寻路的引擎闸门，登录缺发则点击
 			// 无反应（msg266 都不发起）。

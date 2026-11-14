@@ -568,34 +568,17 @@ func (s *sceneLifecycle) clientActivity() error {
 	// 终极判别实验（B 路线，2026-11-14）：NINEYIN_REPLAY_FRAMES_FILE 指向
 	// 官服抓包提取的原始帧文件，物化完成后原样回放。格式：裸单帧，或
 	// [u32 len][frame]×N 多帧打包（tools 打包器产出）。
+	// 第十轮起为两阶段（见 replay_phase2.go）：本钩子只发 Phase A（0x0B+
+	// 化身 0x28+首爆发）；Phase B（第二爆发+AOI 物化簇）等客户端对回放
+	// 0x0B 的下一个显式 0x09 ClientReady 再发——单点全量灌入会把 Phase B
+	// 灌进新场景读条窗口而全丢。
 	if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE")); path != "" {
-		if raw, err := os.ReadFile(path); err == nil {
-			sent := 0
-			rest := raw
-			// 多帧打包格式：连续 [u32 len][frame]
-			for len(rest) >= 4 {
-				fl := int(binary.LittleEndian.Uint32(rest))
-				if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
-					break
-				}
-				if err := s.conn.WriteFrame(rest[4 : 4+fl]); err != nil {
-					log.Printf("%s: replay %s: %v", s.remote, path, err)
-					break
-				}
-				sent++
-				rest = rest[4+fl:]
+		if sent := replayFramesPack(s.conn, path); sent > 0 {
+			log.Printf("%s: replayed %d frame(s) from %s", s.remote, sent, path)
+			if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {
+				replayPhase2Armed.Store(true)
+				log.Printf("%s: phase-2 replay armed; waiting for next explicit ClientReady (0x09)", s.remote)
 			}
-			// 兼容裸单帧文件
-			if sent == 0 {
-				if err := s.conn.WriteFrame(raw); err != nil {
-					log.Printf("%s: replay %s: %v", s.remote, path, err)
-				} else {
-					sent = 1
-				}
-			}
-			log.Printf("%s: replayed %d frame(s)/%d bytes from %s", s.remote, sent, len(raw), path)
-		} else {
-			log.Printf("%s: replay file %s unreadable: %v", s.remote, path, err)
 		}
 	}
 	return nil
