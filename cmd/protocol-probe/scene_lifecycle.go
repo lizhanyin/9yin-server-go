@@ -631,6 +631,12 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		if entity.schedule != nil {
 			patchAddObjectTransform(payload, transform)
 		}
+		// B 路线（官服家族客户端）：物化帧改走 0x28 明文方言
+		//（mode=0x46，l.pcapng 6 帧先例；值对仍按当前 0x09 表官方位）。
+		// fork 客户端对 op 0x28 走 LZ 解压会丢弃本帧——env 门控默认关。
+		if npcAddAsOp28Enabled() && payload[0] == 0x0D {
+			payload = wrapObjectAddAsOp28(payload)
+		}
 		digest := sha256.Sum256(payload)
 		log.Printf("%s: materialize scene object id=%d kind=%s opcode=0x%02X payload_len=%d payload_sha256=%x",
 			s.remote, id, entity.description, payload[0], len(payload), digest)
