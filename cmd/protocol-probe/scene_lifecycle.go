@@ -560,10 +560,15 @@ func (s *sceneLifecycle) clientActivity() error {
 	// B 线第十一轮 wholesale 模式（replay_phase2.go）：官服帧独占对象
 	// 空间——我方场景对象不物化（fork 方言 0x0D 会污染渲染判读），
 	// 旧回放 env 钩子同样跳过（Phase A 已在进场位发出）。
+	// OVERLAY 档（第十四轮）：恢复我方物化，仅跳过回放钩子。
 	if replayReplaceEntryEnabled() {
 		s.armed = false
-		log.Printf("%s: replace-entry mode; native materialization and replay hook suppressed", s.remote)
-		return nil
+		if replayNativeOverlayEnabled() {
+			log.Printf("%s: replace-entry overlay; native materialization active, replay hook suppressed", s.remote)
+		} else {
+			log.Printf("%s: replace-entry mode; native materialization and replay hook suppressed", s.remote)
+			return nil
+		}
 	}
 	log.Printf("%s: post-ready client activity; materializing scene objects", s.remote)
 	if err := s.reconcileViewportLocked(); err != nil {
@@ -579,8 +584,9 @@ func (s *sceneLifecycle) clientActivity() error {
 	// 第十轮起为两阶段（见 replay_phase2.go）：本钩子只发 Phase A（0x0B+
 	// 化身 0x28+首爆发）；Phase B（第二爆发+AOI 物化簇）等客户端对回放
 	// 0x0B 的下一个显式 0x09 ClientReady 再发——单点全量灌入会把 Phase B
-	// 灌进新场景读条窗口而全丢。
-	if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE")); path != "" {
+	// 灌进新场景读条窗口而全丢。wholesale 模式 Phase A 已在进场位发出，
+	// 此处恒跳过（overlay 档恢复物化但同样不重发回放）。
+	if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE")); path != "" && !replayReplaceEntryEnabled() {
 		if sent := replayFramesPack(s.conn, path); sent > 0 {
 			log.Printf("%s: replayed %d frame(s) from %s", s.remote, sent, path)
 			if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {

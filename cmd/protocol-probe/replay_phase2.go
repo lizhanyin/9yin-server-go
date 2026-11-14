@@ -34,6 +34,16 @@ func replayReplaceEntryEnabled() bool {
 	return os.Getenv("NINEYIN_REPLAY_REPLACE_ENTRY") == "1"
 }
 
+// replayNativeOverlayEnabled：wholesale 骨架上的我方数据覆盖开关
+//（NINEYIN_REPLAY_NATIVE_OVERLAY=1）。放开两处压制：显式 0x09 后的
+// 我方 ClientReady 推送簇（AutoTrace/轻功/个性配置/键位/外观/邮件/
+// 坐骑/兵录/九阴志/开关树）照常下发；clientActivity 恢复我方场景对
+// 象物化（仅跳过回放 env 钩子——Phase A 已在进场位发过）。镜像数据
+// 先落、我方数据后到覆盖，逐步把 bin 拐杖里可替代的部分替换成代码。
+func replayNativeOverlayEnabled() bool {
+	return os.Getenv("NINEYIN_REPLAY_NATIVE_OVERLAY") == "1"
+}
+
 // replayEntryFramesPath：Phase A 文件路径（wholesale 模式下即进场帧）。
 func replayEntryFramesPath() string {
 	return strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE"))

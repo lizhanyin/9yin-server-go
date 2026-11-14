@@ -2962,8 +2962,10 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			}
 			// wholesale 模式：官服帧独占会话，我方 ClientReady 推送簇
 			//（AutoTrace/轻功/键位/外观/坐骑/九阴志/开关树）全部跳过，
-			// 直达就绪迁移尾段。
-			if replayReplaceEntryEnabled() {
+			// 直达就绪迁移尾段。OVERLAY 档放开推送簇——我方数据后到
+			// 覆盖官服镜像数据（官服骨架+我方数据覆盖，去 bin 拐杖的
+			// 递进步）。
+			if replayReplaceEntryEnabled() && !replayNativeOverlayEnabled() {
 				goto readyTail
 			}
 			// AutoTrace=1（外服私服 4.81s ClientReady 簇，m144 后 m52 前）：
