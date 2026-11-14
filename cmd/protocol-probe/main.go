@@ -2638,48 +2638,9 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					}
 				}
 				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s (swapSelf=%v entry=%v avatar=%v); native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath(), swapSelf, swappedEntry, swappedAvatar)
-				// OVERLAY 档：phase A 之后补推我方物品域（与官服首爆发
-				// 记录批同相位——读条窗口客户端缓冲、加载后落账，round11
-				// 实证）。装载序=正常进场块同款（restoreSessionInventory/
-				// 镇派/随机属性先算，行后发）。
-				if swapSelf && replayNativeOverlayEnabled() {
-					bagpacks, packErr := inventory.bagpacks(ctx, activeRole.ID)
-					if packErr != nil {
-						log.Printf("%s: load bagpack anchors (skip): %v", conn.RemoteAddr(), packErr)
-					}
-					equips, equipErr := inventory.equips(ctx, activeRole.ID)
-					if equipErr != nil {
-						log.Printf("%s: load equips (skip inventory): %v", conn.RemoteAddr(), equipErr)
-					}
-					bagItems, bagErr := inventory.bagItems(ctx, activeRole.ID)
-					if bagErr != nil {
-						log.Printf("%s: load bag items (skip inventory): %v", conn.RemoteAddr(), bagErr)
-					}
-					visual = mergeVisual(visual, equips)
-					player.restoreSessionInventory(visual.sex, equips, bagItems, bagpacks)
-					player.refreshZhenpaiEquipBonuses()
-					if randomPropsStore != nil {
-						player.setEquipAttributeAdds(equipAttributeSums(equips, randomPropsStore.LoadAll(ctx, activeRole.ID)))
-					}
-					if equipErr == nil && bagErr == nil && (len(equips) > 0 || len(bagItems) > 0) {
-						frames, frameErr := inventoryFrames(activeRole.ID, visual.sex, equips, bagItems)
-						if frameErr != nil {
-							log.Printf("%s: encode inventory (skip): %v", conn.RemoteAddr(), frameErr)
-						} else {
-							for _, frame := range frames {
-								if err := link.WriteFrame(frame); err != nil {
-									log.Printf("%s: push inventory frame: %v", conn.RemoteAddr(), err)
-									return
-								}
-							}
-							log.Printf("%s: pushed inventory equips=%d bagItems=%d role=%d", conn.RemoteAddr(), len(equips), len(bagItems), activeRole.ID)
-						}
-						pushLoginRandomProps(link, randomPropsStore, ctx, activeRole.ID, equips, bagItems)
-					}
-					if err := pushEquipAppearance(link, player, equips); err != nil {
-						log.Printf("%s: push equip appearance: %v", conn.RemoteAddr(), err)
-					}
-				}
+				// 每连接复位显式就绪门（包级原子跨连接残留会让下一次
+				// 登录的物化又在读条窗口抢跑）。
+				replayExplicitReadySeen.Store(false)
 				if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {
 					replayPhase2Armed.Store(true)
 					log.Printf("%s: phase-2 replay armed at wholesale entry", conn.RemoteAddr())
@@ -3001,6 +2962,47 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					if sent := replayFramesPack(link, path); sent > 0 {
 						log.Printf("%s: replayed %d phase-2 frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
 					}
+				}
+			}
+			// OVERLAY 档物品域：Phase B 的 op15 视图容器之后才能发行
+			//（15:17 会话实证：进场位发行的行目标视图尚不存在=全丢，
+			// 物品栏空）。装载序=正常进场块同款。
+			if replayReplaceEntryEnabled() && replayNativeOverlayEnabled() && runtime != nil && player != nil {
+				bagpacks, packErr := inventory.bagpacks(ctx, runtime.activeRole.ID)
+				if packErr != nil {
+					log.Printf("%s: load bagpack anchors (skip): %v", conn.RemoteAddr(), packErr)
+				}
+				equips, equipErr := inventory.equips(ctx, runtime.activeRole.ID)
+				if equipErr != nil {
+					log.Printf("%s: load equips (skip inventory): %v", conn.RemoteAddr(), equipErr)
+				}
+				bagItems, bagErr := inventory.bagItems(ctx, runtime.activeRole.ID)
+				if bagErr != nil {
+					log.Printf("%s: load bag items (skip inventory): %v", conn.RemoteAddr(), bagErr)
+				}
+				roleVisual := mergeVisual(resolveRoleVisual(runtime.activeRole.Appearance.Values), equips)
+				player.restoreSessionInventory(roleVisual.sex, equips, bagItems, bagpacks)
+				player.refreshZhenpaiEquipBonuses()
+				if randomPropsStore != nil {
+					player.setEquipAttributeAdds(equipAttributeSums(equips, randomPropsStore.LoadAll(ctx, runtime.activeRole.ID)))
+				}
+				if equipErr == nil && bagErr == nil && (len(equips) > 0 || len(bagItems) > 0) {
+					frames, frameErr := inventoryFrames(runtime.activeRole.ID, roleVisual.sex, equips, bagItems)
+					if frameErr != nil {
+						log.Printf("%s: encode inventory (skip): %v", conn.RemoteAddr(), frameErr)
+					} else {
+						for _, frame := range frames {
+							if err := link.WriteFrame(frame); err != nil {
+								log.Printf("%s: push inventory frame: %v", conn.RemoteAddr(), err)
+								return
+							}
+						}
+						log.Printf("%s: pushed inventory equips=%d bagItems=%d role=%d", conn.RemoteAddr(), len(equips), len(bagItems), runtime.activeRole.ID)
+					}
+					pushLoginRandomProps(link, randomPropsStore, ctx, runtime.activeRole.ID, equips, bagItems)
+				}
+				if err := pushEquipAppearance(link, player, equips); err != nil {
+					log.Printf("%s: push equip appearance: %v", conn.RemoteAddr(), err)
 				}
 			}
 			// wholesale 模式：官服帧独占会话，我方 ClientReady 推送簇
