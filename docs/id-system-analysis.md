@@ -1,5 +1,9 @@
 # 9yin ID 体系全景分析（9yin-game-native-menu.exe 逆向 + 抓包实证）
-
+>
+> 🗄️ **fork 方言存档（2026-11-14 标记）**：§6.5 玩家对 (0x11000001, 0x7A5C0B) 仍是 fork 客户端线的权威落地；
+> 但外服 B 线已另借官方 ID 对（NINEYIN_REPLAY_SELF_IDS），进场帧 EntryScene 的 fork 形（恒 0x1F6A3）在 B 线废弃、
+> 改官方 4 属性形（见《[外服方言B线路线收束](外服方言B线路线收束.md)》）。本文属性索引为 fork 表位，
+> official2433 唯一方言下同名位有漂移；现行权威见 [docs/README.md](README.md) 与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
 > 分析对象：`E:\Workspace\project\game\adata\fork\9yin-game-native-menu.exe`
 > （Go 1.26.5 PE64，本项目 `github.com/local/9yin-go-server/cmd/protocol-probe` 的 fork 构建，带完整 DWARF/pclntab 符号）
 > 抓包：同目录 `127-0-0-1-57378_{c2s,s2c}.bin`（该 fork 服务端与真实客户端的一次完整会话，**能正常进入游戏**）。

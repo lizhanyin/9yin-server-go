@@ -1,5 +1,8 @@
 # fork P2 复刻：商店购销（70/71）、称号（295）、经脉（150/161）
-
+>
+> 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
+> official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
+> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
 > 2026-11-07 落地。证据三方交叉：fork 二进制（`F:\Game\Online\9yin\9yin_server1\build\9yin-game-native-menu.exe`，`go tool objdump` 行号级反汇编）+ Java 参考服（`G:\pojie\ai\9yin-server`，msg70 全链权威蓝本）+ 官方属性表（`official_property_table.txt`）。
 > 复现产物：`C:\Users\lzy\AppData\Local\Temp\fork_p2\{sbu,sse,jma,jmc,tst,scm}.txt`（objdump 导出）。
 

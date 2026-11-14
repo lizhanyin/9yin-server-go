@@ -1,8 +1,11 @@
 # 客户端资源知识抽取（res1）
-
+>
+> 🗄️ **冻结快照（2026-11-14 标记）**：本目录为 GM 客户端（盛大 res1）文本抽取知识库，2026-11-06 生成后未再更新；
+> 再生脚本 `tools/text-extract/` 已不在本仓库，数据以本快照为准。注意：下文表格中的 `res1_inventory.json`
+> 实际文件名为 `data/resourses_inventory.json`。总索引见 [docs/README.md](../README.md)。
 > 来源：`E:/Workspace/project/game/res1/text/chineses/`（盛大GM版客户端中文文本资源，共 40 项、约 113MB）。
 > 抽取脚本：`tools/text-extract/extract_text.py`，重新生成：`python tools/text-extract/extract_text.py`。
-> res1 完整资源包（share 配置表 / ini 表现配置 / lua64 脚本 / map 场景）的整理见 [res1-resources.md](res1-resources.md) 与 [share-configs.md](share-configs.md)，清单脚本 `tools/text-extract/extract_res1_configs.py`。
+> res1 完整资源包（share 配置表 / ini 表现配置 / lua64 脚本 / map 场景）的整理见 [resources.md](resources.md) 与 [share-configs.md](share-configs.md)，清单脚本 `tools/text-extract/extract_res1_configs.py`。
 > 旧版源（`E:/Workspace/九阴服务端/resources/modern/text/chineses/`）为上一轮整理所用；res1 为更新版本：18 个 idres 内容更新，新增 `stringtask_normal/special`、`form_helper_text`、`string_player_name` 四个子目录。
 
 ## 源文件格式与编码
@@ -80,5 +83,5 @@ for line in gzip.open('docs/text-extract/data/buffs.jsonl.gz','rt',encoding='utf
 - [道具作用分类](item-functions.md)
 - [NPC 作用分类](npc-functions.md)
 - [规则与数值数据](rules-and-data.md)
-- [res1 资源包总览](res1-resources.md)（ini/lua64/map/text 目录结构与用途）
+- [res1 资源包总览](resources.md)（ini/lua64/map/text 目录结构与用途）
 - [share 配置表体系](share-configs.md)（39 子系统清单、重点表结构、与服务端关联）

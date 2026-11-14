@@ -1,4 +1,4 @@
-# sql/ — 数据库结构与配置数据权威存档
+# migrations/ — 数据库结构与配置数据权威存档
 
 本目录是 **nineyin 库（F:\Game\Online\9yin\9yin-server-go\mysql, 127.0.0.1:3306）结构与配置数据的唯一权威版本存档**。
 数据库升级（含新库重建、缺表补建、配置恢复）统一通过本目录完成——`deploy.bat` 第 [3] 步即调用 `upgrade-db.bat` 重放本目录全部脚本。

@@ -42,7 +42,7 @@ go build -trimpath -o .\build\gm-panel.exe ./cmd/gm-panel
 - `internal`：协议、角色、资源及网络实现
 - `migrations`：MySQL 表结构迁移
 - `scripts`：服务端 Lua 脚本（见下节）
-- `docs`：研究笔记与协议知识库（原 `spec/` 现为 `docs/spec/`，文本抽取数据在 `docs/text-extract/`）
+- `docs`：研究笔记与协议知识库，总索引见 [docs/README.md](docs/README.md)（原 `spec/` 现为 `docs/spec/`，文本抽取数据在 `docs/text-extract/`）
 - `testdata`：测试所需的最小协议夹具
 
 ## 数据库迁移重放

@@ -1,5 +1,8 @@
 # fork 二进制消息清单与功能盘点
-
+>
+> 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
+> official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
+> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
 > 对象：`F:\Game\Online\9yin\9yin_server1\build\9yin-game-native-menu.exe`
 > （`github.com/local/9yin-go-server` fork，commit `fb21001f` 2026-09-14，go1.26.5，符号未剥离）
 >

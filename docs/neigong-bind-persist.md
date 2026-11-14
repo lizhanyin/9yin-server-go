@@ -1,5 +1,8 @@
 # 内功栏绑定持久化（NeiGongBind，2026-11-07）
-
+>
+> 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
+> official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
+> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
 > 真机反馈：「内功栏，放置武器或者内功绑定的快捷栏序号没有存储」。
 > 根因：内功栏的**绑定关系**（每格绑到哪个武器快捷栏序号）走的是独立协议
 > C2S 199 / 属性 NeiGongBind(201)，与快捷栏放置本身（200/201 → role_shortcuts）

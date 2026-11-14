@@ -1,5 +1,8 @@
 # NPC 对话交互与商店 View61 —— 四期「0x07 对象选择/菜单/商店」实现记录
-
+>
+> 🗄️ **fork 方言存档（2026-11-14 标记）**：本文属性索引/帧方言为 fork 表时代（如 LastObject=414），
+> official2433 唯一方言下同名位有漂移（→416，共享域自 307 起 +2 递增）。
+> 现行权威见 [docs/README.md](README.md) 索引与 [docs/official/fxnet2-op-dispatch-table.md](official/fxnet2-op-dispatch-table.md)。
 > 2026-11-04。分支 `9yin-main-new`。数据真值源 `E:\Workspace\project\game\9yin_server1`
 > （optiontalk 三件套 + shop.ini + tool_item.ini），wire 真值源 F 服快活岛开商店抓包
 > （`tools/smoke/shop_probe_frames.txt` 41396-41450 段）与 Go 源 messages.go:121-193。
