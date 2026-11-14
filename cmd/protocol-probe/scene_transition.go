@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/local/9yin-go-server/internal/clientdata"
@@ -31,8 +33,19 @@ func sendEntryScene(conn sceneMessageConnection, scene role.Scene) error {
 	// ConfigID/Resource 按名经场景域（首现）解析：fork 表落 7/8、
 	// 外服私服 2433 表天然落 1447/1448（=外服私服 op0B 样本原号，上方注释的
 	// 真机教训由此消解——两方言各自与所发表自洽）。
-	entry = appendStringProperty(entry, clientdata.MustSceneProperty("ConfigID").Index, scene.Config)
-	entry = appendStringProperty(entry, clientdata.MustSceneProperty("Resource").Index, scene.Resource)
+	entryConfig, entryResource := scene.Config, scene.Resource
+	// 场景切换判别实验（B 路线，2026-11-14）：NINEYIN_SCENE_CONFIG/
+	// NINEYIN_SCENE_RESOURCE 覆盖 0x0B 场景串——外服客户端 ini.package 无
+	// ini\scene 目录，city05 配置疑缺失；换成官服原生场景（school03_
+	// JunZiTang，c.pcapng 实证）可判场景管线是否启动。
+	if v := strings.TrimSpace(os.Getenv("NINEYIN_SCENE_CONFIG")); v != "" {
+		entryConfig = v
+	}
+	if v := strings.TrimSpace(os.Getenv("NINEYIN_SCENE_RESOURCE")); v != "" {
+		entryResource = v
+	}
+	entry = appendStringProperty(entry, clientdata.MustSceneProperty("ConfigID").Index, entryConfig)
+	entry = appendStringProperty(entry, clientdata.MustSceneProperty("Resource").Index, entryResource)
 	// 尾属性 idx 99 的宽度按当前 0x09 表线型编码：fork 活动表该行
 	// int32（4B，旧写法恰好合法）、官方 2433 表 int64（8B）。此前恒写
 	// u32 → 官方方言下客户端按表读 8B 越出帧尾 → fxnet2 RecvProperty
