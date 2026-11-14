@@ -2521,13 +2521,56 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// B 线第十一轮 wholesale 判别（replay_phase2.go）：进场整体
 			// 官服化。跳过本块其余全部我方进场帧，改发官服 Phase A
 			//（0x0B+化身 0x28+首爆发），Phase B 等客户端显式 0x09。
+			// 第十二轮换心（NINEYIN_REPLAY_SWAP_SELF=1）：pack 走查时
+			// 官服 0x0B → 我方 sendEntryScene（我方场景/出生点）、化身
+			// 0x28（len>1000）→ 我方 playerProfile0x28Frame（我方 id/档
+			// 案/技能行），其余帧原样透传——判「我方 id+我方场景在官服
+			// 方言下渲染」。我方 self 0x0D/0x1F 恒不发（官服形状=0x0B+
+			// 档案 0x28，无 self 0x0D）。
 			if replayReplaceEntryEnabled() {
 				if err := world.begin(activeRole.Location.Scene.Config, activeRole.Location.Scene.Resource, sceneNPCs); err != nil {
 					log.Printf("%s: begin scene generation: %v", conn.RemoteAddr(), err)
 					return
 				}
-				sent := replayFramesPack(link, replayEntryFramesPath())
-				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s; native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath())
+				swapSelf := os.Getenv("NINEYIN_REPLAY_SWAP_SELF") == "1"
+				sent, swappedEntry, swappedAvatar := 0, false, false
+				if raw, rerr := os.ReadFile(replayEntryFramesPath()); rerr != nil {
+					log.Printf("%s: replay file %s unreadable: %v", conn.RemoteAddr(), replayEntryFramesPath(), rerr)
+				} else {
+					rest := raw
+					for len(rest) >= 4 {
+						fl := int(binary.LittleEndian.Uint32(rest))
+						if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
+							break
+						}
+						frame := rest[4 : 4+fl]
+						switch {
+						case swapSelf && frame[0] == 0x0B:
+							if err := sendEntryScene(link, activeRole.Location.Scene); err != nil {
+								log.Printf("%s: write swapped entry scene: %v", conn.RemoteAddr(), err)
+								return
+							}
+							swappedEntry = true
+						case swapSelf && frame[0] == 0x28 && fl > 1000:
+							learnedRows := applyStoredSkillLevels(player, currentRoleID(), skillLevelStoreOf(), mergeLearnedSkills(dbLearnedSkills))
+							profileFrame, fieldCount := playerProfile0x28Frame(playerObjectID, playerOwnerID, activeRole.Location.Position, learnedRows)
+							if err := link.WriteFrame(profileFrame); err != nil {
+								log.Printf("%s: write swapped player profile 0x28: %v", conn.RemoteAddr(), err)
+								return
+							}
+							swappedAvatar = true
+							log.Printf("%s: swapped avatar 0x28 -> ours fields=%d skills=%d bytes=%d", conn.RemoteAddr(), fieldCount, len(learnedRows), len(profileFrame))
+						default:
+							if err := link.WriteFrame(frame); err != nil {
+								log.Printf("%s: replay %s: %v", conn.RemoteAddr(), replayEntryFramesPath(), err)
+								return
+							}
+						}
+						sent++
+						rest = rest[4+fl:]
+					}
+				}
+				log.Printf("%s: wholesale replay entry: sent %d frame(s) from %s (swapSelf=%v entry=%v avatar=%v); native login frames suppressed", conn.RemoteAddr(), sent, replayEntryFramesPath(), swapSelf, swappedEntry, swappedAvatar)
 				if strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")) != "" {
 					replayPhase2Armed.Store(true)
 					log.Printf("%s: phase-2 replay armed at wholesale entry", conn.RemoteAddr())
