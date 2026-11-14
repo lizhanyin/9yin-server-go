@@ -2972,6 +2972,22 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				if packErr != nil {
 					log.Printf("%s: load bagpack anchors (skip): %v", conn.RemoteAddr(), packErr)
 				}
+				// 背包视图容器 + 扩展页锚点：官服 op15×30 的视图集不含
+				// 我方 17 容器/8 扩展页（15:20 会话实证扩展背包空）——
+				// 容器自建，行随后挂。
+				for _, frame := range bagViewCreateFrames() {
+					if err := link.WriteFrame(frame); err != nil {
+						log.Printf("%s: create bag view frame: %v", conn.RemoteAddr(), err)
+						return
+					}
+				}
+				for _, frame := range itemBagFrames(bagpacks, time.Now()) {
+					if err := link.WriteFrame(frame); err != nil {
+						log.Printf("%s: add bagpack anchor: %v", conn.RemoteAddr(), err)
+						return
+					}
+				}
+				log.Printf("%s: created %d bag view containers with %d expansion anchors", conn.RemoteAddr(), len(bagViewCreateFrames()), len(itemBagFrames(bagpacks, time.Now())))
 				equips, equipErr := inventory.equips(ctx, runtime.activeRole.ID)
 				if equipErr != nil {
 					log.Printf("%s: load equips (skip inventory): %v", conn.RemoteAddr(), equipErr)
