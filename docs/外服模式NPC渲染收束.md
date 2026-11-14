@@ -190,7 +190,7 @@ wstr len=字节数；WireObject=8B；0x10=[op][flags][obj u32][own u32][count u1
 | 64ba565 | hybrid2433 混合表方言 |
 | 0c3109e | v3 AIEffect 可选化（fork 表 panic 静默断连根因）+ fork 方言回归测试 |
 
-## 六、官服原生 NPC 物化通道全景 + 229-130 复活（2026-11-13，待真机）
+## 六、外服原生 NPC 物化通道全景 + 229-130 复活（2026-11-13，待真机）
 
 初始账号.pcapng / 3.pcapng（Blue Dragon 线 148.153.158.107:2001，真·官方家族
 服务器+客户端同场）把官方的实体物化分工全解了：
@@ -226,3 +226,52 @@ job_skill_share_rec、130=EscortRec）的记录帧语义不变，仍停用——
 0x0D/0x28 吃 fork 头行（§四）、m229 是记录帧（本节）、0x46 未试但同理属
 官方家族客户端语义。**hybrid2433 为最终答案**。229-130 实现保留但默认彻底
 关闭（NINEYIN_NPC_MARK_229=1 显式开启，留作官方家族客户端接入时对照）。
+
+## 后记：方言定案 official2433 唯一（2026-11-14）
+
+用户拍板换前提：服务端**唯一支持 official2433 表**（分支
+`official-2433-only`，worktree `9yin-server-go-2433`）。动机——外服抓包
+帧与本表逐字段同方言，可直接对照/回放模拟发送；fork/hybrid 头块语义
+不同，每次都要转译且不可靠。上文「hybrid2433 为最终答案」的适用前提
+（fork 客户端开画面玩）随之收窄为：**帧级测试工作流以 2433 为基线**，
+要"开客户端看世界"须配官方家族客户端（或补 0x29 批量预载通道，见
+docs/外服0x29批量预载通道解析.md）。
+
+落地（本分支）：
+
+- `internal/clientdata/property_table.go` 删 `NINEYIN_PROPERTY_TABLE`
+  三路门控与 hybrid 拼接，恒走 `official_property_table_2433.txt`；
+  fork 表 blob（2370 项）与 `.bak` 删除；
+- `SwapPropertyTableForTest` 删除（无方言可切），双方言/表驱动测试
+  收敛为唯一表断言（npc_official_dialect / player_motion / catalog /
+  scene_transition / profile / detail_v3）；
+- `NpcType`/`HP`/`State`/`WeaponMode`/`NotPositive` 等 2433 场景域名
+  绑定回归全绿；fork-only 名（StopTime/PosiX/Orient…）断供语义钉死
+  （npc_resolver.go 死链的 StopTime 双列审定 alias 同步清理）；
+- 0x28 v3 详情通道 `NINEYIN_NPC_DETAIL_0X28` 由 opt-in 转**默认开**
+  （=0 可关）——纯 2433 无头块，NPC 物化必须走 0x28。
+
+部署面：F: `start-9yin.bat` 的 `set NINEYIN_PROPERTY_TABLE=hybrid2433`
+行在本分支部署时删除（env 已无消费者）；部署前主工作区功能不受影响。
+
+## 尾追段：渲染头行通道复活（2026-11-14 晚，真机 NPC 仍不渲染后）
+
+真机复验（official-2433-only 分支部署、玩家可进世界）NPC 仍不渲染。
+**fxnet2 op 分发表全解（docs/official/fxnet2-op-dispatch-table.md，
+内存静态分析）推翻「渲染必需 0x28」旧二分结论**：fork fxnet2 主表仅
+0x38 项（0x00-0x37）——0x46/0x47 越界即 default 忽略（外服客户端是
+另一版本 fxnet2）；0x28 在压缩族二级表=**LZ 解压→内层帧递归**，我方
+v3 的 [0x28][0x46] 明文帧被 fork 客户端当 LZ 流解压（垃圾→静默丢帧，
+运气差即历史四连崩）——**0x28 v3 从未真正到达 fork 客户端任何处理
+逻辑**，「外服方言 NPC 渲染必需 0x28」是伪结论。
+
+正解=**表尾追**：0x09 表官方 2433 行零改动，末尾追加 61 行 fork 头块
+缺席名（Race@2433/PosiX@2434/PosiY@2435/PosiZ@2436/Orient@2437/
+FloatingState/BufferListStr…；StopTime 刻意排除保双列审定退役语义），
+表长 2494。依据=分发表附「表追加只许末尾」官方许可 + 客户端按位置
+绑定不校验名字 + 生产全按名解析自动跟随（PosiX 场景域首现=尾位 →
+npc_resolver 摆放四行注入自动复活、NPC 0x0D 头行自动回归）。外服
+抓包 diff/回放不受影响（外服帧恒无 idx>=2433 值对）。
+
+真机待验：尾追表部署后 fork 客户端 NPC 渲染。若仍不渲染，下一步
+二分尾追行集（先只保留 PosiX 四行）。
