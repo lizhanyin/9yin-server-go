@@ -96,6 +96,21 @@ const (
 	waterDriftStaticData    uint32 = 216
 	waterJumpStaticData     uint32 = 5786
 
+	// 官服登录三件套固定 buff（登陆/登陆2/c/初始账号 四包 0x10 属性帧
+	// 实证，2433 表 idx 631/632）：槽 1=BufferInfo1 装备整合
+	// buff_group_flag_101（zhenghe_eq.png，装备特效统一聚合位）恒
+	// '6747,obj,own,1,0,0'；槽 2=BufferInfo2 饱食度 buf_baosd_02 恒
+	// '1E37,obj,own,0,0,0'。官服槽位全景=1/2 固定、3 内功、4 起动态
+	//（格挡 11CE/内功子 4BF9 全在 4+）。落地取「默认内容」语义：槽位
+	// 无战斗租约时显示固定 buff，租约可临时覆盖、到期自动回落——两种
+	// 表方言按名解析 BufferInfoN，槽号与客户端无关。
+	equipFixedBuffSlot         uint16 = 1
+	equipFixedBuffStaticData   uint32 = 26439
+	equipFixedBuffConfigID            = "buff_group_flag_101"
+	satietyFixedBuffSlot       uint16 = 2
+	satietyFixedBuffStaticData uint32 = 7735
+	satietyFixedBuffConfigID          = "buf_baosd_02"
+
 	// 装备中的内功使用同一个原生 BuffStore，但不得与临时战斗/轻功槽位
 	// 共用。其租约在出生时以及每次 215 响应时都从权威装备状态续期。
 	innerPowerBuffLease = 24 * time.Hour
@@ -1429,6 +1444,14 @@ func (p *playerActor) bufferInfo(slot uint16, now time.Time) string {
 func (p *playerActor) bufferInfoLocked(slot uint16, now time.Time) string {
 	buff, ok := p.buffs[slot]
 	if !ok || !buff.expiresUTC.After(now.UTC()) {
+		// 固定 buff 默认内容（见常量块注释）：官服无租约时槽 1/2 恒显
+		// 装备整合/饱食度，战斗租约覆盖后到期回落。
+		switch slot {
+		case equipFixedBuffSlot:
+			return fmt.Sprintf("%X,%X,%X,1,0,0", equipFixedBuffStaticData, playerObjectID, playerOwnerID)
+		case satietyFixedBuffSlot:
+			return fmt.Sprintf("%X,%X,%X,0,0,0", satietyFixedBuffStaticData, playerObjectID, playerOwnerID)
+		}
 		return ""
 	}
 	level := buff.level
@@ -1453,6 +1476,15 @@ func (p *playerActor) bufferListStringLocked(now time.Time) string {
 	for _, slot := range nativeBuffSlots {
 		buff, ok := p.buffs[slot]
 		if !ok || !buff.expiresUTC.After(now.UTC()) {
+			// 固定 buff 默认内容（BufferInfo 槽 1/2 同口径，EndTime=0 永久）。
+			switch slot {
+			case equipFixedBuffSlot:
+				fmt.Fprintf(&list, "%s,local-%d,1,%d-%d,0,1,0|", equipFixedBuffConfigID, slot, playerObjectID, playerOwnerID)
+				continue
+			case satietyFixedBuffSlot:
+				fmt.Fprintf(&list, "%s,local-%d,0,%d-%d,0,1,0|", satietyFixedBuffConfigID, slot, playerObjectID, playerOwnerID)
+				continue
+			}
 			continue
 		}
 		configID := buff.configID
