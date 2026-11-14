@@ -112,8 +112,7 @@ func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, config
 	if photoRoot == "" {
 		photoRoot = configID
 	}
-	put(184, 7, "icon\funcnpc\\" + photoRoot + ".png") // Photo（官方公式 iconuncnpc\）
-	put(1566, 3, uint32(14))               // NpcType
+	put(184, 7, "icon\funcnpc\\" + photoRoot + ".png") // Photo（官方公式 iconuncnpc\）
 	put(214, 5, float32(1.0))              // ActionSpeed
 	put(1596, 3, uint32(1))                // NotPositive（样本白名=1）
 	put(84, 7, "nil")                      // AIEffect

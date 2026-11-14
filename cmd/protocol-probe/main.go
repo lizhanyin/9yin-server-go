@@ -3077,14 +3077,6 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					log.Printf("%s: push equip appearance: %v", conn.RemoteAddr(), err)
 				}
 			}
-			// 判别（第十四轮末）：NINEYIN_REPLAY_NPC_FILE=外服 AOI 簇
-			// NPC 0x28 明文重打包文件（tools/c_aoi_cluster_decode.py 产
-			// 出，0x46 零改写）——官方原帧直发判「生成器字段差 vs 相位」。
-			if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_NPC_FILE")); path != "" {
-				if sent := replayFramesPack(link, path); sent > 0 {
-					log.Printf("%s: replayed %d official NPC frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
-				}
-			}
 			// wholesale 模式：外服帧独占会话，我方 ClientReady 推送簇
 			//（AutoTrace/轻功/键位/外观/坐骑/九阴志/开关树）全部跳过，
 			// 直达就绪迁移尾段。OVERLAY 档放开推送簇——我方数据后到
