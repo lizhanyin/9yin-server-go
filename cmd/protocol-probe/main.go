@@ -3014,8 +3014,12 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			// AOI 物化簇的相位窗（外服实测 0x09 后 65ms 发第二爆发）。
 			if replayPhase2Armed.Load() {
 				replayPhase2Armed.Store(false)
-				if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")); path != "" {
-					if sent := replayFramesPack(link, path); sent > 0 {
+				if path := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_PHASE2_FILE")); path != "" && runtime != nil && runtime.activeRole != nil {
+					// self 0x1F posA 对齐存档落点（p2_slim 内那帧外服
+					// Location 会把化身 posA 拽回外服出生点——重进位置
+					// 修复的漏网帧，2026-11-14 恢复）。
+					sent := replayFramesPackAlignSelfPos(link, path, playerObjectID, playerOwnerID, runtime.activeRole.Location.Position)
+					if sent > 0 {
 						log.Printf("%s: replayed %d phase-2 frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
 					}
 				}

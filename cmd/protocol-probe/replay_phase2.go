@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"log"
+	"math"
 	"os"
 	"strings"
 	"sync/atomic"
+
+	"github.com/local/9yin-go-server/internal/role"
 )
 
 // B 线两阶段回放（2026-11-14 第十轮）。外服抓包时序定案（c/登陆/登陆2/
@@ -57,30 +60,62 @@ func replayEntryFramesPath() string {
 	return strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_FRAMES_FILE"))
 }
 
-// officialFramePosAOffset 在外服化身 0x28 透传帧头部定位变换块 posA
-//（X/Y/Z/Orient 4×f32）的字节偏移。头部形（c#124 化身帧实测 obj@14/
-// own@18/posA@22=928.33,48.75,998.877,0.906=外服 city05 出生点）：
-// … obj u32, own u32, posA。obj/own 限定帧头 64 字节内首个紧邻匹配对，
-// 防长帧字段区的值碰撞；形不符返回 ok=false（调用方原样透传保底，
-// 零改写——身份借用的透传帧任何多余改动都是回归风险）。
+// officialFramePosAOffset 在外服透传帧头部定位变换块 posA（X/Y/Z/
+// Orient 4×f32）的字节偏移。头部形（c#124 化身 0x28 实测 obj@14/own@18/
+// posA@22；Phase B 0x1F Location 实测 obj@1/own@5/posA@9——两形同为
+// … obj u32, own u32, posA 紧邻）：obj/own 限定帧头 64 字节内首个紧邻
+// 匹配对，防长帧字段区的值碰撞；形不符返回 ok=false（调用方原样透传
+// 保底，零改写——身份借用的透传帧任何多余改动都是回归风险）。
 func officialFramePosAOffset(frame []byte, obj, own uint32) (int, bool) {
-	if len(frame) < 64+16 {
-		return 0, false
+	limit := 64
+	if len(frame) < limit {
+		limit = len(frame)
 	}
-	head := frame[:64]
+	head := frame[:limit]
 	objOff := bytes.Index(head, binary.LittleEndian.AppendUint32(nil, obj))
-	if objOff < 0 || objOff+8 > len(head) {
+	if objOff < 0 || objOff+8 > limit {
 		return 0, false
 	}
-	if binary.LittleEndian.Uint32(head[objOff+4:]) != own {
+	if binary.LittleEndian.Uint32(frame[objOff+4:]) != own {
+		return 0, false
+	}
+	if objOff+8+16 > len(frame) {
 		return 0, false
 	}
 	return objOff + 8, true
 }
 
+// replayFramesPackAlignSelfPos：replayFramesPack 的 self 0x1F 对齐变体。
+// p2_slim 内有一帧外服 0x1F Location（25B 无 mode 字节：0x1f+obj@1+
+// own@5+posA@9=出生点）在显式 0x09 后随 Phase B 下发——会把进场位化身
+// 0x28 的 posA 改写成果拽回外服出生点（重进位置修复的漏网帧）。逐帧
+// 把 self 0x1F 的 posA 对齐存档落点，其余帧原样。
+func replayFramesPackAlignSelfPos(conn sceneMessageConnection, path string, obj, own uint32, pos role.Position) int {
+	return replayFramesPackTransform(conn, path, func(frame []byte) []byte {
+		if frame[0] != 0x1F {
+			return frame
+		}
+		posOff, ok := officialFramePosAOffset(frame, obj, own)
+		if !ok {
+			return frame
+		}
+		out := append([]byte(nil), frame...)
+		for i, v := range []float32{pos.X, pos.Y, pos.Z, pos.Orient} {
+			binary.LittleEndian.PutUint32(out[posOff+4*i:], math.Float32bits(v))
+		}
+		return out
+	})
+}
+
 // replayFramesPack 原样回放 [u32 len][frame]×N 打包文件（tools 打包器
 // 产出）；裸单帧文件回退。返回发送帧数。
 func replayFramesPack(conn sceneMessageConnection, path string) int {
+	return replayFramesPackTransform(conn, path, nil)
+}
+
+// replayFramesPackTransform 逐帧回放打包文件，transform 非 nil 时每帧
+// 先经其改写（返回切片可直接发送；返回原帧=零改写）。裸单帧文件回退。
+func replayFramesPackTransform(conn sceneMessageConnection, path string, transform func([]byte) []byte) int {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		log.Printf("replay file %s unreadable: %v", path, err)
@@ -93,7 +128,11 @@ func replayFramesPack(conn sceneMessageConnection, path string) int {
 		if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
 			break
 		}
-		if err := conn.WriteFrame(rest[4 : 4+fl]); err != nil {
+		frame := rest[4 : 4+fl]
+		if transform != nil {
+			frame = transform(frame)
+		}
+		if err := conn.WriteFrame(frame); err != nil {
 			log.Printf("replay %s: %v", path, err)
 			break
 		}
