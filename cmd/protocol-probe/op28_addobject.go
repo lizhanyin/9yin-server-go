@@ -111,6 +111,7 @@ func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, config
 		photo = "icon\func\\" + configID + ".png"
 	}
 	put(184, 7, photo)              // Photo
+	put(1566, 3, uint32(14))        // NpcType（16-prop 定版成员，对象类型分派）
 	put(214, 5, float32(1.0))       // ActionSpeed
 	put(1472, 1, byte(25))          // Level
 	put(1597, 1, byte(1))           // BossLevel
