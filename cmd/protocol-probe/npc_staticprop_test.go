@@ -120,15 +120,15 @@ func TestRollSkillHitAppliesNPCDefense(t *testing.T) {
 	physical := combatSkillDefinition{
 		damageRows: []skillDamageRow{{formulaID: 494, damageType: "PhyDamage", params: []string{"112", "1", "2"}}},
 	}
-	// 72×(1−(20·ln(10000/100)−44)/100)=72×0.519=37.37→37
-	if roll := rollSkillHit(player, physical, ref, world, 1); roll.damage != 37 {
-		t.Fatalf("外防 10000 应得 37，得 %+v", roll)
+	// 69×(1−(20·ln(10000/100)−44)/100)=69×0.519=35.81→36
+	if roll := rollSkillHit(player, physical, ref, world, 1); roll.damage != 36 {
+		t.Fatalf("外防 10000 应得 36，得 %+v", roll)
 	}
 	internal := combatSkillDefinition{
 		damageRows: []skillDamageRow{{formulaID: 494, damageType: "NegDamage", params: []string{"112", "1", "2"}}},
 	}
-	// negDef=0（该实力包只配 phyDefBase）→ 无减免，仍 72
-	if roll := rollSkillHit(player, internal, ref, world, 1); roll.damage != 72 {
-		t.Fatalf("阴防 0 应得 72，得 %+v", roll)
+	// negDef=0（该实力包只配 phyDefBase）→ 无减免，仍 69
+	if roll := rollSkillHit(player, internal, ref, world, 1); roll.damage != 69 {
+		t.Fatalf("阴防 0 应得 69，得 %+v", roll)
 	}
 }

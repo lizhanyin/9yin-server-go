@@ -133,6 +133,8 @@ func TestPlayerVitalsIncludeMaxSPDisplayCap(t *testing.T) {
 
 func TestStarterInnerPowerViewUsesNegotiatedBookFields(t *testing.T) {
 	player := newPlayerActor("本地角色", 0)
+	// 五维钉官方创角基线 30（建号默认已改 3；本测对照官方 starter 数值）。
+	player.setBaseAttributes(30, 30, 30, 30, 30)
 	if got := player.stateSnapshot(); got.BaseMaxHP != 1000 || got.MaxHP != 3207 || got.BaseMaxMP != 500 || got.MaxMP != 1337 {
 		t.Fatalf("两仪护心功 server caps=%+v, want base 1000/500 total 3207/1337", got)
 	}
@@ -252,6 +254,8 @@ func TestTaoHuaInnerPowerUsesClassicVisibleRoute(t *testing.T) {
 
 func TestYiHuaInnerPowerUsesSharedClassicVisibleRoute(t *testing.T) {
 	player := newPlayerActor("本地角色", 0)
+	// 五维钉官方创角基线 30（建号默认已改 3；本测对照官方数值）。
+	player.setBaseAttributes(30, 30, 30, 30, 30)
 	book := player.progress.book("ng_yh_001")
 	if book == nil {
 		t.Fatal("missing 移花宫 明玉神功")
@@ -917,6 +921,8 @@ func TestAttributeDerivedAddsMatchOfficialCapture(t *testing.T) {
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			player := newPlayerActor("本地角色", 0)
+			// 五维钉官方创角基线 30（建号默认已改 3；抓包口径 base 30×5）。
+			player.setBaseAttributes(30, 30, 30, 30, 30)
 			player.mu.Lock()
 			book := player.progress.book("ng_jh_001")
 			if book == nil {

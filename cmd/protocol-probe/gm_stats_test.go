@@ -187,8 +187,8 @@ func TestGMStatsThinFrames(t *testing.T) {
 		player.mu.Lock()
 		str, sta, dex := player.progress.attributes.str, player.progress.attributes.sta, player.progress.attributes.dex
 		player.mu.Unlock()
-		if str != 100 || sta != 30 || dex != 80 {
-			t.Fatalf("str=%d sta=%d dex=%d want str=100 sta=30(未跳过维保持) dex=80", str, sta, dex)
+		if str != 100 || sta != 3 || dex != 80 {
+			t.Fatalf("str=%d sta=%d dex=%d want str=100 sta=3(未跳过维保持建号初值) dex=80", str, sta, dex)
 		}
 	})
 }
@@ -371,8 +371,8 @@ func TestFacultySnapshotGMPanelRoundtrip(t *testing.T) {
 	if actValue != actDayUnlimitedSentinel {
 		t.Fatalf("legacy act day value=%d want unlimited sentinel", actValue)
 	}
-	if str != 30 {
-		t.Fatalf("legacy base str=%d want starter 30 (不覆盖运行时值)", str)
+	if str != 3 {
+		t.Fatalf("legacy base str=%d want starter 3 (不覆盖运行时值)", str)
 	}
 	if vitalsSet {
 		t.Fatal("legacy snapshot must not seed vitals")

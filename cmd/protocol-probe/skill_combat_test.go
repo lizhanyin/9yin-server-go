@@ -636,11 +636,11 @@ func TestRollSkillHitUsesPerHitFormulaEngine(t *testing.T) {
 		damageRows: []skillDamageRow{{formulaID: 494, damageType: "NegDamage", params: []string{"112", "1", "2"}}},
 		hitCount:   10,
 	}
-	// 默认属性（str=30/meleePower=80/武器 20-35）：
-	// (112+((80+30+20+35)*1*0.195))/2 = 72.08 → 72（legacy 路径会掷 28×ratio）
+	// 默认属性（建号五维 str=3/meleePower=80/武器 20-35）：
+	// (112+((80+3+20+35)*1*0.195))/2 = 69.455 → 69（legacy 路径会掷 28×ratio）
 	roll := rollSkillHit(player, definition, skillDamageTargetRef{}, nil, 1)
-	if roll.damage != 72 || roll.crit {
-		t.Fatalf("per-hit roll = %+v, want damage=72 crit=false", roll)
+	if roll.damage != 69 || roll.crit {
+		t.Fatalf("per-hit roll = %+v, want damage=69 crit=false", roll)
 	}
 }
 
@@ -890,13 +890,13 @@ func TestRollSkillHitPicksCritValueByDamageType(t *testing.T) {
 	external := combatSkillDefinition{
 		damageRows: []skillDamageRow{{formulaID: 494, damageType: "NegDamage", params: []string{"112", "1", "2"}}},
 	}
-	if roll := rollSkillHit(player, external, skillDamageTargetRef{}, nil, 1); !roll.crit || roll.damage != 144 {
-		t.Fatalf("内功系应暴击 144，得 %+v", roll)
+	if roll := rollSkillHit(player, external, skillDamageTargetRef{}, nil, 1); !roll.crit || roll.damage != 138 {
+		t.Fatalf("内功系应暴击 138，得 %+v", roll)
 	}
 	physical := combatSkillDefinition{
 		damageRows: []skillDamageRow{{formulaID: 494, damageType: "PhyDamage", params: []string{"112", "1", "2"}}},
 	}
-	if roll := rollSkillHit(player, physical, skillDamageTargetRef{}, nil, 1); roll.crit || roll.damage != 72 {
-		t.Fatalf("外功系应不暴击 72，得 %+v", roll)
+	if roll := rollSkillHit(player, physical, skillDamageTargetRef{}, nil, 1); roll.crit || roll.damage != 69 {
+		t.Fatalf("外功系应不暴击 69，得 %+v", roll)
 	}
 }

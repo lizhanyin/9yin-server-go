@@ -2558,15 +2558,47 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 				sent, swappedEntry, swappedAvatar := 0, false, false
 				if raw, rerr := os.ReadFile(replayEntryFramesPath()); rerr != nil {
 					log.Printf("%s: replay file %s unreadable: %v", conn.RemoteAddr(), replayEntryFramesPath(), rerr)
-				} else {
-					rest := raw
-					for len(rest) >= 4 {
-						fl := int(binary.LittleEndian.Uint32(rest))
-						if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
-							break
+			} else {
+				rest := raw
+				replayFrameIdx := 0
+				nativeP1Seen := map[string]bool{}
+				for len(rest) >= 4 {
+					fl := int(binary.LittleEndian.Uint32(rest))
+					if fl <= 0 || fl > len(rest)-4 || fl > 0x10000 {
+						break
+					}
+					frame := rest[4 : 4+fl]
+					// 帧替换档（NINEYIN_REPLAY_NATIVE_FRAMES=1，
+					// replay_native_replace.go）：已有原生生成器的帧就地
+					// 替换为代码生成（值=我方权威状态/结构常量），其余
+					// 透传并打 UNKNOWN 标注（欠账清单逐个销项后 bin 退役）。
+					if replayNativeFramesEnabled() {
+						if nativeFrames, useEntryScene, note, isNative := nativeP1Disposition(replayFrameIdx, frame, player, activeRole.Location.Position); isNative {
+							wrote := 0
+							if useEntryScene {
+								if err := sendEntryScene(link, activeRole.Location.Scene); err != nil {
+									log.Printf("%s: native-replace P1#%d entry scene: %v", conn.RemoteAddr(), replayFrameIdx, err)
+									return
+								}
+								wrote++
+							}
+							for _, nativeFrame := range nativeFrames {
+								if err := link.WriteFrame(nativeFrame); err != nil {
+									log.Printf("%s: native-replace P1#%d write: %v", conn.RemoteAddr(), replayFrameIdx, err)
+									return
+								}
+								wrote++
+							}
+							log.Printf("%s: native-replace P1#%d op=0x%02X -> %d native frame(s) [%s]", conn.RemoteAddr(), replayFrameIdx, frame[0], wrote, note)
+							sent += wrote
+							rest = rest[4+fl:]
+							replayFrameIdx++
+							continue
 						}
-						frame := rest[4 : 4+fl]
-						switch {
+						nativeP1MarkUnknown(replayFrameIdx, frame, nativeP1Seen)
+					}
+					replayFrameIdx++
+					switch {
 						case swapSelf && frame[0] == 0x0B:
 							// NINEYIN_REPLAY_PASSTHROUGH_0B=1：0x0B 原样透传
 							//（步骤①真机定案=我方 0x0B 是物化破坏点；官方 4 属性
@@ -3018,9 +3050,16 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					// self 0x1F posA 对齐存档落点（p2_slim 内那帧外服
 					// Location 会把化身 posA 拽回外服出生点——重进位置
 					// 修复的漏网帧，2026-11-14 恢复）。
-					sent := replayFramesPackAlignSelfPos(link, path, playerObjectID, playerOwnerID, runtime.activeRole.Location.Position)
-					if sent > 0 {
-						log.Printf("%s: replayed %d phase-2 frame(s) after explicit ClientReady", conn.RemoteAddr(), sent)
+					// 帧替换档：0x15/0x1F 原生生成、其余透传+UNKNOWN
+					// 标注（replay_native_replace.go 分派表）。
+					var phase2Sent int
+					if replayNativeFramesEnabled() {
+						phase2Sent = replayPhase2NativeReplace(link, path, playerObjectID, playerOwnerID, runtime.activeRole.Location.Position)
+					} else {
+						phase2Sent = replayFramesPackAlignSelfPos(link, path, playerObjectID, playerOwnerID, runtime.activeRole.Location.Position)
+					}
+					if phase2Sent > 0 {
+						log.Printf("%s: replayed %d phase-2 frame(s) after explicit ClientReady", conn.RemoteAddr(), phase2Sent)
 					}
 				}
 			}

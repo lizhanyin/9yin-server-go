@@ -429,7 +429,8 @@ func newPlayerProgress() playerProgress {
 		actDayValueLast:     actDayUnlimitedSentinel,
 		lastAdvance:         time.Now().UTC(),
 		attributes: playerAttributes{
-			sp: maxPlayerSP, str: 30, sta: 30, dex: 30, ing: 30, spi: 30,
+			// 建号五维=3（2026-11-15 用户拍板；官方白板口径为 30）。
+			sp: maxPlayerSP, str: 3, sta: 3, dex: 3, ing: 3, spi: 3,
 			meleePower: 80, shotPower: 80, magicPower: 80,
 			phyVa: 16, magicVa: 16,
 			phyHit: 50, magicHit: 50,
