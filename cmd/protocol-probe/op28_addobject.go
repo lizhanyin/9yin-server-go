@@ -44,3 +44,9 @@ func wrapObjectAddAsOp28(plain []byte) []byte {
 	frame = append(frame, body...)
 	return frame
 }
+
+// npcResourceOverride 判别实验开关：NINEYIN_NPC_RESOURCE_OVERRIDE=npc\monster483
+// 强制全 NPC 用同一外服库在册模型串。
+func npcResourceOverride() string {
+	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_RESOURCE_OVERRIDE"))
+}

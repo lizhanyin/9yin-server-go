@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/local/9yin-go-server/internal/clientdata"
 	"github.com/local/9yin-go-server/internal/ecs"
 	"github.com/local/9yin-go-server/internal/luascript"
 	"github.com/local/9yin-go-server/internal/mapnav"
@@ -436,6 +437,15 @@ func (r *sceneRun) registerNPCLocked(id uint32, npc npcSpawn) error {
 	id = forkNPCID(id)
 	if id == 0 || id == 1 || id == playerObjectID {
 		return fmt.Errorf("NPC scene identity %d collides with reserved player identity", id)
+	}
+	// 判别实验（B 路线，2026-11-14）：强制覆盖 Resource 模型串——外服客户端
+	// 模型库为官服命名族（l.pcapng 实证 npc\monster483/npc\world<NUL>406），
+	// fork 名（npc\worldnpc288）在其库中不存在，疑不渲染根因。覆盖后真机
+	// 全城同模型即坐实。
+	if override := npcResourceOverride(); override != "" {
+		if _, ok := npc.resolved.Properties["Resource"]; ok {
+			npc.resolved.Properties["Resource"] = clientdata.PropertyValue{Value: clientdata.StringValue(override)}
+		}
 	}
 	if npc.schedule != nil && !patrolCombatScriptClass(npc.resolved.ScriptClass) {
 		// 巡逻 NPC 按共同时钟采样当前时刻位置：0x0D 载荷与初始
