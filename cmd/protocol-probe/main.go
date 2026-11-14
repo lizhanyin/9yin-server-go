@@ -2552,14 +2552,48 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 							}
 							swappedEntry = true
 						case swapSelf && frame[0] == 0x28 && fl > 1000:
-							learnedRows := applyStoredSkillLevels(player, currentRoleID(), skillLevelStoreOf(), mergeLearnedSkills(dbLearnedSkills))
-							profileFrame, fieldCount := playerProfile0x28Frame(playerObjectID, playerOwnerID, activeRole.Location.Position, learnedRows)
-							if err := link.WriteFrame(profileFrame); err != nil {
-								log.Printf("%s: write swapped player profile 0x28: %v", conn.RemoteAddr(), err)
-								return
+							// 换身两档：NINEYIN_REPLAY_AVATAR_BODY 指向官服档案
+							// 明文体模板（k#1978 全 392 字段含 elmet/cloth/shoes/
+							// sword 装备外观区）——obj/own 全文替换+posA 落我方坐
+							// 标后 0x46 直发；缺省回落我方 41 字段生成器（头有身无
+							// 的实测差距=装备外观字段段）。
+							if bodyPath := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_AVATAR_BODY")); bodyPath != "" {
+								plain, berr := os.ReadFile(bodyPath)
+								if berr != nil || len(plain) < 62 {
+									log.Printf("%s: avatar body template %s unreadable (%v)", conn.RemoteAddr(), bodyPath, berr)
+									return
+								}
+								oldObj := append([]byte(nil), plain[0:4]...)
+								oldOwn := append([]byte(nil), plain[4:8]...)
+								newObj := binary.LittleEndian.AppendUint32(nil, playerObjectID)
+								newOwn := binary.LittleEndian.AppendUint32(nil, playerOwnerID)
+								plain = bytes.ReplaceAll(plain, oldObj, newObj)
+								plain = bytes.ReplaceAll(plain, oldOwn, newOwn)
+								pos := activeRole.Location.Position
+								for i, v := range []float32{pos.X, pos.Y, pos.Z, pos.Orient} {
+									binary.LittleEndian.PutUint32(plain[8+4*i:], math.Float32bits(v))
+								}
+								wrapped := make([]byte, 0, len(plain)+10)
+								wrapped = append(wrapped, 0x28, 0x46)
+								wrapped = binary.LittleEndian.AppendUint32(wrapped, uint32(len(plain)+9)) // len-1
+								wrapped = binary.LittleEndian.AppendUint32(wrapped, uint32(len(plain)))
+								wrapped = append(wrapped, plain...)
+								if err := link.WriteFrame(wrapped); err != nil {
+									log.Printf("%s: write avatar body template 0x28: %v", conn.RemoteAddr(), err)
+									return
+								}
+								swappedAvatar = true
+								log.Printf("%s: swapped avatar 0x28 -> body template %s fields=%d bytes=%d obj=%#x", conn.RemoteAddr(), bodyPath, binary.LittleEndian.Uint16(plain[60:]), len(wrapped), playerObjectID)
+							} else {
+								learnedRows := applyStoredSkillLevels(player, currentRoleID(), skillLevelStoreOf(), mergeLearnedSkills(dbLearnedSkills))
+								profileFrame, fieldCount := playerProfile0x28Frame(playerObjectID, playerOwnerID, activeRole.Location.Position, learnedRows)
+								if err := link.WriteFrame(profileFrame); err != nil {
+									log.Printf("%s: write swapped player profile 0x28: %v", conn.RemoteAddr(), err)
+									return
+								}
+								swappedAvatar = true
+								log.Printf("%s: swapped avatar 0x28 -> ours fields=%d skills=%d bytes=%d", conn.RemoteAddr(), fieldCount, len(learnedRows), len(profileFrame))
 							}
-							swappedAvatar = true
-							log.Printf("%s: swapped avatar 0x28 -> ours fields=%d skills=%d bytes=%d", conn.RemoteAddr(), fieldCount, len(learnedRows), len(profileFrame))
 						default:
 							if err := link.WriteFrame(frame); err != nil {
 								log.Printf("%s: replay %s: %v", conn.RemoteAddr(), replayEntryFramesPath(), err)
