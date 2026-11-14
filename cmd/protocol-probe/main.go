@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2364,6 +2365,24 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 			visual := resolveRoleVisual(activeRole.Appearance.Values)
 			player = newPlayerActor(activeRole.Name, starterSilver)
 			setPlayerWireIdentity(uint32(activeRole.ID))
+			// B 线第十三轮：会话身份整体借用官服抓包对
+			//（NINEYIN_REPLAY_SELF_IDS="obj,own" 十六进制）——0x0B/化身
+			// 0x28/全部后续帧同一对 id，官服化身帧原样透传即命中 self。
+			// 绕行背景：k#1978 明文模板换 id 后客户端建主玩家失败
+			//（lua 主玩家创建失败 1706-2309，嵌套自引用归一后仍败，
+			// 疑 re-entry 态字段触发创建链校验）——官服 c#124 帧在第十
+			// 一轮原样实证可建，故改借用其身份零改写。
+			if v := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_SELF_IDS")); v != "" {
+				if parts := strings.Split(v, ","); len(parts) == 2 {
+					if o, e1 := strconv.ParseUint(strings.TrimSpace(parts[0]), 0, 64); e1 == nil {
+						if w, e2 := strconv.ParseUint(strings.TrimSpace(parts[1]), 0, 64); e2 == nil {
+							playerObjectID = uint32(o)
+							playerOwnerID = uint32(w)
+							log.Printf("%s: replay self ids override obj=%#x own=%#x", conn.RemoteAddr(), playerObjectID, playerOwnerID)
+						}
+					}
+				}
+			}
 			player.faction = roleFaction(activeRole.Appearance.Values)
 			// 外观域会话态（docs/装备外观与风物志挂载.md V4）：显示类型
 			// 偏好（role_appearance）、时装/身份装激活集（role_fashion_suits，
@@ -2533,6 +2552,9 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 					return
 				}
 				swapSelf := os.Getenv("NINEYIN_REPLAY_SWAP_SELF") == "1"
+				// SELF_IDS 借用身份时化身原样透传（官服帧 ids 已对位，
+				// 任何改写都是回归风险）。
+				selfIdsOverride := strings.TrimSpace(os.Getenv("NINEYIN_REPLAY_SELF_IDS")) != ""
 				sent, swappedEntry, swappedAvatar := 0, false, false
 				if raw, rerr := os.ReadFile(replayEntryFramesPath()); rerr != nil {
 					log.Printf("%s: replay file %s unreadable: %v", conn.RemoteAddr(), replayEntryFramesPath(), rerr)
@@ -2552,6 +2574,17 @@ func handle(conn net.Conn, store *roleStore, facultyStore *facultyDBStore, inven
 							}
 							swappedEntry = true
 						case swapSelf && frame[0] == 0x28 && fl > 1000:
+							if selfIdsOverride {
+								// 借用官服身份：官服化身帧 ids 已对位 self，
+								// 原样透传（第十一轮实证可建可渲染）。
+								if err := link.WriteFrame(frame); err != nil {
+									log.Printf("%s: replay avatar passthrough: %v", conn.RemoteAddr(), err)
+									return
+								}
+								swappedAvatar = true
+								log.Printf("%s: avatar 0x28 passthrough (%d bytes, official ids)", conn.RemoteAddr(), fl)
+								break
+							}
 							// 换身两档：NINEYIN_REPLAY_AVATAR_BODY 指向官服档案
 							// 明文体模板（k#1978 全 392 字段含 elmet/cloth/shoes/
 							// sword 装备外观区）——obj/own 全文替换+posA 落我方坐
