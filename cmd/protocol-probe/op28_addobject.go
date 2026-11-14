@@ -70,7 +70,7 @@ func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, config
 	body := make([]byte, 0, 320)
 	body = binary.LittleEndian.AppendUint32(body, objectID)
 	body = binary.LittleEndian.AppendUint32(body, ownerID)
-	for _, f := range []float32{x, y, z, yaw, 0, 0, 0, 0, 0, 0, 0, 0} {
+	for _, f := range []float32{x, y, z, yaw, 0, 0, 0, 0, npcDetail0x28BaseScale, 0, 0, 0} {
 		body = binary.LittleEndian.AppendUint32(body, math.Float32bits(f))
 	}
 	body = binary.LittleEndian.AppendUint32(body, 1)
@@ -98,29 +98,33 @@ func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, config
 		_ = typ
 		count++
 	}
-	// 官服 16-prop 定版序（#1776 实证字段集；表外 idx 段缺省可缺席）
-	put(179, 5, float32(0.939))     // CollideRadius
-	put(183, 7, "stand")            // State
-	put(181, 1, byte(4))            // Type
+	// 官方 0x46 可建帧 19 字段定版（npc.pcapng #1841/#1898 明文走查，
+	// 罗塞塔石碑——官方自己用 0x46 建对象的确切内容）：
+	put(179, 5, float32(0.915))            // CollideRadius（样本 0.915）
+	put(183, 7, "stand")                   // State（样本 walk=巡逻中，物化时刻 stand）
+	put(181, 1, byte(4))                   // Type
 	if resource != "" {
 		put(1448, 7, resource) // Resource
 	}
-	put(1447, 7, configID)          // ConfigID
-	photo := "icon\func\\" + resource + ".png"
-	if resource == "" {
-		photo = "icon\func\\" + configID + ".png"
+	put(1565, 7, "0.0,0.0,0.0")            // RotatePara（样本按朝向，静态零）
+	put(1447, 7, configID)                 // ConfigID
+	photoRoot := resource
+	if photoRoot == "" {
+		photoRoot = configID
 	}
-	put(184, 7, photo)              // Photo
-	put(1566, 3, uint32(14))        // NpcType（16-prop 定版成员，对象类型分派）
-	put(214, 5, float32(1.0))       // ActionSpeed
-	put(1472, 1, byte(25))          // Level
-	put(1597, 1, byte(1))           // BossLevel
+	put(184, 7, "icon\funcnpc\\" + photoRoot + ".png") // Photo（官方公式 iconuncnpc\）
+	put(1566, 3, uint32(14))               // NpcType
+	put(214, 5, float32(1.0))              // ActionSpeed
+	put(1596, 3, uint32(1))                // NotPositive（样本白名=1）
+	put(84, 7, "nil")                      // AIEffect
+	put(1472, 1, byte(25))                 // Level（静态，后续接目录真值）
+	put(1597, 1, byte(1))                  // BossLevel
 	put(1602, 7, "null,null,null,null,null") // IDCard
-	put(1604, 7, "stand")           // BornAction
-	put(1606, 7, "hand1_1")         // WeaponMode
-	put(471, 3, uint32(100))        // HPRatio
-	put(480, 3, uint32(100))        // ParryRatio
-	put(484, 3, uint32(100))        // HitHPRatio
+	put(1604, 7, "stand")                  // BornAction
+	put(1606, 7, "hand1_1")                // WeaponMode
+	put(471, 3, uint32(100))               // HPRatio
+	put(480, 3, uint32(100))               // ParryRatio
+	put(484, 3, uint32(100))               // HitHPRatio
 	binary.LittleEndian.PutUint16(body[countAt:], uint16(count))
 
 	frame := make([]byte, 0, len(body)+10)
