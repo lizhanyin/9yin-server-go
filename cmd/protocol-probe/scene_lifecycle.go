@@ -672,7 +672,12 @@ func (s *sceneLifecycle) reconcileViewportLocked() error {
 		// B 路线（官服家族客户端）：物化帧改走 0x28 明文方言
 		//（mode=0x46，l.pcapng 6 帧先例；值对仍按当前 0x09 表官方位）。
 		// fork 客户端对 op 0x28 走 LZ 解压会丢弃本帧——env 门控默认关。
-		if npcAddAsOp28Enabled() && payload[0] == 0x0D {
+		// OFFICIAL 档（NINEYIN_NPC_0X28_OFFICIAL=1）：按官服 AOI 簇
+		// 16-prop 模板全新生成（fork 大档字段集官服客户端读不懂，
+		// 15:28 会话实证不建对象）。
+		if npcOfficial0x28Enabled() {
+			payload = officialNPC0x28Frame(uint32(id), entity.ownerID, transform.X, transform.Y, transform.Z, transform.Orient, entity.configID, entity.model)
+		} else if npcAddAsOp28Enabled() && payload[0] == 0x0D {
 			payload = wrapObjectAddAsOp28(payload)
 		}
 		digest := sha256.Sum256(payload)

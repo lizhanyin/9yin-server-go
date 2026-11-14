@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"math"
 	"os"
 	"strings"
 )
@@ -49,4 +50,82 @@ func wrapObjectAddAsOp28(plain []byte) []byte {
 // 强制全 NPC 用同一外服库在册模型串。
 func npcResourceOverride() string {
 	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_RESOURCE_OVERRIDE"))
+}
+
+// npcOfficial0x28Enabled：NINEYIN_NPC_0X28_OFFICIAL=1 时 NPC 物化帧按
+// 官服 AOI 簇 16-prop 模板全新生成（不再 wrap fork 0x0D 大档）。
+// 依据（c.pcapng 簇逐字节解码 + 历轮 16-prop 定版合并）：官服怪帧
+// #1776 = 17 字段精选（CollideRadius/State/Type/Resource/ConfigID/
+// Photo/ActionSpeed/Level/BossLevel/IDCard 族），坐标走变换块
+// [8:60]，无 fork 表尾 PosiX/Orient 字段、无 Name——fork 大档字段集
+// 官服客户端按自记录方言读不懂故不建对象（15:28 会话实证）。
+func npcOfficial0x28Enabled() bool {
+	return strings.TrimSpace(os.Getenv("NINEYIN_NPC_0X28_OFFICIAL")) == "1"
+}
+
+// officialNPC0x28Frame 按官服方言生成 mode=0x46 明文 0x28 物化帧。
+// 字段值大部分为官服静态缺省（16-prop 定版），ConfigID/Resource 用
+// 目录真值；串按 0x28 记录方言 [u32 len 含NUL][GBK+NUL]。
+func officialNPC0x28Frame(objectID, ownerID uint32, x, y, z, yaw float32, configID, resource string) []byte {
+	body := make([]byte, 0, 320)
+	body = binary.LittleEndian.AppendUint32(body, objectID)
+	body = binary.LittleEndian.AppendUint32(body, ownerID)
+	for _, f := range []float32{x, y, z, yaw, 0, 0, 0, 0, 0, 0, 0, 0} {
+		body = binary.LittleEndian.AppendUint32(body, math.Float32bits(f))
+	}
+	body = binary.LittleEndian.AppendUint32(body, 1)
+	countAt := len(body)
+	body = binary.LittleEndian.AppendUint16(body, 0) // count 占位
+
+	count := 0
+	put := func(idx uint16, typ int, val any) {
+		body = binary.LittleEndian.AppendUint16(body, idx)
+		switch v := val.(type) {
+		case float32:
+			body = binary.LittleEndian.AppendUint32(body, math.Float32bits(v))
+		case uint32:
+			body = binary.LittleEndian.AppendUint32(body, v)
+		case int32:
+			body = binary.LittleEndian.AppendUint32(body, uint32(v))
+		case byte:
+			body = append(body, v)
+		case string:
+			raw := append([]byte(nil), []byte(v)...)
+			raw = append(raw, 0)
+			body = binary.LittleEndian.AppendUint32(body, uint32(len(raw)))
+			body = append(body, raw...)
+		}
+		_ = typ
+		count++
+	}
+	// 官服 16-prop 定版序（#1776 实证字段集；表外 idx 段缺省可缺席）
+	put(179, 5, float32(0.939))     // CollideRadius
+	put(183, 7, "stand")            // State
+	put(181, 1, byte(4))            // Type
+	if resource != "" {
+		put(1448, 7, resource) // Resource
+	}
+	put(1447, 7, configID)          // ConfigID
+	photo := "icon\func\\" + resource + ".png"
+	if resource == "" {
+		photo = "icon\func\\" + configID + ".png"
+	}
+	put(184, 7, photo)              // Photo
+	put(214, 5, float32(1.0))       // ActionSpeed
+	put(1472, 1, byte(25))          // Level
+	put(1597, 1, byte(1))           // BossLevel
+	put(1602, 7, "null,null,null,null,null") // IDCard
+	put(1604, 7, "stand")           // BornAction
+	put(1606, 7, "hand1_1")         // WeaponMode
+	put(471, 3, uint32(100))        // HPRatio
+	put(480, 3, uint32(100))        // ParryRatio
+	put(484, 3, uint32(100))        // HitHPRatio
+	binary.LittleEndian.PutUint16(body[countAt:], uint16(count))
+
+	frame := make([]byte, 0, len(body)+10)
+	frame = append(frame, 0x28, 0x46)
+	frame = binary.LittleEndian.AppendUint32(frame, uint32(len(body)+9)) // len-1
+	frame = binary.LittleEndian.AppendUint32(frame, uint32(len(body)))
+	frame = append(frame, body...)
+	return frame
 }
