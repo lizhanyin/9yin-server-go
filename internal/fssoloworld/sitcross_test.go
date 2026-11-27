@@ -74,15 +74,16 @@ func assertNoFrames(t *testing.T, frames [][]byte, what string) {
 	}
 }
 
-// 进出簇（官服方言，男号线 #1293/#1294 实证）：进入 = BufferInfo2 槽串
-//（buf_baosd_02/1E37）→ m169 挂；退出 = m169 撤簇首 → BufferInfo2 清空；
-// 重复 start 与不在坐姿的 stop 空转。
+// 进出簇（外服权威方言，FsGame 实时打坐段逐字节实证、2433 文档 §五）：
+// 进入 = LogicState=102 → m24 c1=40 "dazuo_old"；退出 = LogicState=0 →
+// m24 c1=41；重复 start 与不在坐姿的 stop 空转。buf_baosd_02 是已学打坐
+// 常驻标记 buff（登录基线 BufferInfo2 槽常在），进出簇不发。
 func TestSitcrossToggleFrames(t *testing.T) {
 	f := newSkillFixture(t)
 	send := func(flag int32) { f.s.dispatchCustom(f.pl, sitcrossMessage(flag)) }
 
 	send(1)
-	assertSitFrames(t, f.take(), "BufferInfo2=1E37,1,1,0,0,0 | m169(i:0,s:buf_baosd_02,o:1/1,o:1/1,s:,s:,l:0,i:0)")
+	assertSitFrames(t, f.take(), "LogicState=102 | m24(o:1/1,i:40,s:dazuo_old)")
 	if !f.pl.sitting() {
 		t.Fatal("进入后应在打坐")
 	}
@@ -91,7 +92,7 @@ func TestSitcrossToggleFrames(t *testing.T) {
 	assertNoFrames(t, f.take(), "重复 start")
 
 	send(0)
-	assertSitFrames(t, f.take(), "m169(i:1,s:buf_baosd_02,o:1/1,o:1/1,s:,s:,l:0,i:0) | BufferInfo2=")
+	assertSitFrames(t, f.take(), "LogicState=0 | m24(o:1/1,i:41,s:dazuo_old)")
 	if f.pl.sitting() {
 		t.Fatal("起立后不应在打坐")
 	}
@@ -103,7 +104,7 @@ func TestSitcrossToggleFrames(t *testing.T) {
 	send(1)
 	f.take()
 	send(2)
-	assertSitFrames(t, f.take(), "m169(i:1,s:buf_baosd_02,o:1/1,o:1/1,s:,s:,l:0,i:0) | BufferInfo2=")
+	assertSitFrames(t, f.take(), "LogicState=0 | m24(o:1/1,i:41,s:dazuo_old)")
 
 	// 未知取值：状态不动。
 	send(1)
