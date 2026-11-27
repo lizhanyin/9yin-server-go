@@ -55,8 +55,9 @@ func (s *RoleState) RemoveTaskTrack(taskID uint32) {
 }
 
 // SeedTaskIDs 建号种子的任务集合：accepted＝种进 Task_Accepted 的功能门
-// 行，completed＝种进 Task_Completed 位图的功能门任务（含 0 值占位，与
-// BuildRoleState 写入的顺序、内容一致）。
+// 行，completed＝种进 Task_Completed 位图的功能门任务（与 BuildRoleState
+// 写入的顺序、内容一致）。空门（白板建号）＝空集——0 不是任务号，不得
+// 作为占位种进位图（会凭空多发行 0 位图行）。
 func SeedTaskIDs() (accepted, completed []uint32) {
 	g := roleStateAssets.starter.TaskGates
 	for id := atou32(g.Guide.First); id != 0 && id <= atou32(g.Guide.Last); id++ {
@@ -74,7 +75,11 @@ func SeedTaskIDs() (accepted, completed []uint32) {
 	if v := atou32(g.Unlock.FacultyActAlt); v != 0 {
 		accepted = append(accepted, v)
 	}
-	completed = append(completed, atou32(g.Unlock.FunctionUnlock), atou32(g.Unlock.OpenGate))
+	for _, raw := range []string{g.Unlock.FunctionUnlock, g.Unlock.OpenGate} {
+		if id := atou32(raw); id != 0 {
+			completed = append(completed, id)
+		}
+	}
 	completed = append(completed, splitU32(g.FuncGate.IDs)...)
 	return accepted, completed
 }

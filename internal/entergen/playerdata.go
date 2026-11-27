@@ -53,37 +53,43 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 		bookCurNeiGong = book.ConfigID
 	}
 
-	// 面板五维（白板 + 首本书 varprop——官服白板口径 RoleBaseProp）。
+	// 面板五维（白板 + 运行书 varprop——官服白板口径 RoleBaseProp）；
+	// 资源 Add 走五维系数推导（resourceadds.go——2·Str+7·Sta 系官方
+	// 公式层，书资源分量为加数之一）。
 	str := int32(state.Str) + int32(book.StrAdd)
 	sta := int32(state.Sta) + int32(book.StaAdd)
 	dex := int32(state.Dex) + int32(book.DexAdd)
 	ing := int32(state.Ing) + int32(book.IngAdd)
 	spi := int32(state.Spi) + int32(book.SpiAdd)
-	maxHP := int32(state.HP) + int32(book.MaxHPAdd)
-	maxMP := int32(state.MP) + int32(book.MaxMPAdd)
-	maxParry := int32(state.Parry) + int32(book.MaxParryAdd)
+	adds := DerivedResourceAdds(state, book)
+	maxHP := DerivedMaxHP(state, book)
+	maxMP := DerivedMaxMP(state, book)
+	maxParry := int32(state.Parry) + adds.MaxParryAdd
 
-	// 官方恢复公式：基础位 ceil(总上限/10)；Add 位五维分数系数。
-	hpUpSpeed := sitcrossRecovery(maxHP)
-	mpUpSpeed := sitcrossRecovery(maxMP)
+	// 官方恢复公式：**基础列 0**——站立回复只走 Add 列五维公式（官方逐点
+	// 表：Sta 每 5 秒 +0.07 生命、Spi 每 5 秒 +0.2 蓝；docs/official/
+	// 九阴建角初始数据归纳.md §3.1）。旧基础位 ceil(上限/10) 是打坐速率
+	// 口径，塞基础列会让客户端站立也按打坐速回（「回血回蓝值高了」病灶）。
+	// 打坐回复由服务端权威帧驱动（sitcross.go），不依赖本列。
 	hpUpSpeedAdd := staHundredthsAdd(sta)
 	mpUpSpeedAdd := spiTenthsAdd(spi)
 
 	objHex := fmt.Sprintf("%X", ctx.Identity.ObjectID)
 	ownHex := fmt.Sprintf("%X", ctx.Identity.OwnerID)
+	curHP, curMP, hpRatio, mpRatio := currentVitals(ctx, maxHP, maxMP)
 
 	props := []IndexedProperty{}
 
 	// ---- 头部 vitals（stateProperties 前段）----
 	props = append(props,
 		ap("LogicState", ByteValue(0)), // 52626 #27 首条 idx465 byte 0
-		ap("HPRatio", Int32Value(100)),
-		ap("MPRatio", Int32Value(100)),
+		ap("HPRatio", Int32Value(hpRatio)),
+		ap("MPRatio", Int32Value(mpRatio)),
 		// 客户端用基础值 + MaxHPAdd/MaxMPAdd 推导显示总量。
 		ap("MaxHP", Int32Value(int32(state.HP))),
 		ap("MaxMP", Int32Value(int32(state.MP))),
-		ap("HP", Int32Value(maxHP)),
-		ap("MP", Int32Value(maxMP)),
+		ap("HP", Int32Value(int32(curHP))),
+		ap("MP", Int32Value(int32(curMP))),
 		ap("SpeedRatio", Int32Value(100)),
 		ap("HitHP", Int32Value(int32(state.HP))),
 		ap("HitHPRatio", Int32Value(100)),
@@ -107,9 +113,9 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 		ap("HPHeartSpeedAdd", Int32Value(0)),
 		ap("MPHeartSpeed", Int32Value(1000)),
 		ap("MPHeartSpeedAdd", Int32Value(0)),
-		ap("HPUpSpeed", Int32Value(hpUpSpeed)),
+		ap("HPUpSpeed", Int32Value(0)),
 		ap("HPUpSpeedAdd", Int32Value(hpUpSpeedAdd)),
-		ap("MPUpSpeed", Int32Value(mpUpSpeed)),
+		ap("MPUpSpeed", Int32Value(0)),
 		ap("MPUpSpeedAdd", Int32Value(mpUpSpeedAdd)),
 		ap("Name", WideValue(ctx.RoleName)),
 		// 货币三币（2433 线 currenciesUpdate 口径：碎银 1 / 官银 2 / 黄金 0）。
@@ -119,8 +125,8 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 	)
 
 	// BufferListStr：2433 表在名（fork 线外服表无此名停发——方言门控按
-	// Must* 编码期报错兜底），值与 0x0D 归档同源。
-	props = append(props, ap("BufferListStr", StringValue(appearanceBufferList)))
+	// Must* 编码期报错兜底），值与 0x0D 归档同源（按运行书动态）。
+	props = append(props, ap("BufferListStr", StringValue(bufferListString(ctx))))
 
 	// ---- 门派域（建号无门派：三空串）----
 	props = append(props,
@@ -129,11 +135,15 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 		ap("NewSchool", StringValue("")),
 	)
 
-	// ---- BufferInfo 24 槽（CSV 条；登录 buff 与 0x0D 归档同源）----
+	// ---- BufferInfo 24 槽（CSV 条；登录 buff 与 0x0D 归档同源）。
+	// 槽 4=装备内功 buff——按 CurNeiGong 动态（ctx.BuffInfo4，旧版写死
+	// ng_wd_001 的 1742 槽条）。----
 	bufferInfos := map[int]string{
 		1: fmt.Sprintf("6747,%s,%s,1,0,0", objHex, ownHex),
 		2: fmt.Sprintf("1E37,%s,%s,0,0,0", objHex, ownHex),
-		4: fmt.Sprintf("1742,%s,%s,3,C39342C7231,1", objHex, ownHex),
+	}
+	if ctx.BuffInfo4 != "" {
+		bufferInfos[4] = ctx.BuffInfo4
 	}
 	for slot := 1; slot <= 24; slot++ {
 		props = append(props, ap(fmt.Sprintf("BufferInfo%d", slot), StringValue(bufferInfos[slot])))
@@ -221,12 +231,12 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 		ap("JujDef", Int32Value(50)),
 		ap("MinMeleeDamage", Int32Value(20)),
 		ap("MaxMeleeDamage", Int32Value(35)),
-		ap("MaxHPAdd", Int32Value(int32(book.MaxHPAdd))),
-		ap("MaxMPAdd", Int32Value(int32(book.MaxMPAdd))),
-		ap("MaxParryAdd", Int32Value(int32(book.MaxParryAdd))),
-		ap("MinMagicDefAdd", Int32Value(int32(book.MinMagicDefAdd))),
+		ap("MaxHPAdd", Int32Value(adds.MaxHPAdd)),
+		ap("MaxMPAdd", Int32Value(adds.MaxMPAdd)),
+		ap("MaxParryAdd", Int32Value(adds.MaxParryAdd)),
+		ap("MinMagicDefAdd", Int32Value(adds.MinMagicDefAdd)),
 		ap("MaxLevel", Int32Value(int32(book.MaxLevel))),
-		ap("CurNeiGongWuXing", Int32Value(5)), // ng_wd_001 五行土
+		ap("CurNeiGongWuXing", Int32Value(ctx.NeiGongWuXing)), // 按 CurNeiGong 目录取（0=缺档降级）
 		ap("WuJiPoint", Int32Value(0)),
 		ap("MaxWuJiPoint", Int32Value(0)),
 	)
@@ -255,6 +265,32 @@ func sitcrossRecovery(maximum int32) int32 {
 		return 0
 	}
 	return (maximum + 9) / 10
+}
+
+// currentVitals 本次进场当前血/蓝（ctx.CurHP/CurMP ≤0＝满值；超上限
+// 钳制——运行书换小上限时防 >100%）。返回值与 ratio 供 0x0D/0x10 两帧
+// 同源取用。
+func currentVitals(ctx Context, maxHP, maxMP int32) (hp, mp int, hpRatio, mpRatio int32) {
+	hp, mp = int(maxHP), int(maxMP)
+	if ctx.CurHP > 0 && ctx.CurHP < hp {
+		hp = ctx.CurHP
+	}
+	if ctx.CurMP > 0 && ctx.CurMP < mp {
+		mp = ctx.CurMP
+	}
+	return hp, mp, vitalRatio(hp, int(maxHP)), vitalRatio(mp, int(maxMP))
+}
+
+// vitalRatio 百分比（上限非正防零除——0x0D 缺省口径）。
+func vitalRatio(cur, max int) int32 {
+	if max <= 0 {
+		return 100
+	}
+	ratio := cur * 100 / max
+	if ratio > 100 {
+		ratio = 100
+	}
+	return int32(ratio)
 }
 
 // staHundredthsAdd / spiTenthsAdd 官方分数系数 Add 位：

@@ -396,6 +396,8 @@ func TestTaskSyncOfficialOrder(t *testing.T) {
 		"m209 9 1340",
 		"m24 " + taskTestPlayer + ` 40 "task_accept"`,
 		`m1 1 "9628" "title_1340"`,
+		"13 Accepted row=0 c7=0",
+		"13 Accepted row=0 c7=1",
 	}, "1340 接取簇")
 	assertLines(t, taskSyncLines(t, taskTestTrace(t, s, pl, "0,1340", frames)), traceWrites, "1340 追踪列表回置")
 
@@ -433,6 +435,8 @@ func TestTaskSyncOfficialOrder(t *testing.T) {
 		"m209 9 1347",
 		"m24 " + taskTestPlayer + ` 40 "task_accept"`,
 		`m1 1 "9628" "title_1347"`,
+		"13 Accepted row=0 c7=0",
+		"13 Accepted row=0 c7=1",
 		"m24 " + taskTestPlayer + ` 40 "task_complete"`,
 		"m8",
 	}, "1340 完成簇（末步自动提交）")
@@ -524,6 +528,8 @@ func TestTaskSyncOfficialOrder(t *testing.T) {
 		"m209 9 1341",
 		"m24 " + taskTestPlayer + ` 40 "task_accept"`,
 		`m1 1 "9628" "title_1341"`,
+		"13 Accepted row=0 c7=0",
+		"13 Accepted row=0 c7=1",
 		"m24 " + taskTestPlayer + ` 40 "task_complete"`,
 		"m18 " + wushuIdent + ` ""`,
 		"m8",
@@ -568,6 +574,8 @@ func TestTaskSyncOfficialOrder(t *testing.T) {
 		"m209 9 1342",
 		"m24 " + taskTestPlayer + ` 40 "task_accept"`,
 		`m1 1 "9628" "title_1342"`,
+		"13 Accepted row=0 c7=0",
+		"13 Accepted row=0 c7=1",
 		"m24 " + taskTestPlayer + ` 40 "task_complete"`,
 	}, "1341 完成簇（末步自动提交，无对话收尾）")
 	if pl.taskAcceptedContains(1341) || !pl.taskAcceptedContains(1342) {
@@ -663,8 +671,9 @@ func storyWindows(t *testing.T, s *Server, pl *Player, npc npcfeed.Spawn, taskID
 
 // TestTaskSyncGuideChainToEnd 模拟客户端从 1342 走到引导链末环 1346：交互
 // 确认、特殊步到步即过、多段剧情窗、杀怪/事件步占位、提交窗确认，以及
-// 建号种子行（1344 已在已接表、1346 已在已交位图）上的链推进。玩家带真
-// 建号种子（已接表先有功能门行）。
+// 种子行（1344 已在已接表、1346 已在已交位图）上的链推进。白板建号无
+// 任务门（2026-11-28 StarterSet 裁剪）——种子行注入（旧功能门口径），
+// 复原「已接表先有种子行」的场景前提。
 func TestTaskSyncGuideChainToEnd(t *testing.T) {
 	s := newNpcTestServer(t)
 	catalog := s.npcTaskCatalogOf()
@@ -676,6 +685,8 @@ func TestTaskSyncGuideChainToEnd(t *testing.T) {
 	pl.npcMu.Lock()
 	pl.npcScene = "born_single_01"
 	pl.npcMu.Unlock()
+	pl.roleState.TaskAccepted = append(pl.roleState.TaskAccepted, 1344)
+	pl.roleState.TaskCompleted = append(pl.roleState.TaskCompleted, 1346)
 	frames := captureFrames(t)
 	seedAccepted := len(pl.roleState.TaskAccepted)
 	if !pl.taskAcceptedContains(1344) || !pl.taskCompletedContains(1346) {
@@ -800,6 +811,8 @@ func TestTaskSyncGuideChainToEnd(t *testing.T) {
 		"m209 9 1344",
 		"m24 " + taskTestPlayer + ` 40 "task_accept"`,
 		`m1 1 "9628" "title_1344"`,
+		fmt.Sprintf("13 Accepted row=%d c7=0", row1344),
+		fmt.Sprintf("13 Accepted row=%d c7=1", row1344),
 		"m24 " + taskTestPlayer + ` 40 "task_complete"`,
 	}, "1343 完成簇（1344 种子已接行）")
 	if pl.taskAcceptedContains(1343) || len(pl.roleState.TaskAccepted) != seedAccepted {

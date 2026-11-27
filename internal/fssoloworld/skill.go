@@ -102,10 +102,11 @@ type combatState struct {
 	channel *channelState
 	// selected 最近一次选靶（msg431）；m211 不带目标时回落。
 	selected uint64
-	// mpCredit 回复小数累积；qinggong 轻功点。
+	// mpCredit/hpCredit 回复小数累积（站立五维公式速率）；qinggong 轻功点。
 	mp       int
 	mpReady  bool
 	mpCredit float64
+	hpCredit float64
 	qinggong int
 	// rageRegen 怒气自动回复/秒（gmdebug.go gm rage；0 = 关闭）。
 	rageRegen int
@@ -272,14 +273,18 @@ func mpRatio(mp, maxMP int) int32 {
 	return int32(mp * 100 / maxMP)
 }
 
-// mpRegenPerSecond 站立 MP 回复速率：登录面板已按官服公式下发
-// MPUpSpeed = ceil(上限/10)（每 2 秒一档）——上限 55 时 3/秒，与抓包
-// 386.5/391.6/396.6s 三次 +3 的观测一致。
-func mpRegenPerSecond(maxMP int) float64 {
-	if maxMP <= 0 {
-		return 0
-	}
-	return float64((maxMP+9)/10) / 2
+// mpRegenPerSecond 站立 MP 回复速率：五维公式（罡气每 5 秒 +0.2 蓝，
+// 官方逐点表——entergen.MPRegenPerSecond 同源；面板 Add 列同速）。
+// 旧口径 ceil(上限/10)/2 随上限缩放，上限抬高后回复过快（病灶）。
+func mpRegenPerSecond(pl *Player) float64 {
+	_, _, _, _, spi := entergen.EffectiveFive(pl.roleState, derefBookOrZero(runningBookOf(&pl.roleState)))
+	return entergen.MPRegenPerSecond(spi)
+}
+
+// hpRegenPerSecond 站立 HP 回复速率：体魄每 5 秒 +0.07 生命（同表）。
+func hpRegenPerSecond(pl *Player) float64 {
+	_, sta, _, _, _ := entergen.EffectiveFive(pl.roleState, derefBookOrZero(runningBookOf(&pl.roleState)))
+	return entergen.HPRegenPerSecond(sta)
 }
 
 // ---- 技能配置入口 ----
@@ -345,21 +350,24 @@ func (s *Server) skillDefinition(pl *Player, id string) (skilldata.Definition, b
 	return def, true
 }
 
-// playerMaxMP MP 上限（entergen 登录面板同口径：基础值 + 首本内功加成）。
+// playerMaxMP MP 上限（entergen 登录面板同口径：白板 + 五维系数推导 Add
+//——DerivedMaxMP，书跟 CurNeiGong 匹配换书自动跟新书；无书=纯系数分量）。
 func playerMaxMP(pl *Player) int {
-	maxMP := pl.roleState.MP
-	if len(pl.roleState.NeiGong) > 0 {
-		maxMP += pl.roleState.NeiGong[0].MaxMPAdd
-	}
-	return maxMP
+	return int(entergen.DerivedMaxMP(pl.roleState, derefBookOrZero(runningBookOf(&pl.roleState))))
 }
 
 // ensureVitals 首次用到时按登录面板口径初始化会话 MP/轻功点（调用方持锁）。
+// 当前蓝取存档持久值（CurMP 钳上限；0=未持久化按满值）。
 func (st *combatState) ensureVitals(pl *Player) {
 	if st.mpReady {
 		return
 	}
-	st.mp, st.mpReady, st.qinggong = playerMaxMP(pl), true, defaultQingGongPoint
+	maxMP := playerMaxMP(pl)
+	mp := maxMP
+	if pl.roleState.CurMP > 0 {
+		mp = clampInt(pl.roleState.CurMP, 0, maxMP)
+	}
+	st.mp, st.mpReady, st.qinggong = mp, true, defaultQingGongPoint
 }
 
 // castLockMS 出招锁时长（CurSkillID 置位 → 收招；期间再按 → m707 9033）。
@@ -776,9 +784,10 @@ func (s *Server) finishCast(pl *Player, seq int, locked bool) {
 	s.sendFrames(pl, b.frames)
 }
 
-// combatTick 每秒 MP 回复（站立：登录面板 MPUpSpeed = ceil(上限/10) 每 2 秒
-// 一档）。变化即推 MP 单属性帧（抓包 386.537/391.570/396.562 同形）。打坐中
-// 改走打坐回复（sitcross.go：HP/MP 各 ceil(上限/10)）。
+// combatTick 每秒站立回复（五维公式：MP=罡气 0.2·Spi/5s、HP=体魄
+// 0.07·Sta/5s——面板 UpSpeed Add 列同速，小数累积进整数）。变化即推
+// 单属性帧（MP 抓包 386.537/391.570/396.562 同形）。打坐中改走打坐回复
+//（sitcross.go：HP/MP 各 ceil(上限/10)，10s 回满）。
 func (s *Server) combatTick() {
 	for _, pl := range s.players.Snapshot() {
 		if pl.State != PlOnline {
@@ -797,11 +806,11 @@ func (s *Server) combatTick() {
 		maxMP := playerMaxMP(pl)
 		var regen [][]byte
 		if st.live.logic == logicSitcross {
-			// 打坐回复接管本拍：站立 MP 回复的小数累积不参与。
-			regen, st.mpCredit = s.sitTickLocked(pl, st, maxMP), 0
+			// 打坐回复接管本拍：站立回复的小数累积不参与。
+			regen, st.mpCredit, st.hpCredit = s.sitTickLocked(pl, st, maxMP), 0, 0
 		} else {
 			before, mp := st.mp, st.mp
-			credit := st.mpCredit + mpRegenPerSecond(maxMP)
+			credit := st.mpCredit + mpRegenPerSecond(pl)
 			for credit >= 1 && mp < maxMP {
 				credit--
 				mp++
@@ -813,6 +822,25 @@ func (s *Server) combatTick() {
 			st.mpCredit, st.mp = credit, mp
 			if mp != before {
 				regen = mpFrame(pl.wireIdent(), mp)
+			}
+			// 站立回血（体魄公式；战斗中量级可忽略——与面板 Add 列同速）。
+			if st.live.ready && st.live.hp > 0 && st.live.hp < st.live.maxHP {
+				hpBefore, hp := st.live.hp, st.live.hp
+				hpCredit := st.hpCredit + hpRegenPerSecond(pl)
+				for hpCredit >= 1 && hp < st.live.maxHP {
+					hpCredit--
+					hp++
+				}
+				if hp >= st.live.maxHP {
+					hpCredit = 0
+				}
+				st.hpCredit, st.live.hp = hpCredit, hp
+				if hp != hpBefore {
+					b := &frameBuilder{ident: pl.wireIdent()}
+					b.prop("HPRatio", entergen.Int32Value(hpRatio(hp, st.live.maxHP)))
+					b.prop("HP", entergen.Int32Value(int32(hp)))
+					regen = append(regen, b.frames...)
+				}
 			}
 		}
 		st.mu.Unlock()

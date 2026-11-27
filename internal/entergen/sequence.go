@@ -204,6 +204,11 @@ func ReadyFrames(ctx Context, now time.Time) ([][]byte, error) {
 		return nil, err
 	}
 	frames = append(frames, books...)
+	meridians, err := JingMaiViewFrames(ctx.State)
+	if err != nil {
+		return nil, err
+	}
+	frames = append(frames, meridians...)
 	qg, err := QingGongViewFrames(ctx.State)
 	if err != nil {
 		return nil, err
@@ -322,20 +327,21 @@ func BasePropertyFrames(ctx Context) ([][]byte, error) {
 
 // CombatAttributeValues 战斗面板可计算子集（等级内功加成后面板值）：
 // 五维 = 基础 + 当前运行书的 varprop 加成（b-line combatPanelProperties
-// 口径），资源/招架 Add 跟当前运行书（无运行书回退首本——建号档只有
-// 一本时同值）。登录整推与 215 换书运行时共用同一取值面。
+// 口径），资源/招架 Add 走五维系数推导（resourceadds.go——与登录 0x0D/
+// 0x10、战斗生存态上限同一取值面；无运行书回退首本——建号档只有一本时
+// 同值）。登录整推与 215 换书运行时共用。
 func CombatAttributeValues(state rolestate.RoleState) []NamedValue {
 	str := int32(state.Str)
 	sta := int32(state.Sta)
 	dex := int32(state.Dex)
 	ing := int32(state.Ing)
 	spi := int32(state.Spi)
-	var maxHPAdd, maxMPAdd, maxParryAdd int32
+	var adds ResourceAdds
 	if len(state.NeiGong) > 0 {
-		book := &state.NeiGong[0]
+		book := state.NeiGong[0]
 		for i := range state.NeiGong {
 			if state.NeiGong[i].ConfigID == state.CurNeiGong {
-				book = &state.NeiGong[i]
+				book = state.NeiGong[i]
 				break
 			}
 		}
@@ -344,15 +350,13 @@ func CombatAttributeValues(state rolestate.RoleState) []NamedValue {
 		dex += int32(book.DexAdd)
 		ing += int32(book.IngAdd)
 		spi += int32(book.SpiAdd)
-		maxHPAdd = int32(book.MaxHPAdd)
-		maxMPAdd = int32(book.MaxMPAdd)
-		maxParryAdd = int32(book.MaxParryAdd)
+		adds = DerivedResourceAdds(state, book)
 	}
 	return []NamedValue{
 		{"Str", str}, {"Sta", sta}, {"Dex", dex}, {"Ing", ing}, {"Spi", spi},
-		{"MaxHPAdd", maxHPAdd},
-		{"MaxMPAdd", maxMPAdd},
-		{"MaxParryAdd", maxParryAdd},
+		{"MaxHPAdd", adds.MaxHPAdd},
+		{"MaxMPAdd", adds.MaxMPAdd},
+		{"MaxParryAdd", adds.MaxParryAdd},
 	}
 }
 

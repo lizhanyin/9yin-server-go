@@ -79,6 +79,16 @@ type Context struct {
 	// level,0,0"；空＝无 buff/缺 StaticData）。fssoloworld 按 CurNeiGong
 	// 书与 neigongdata 目录合成（215 换书运行时同源，neigonguse.go）。
 	BuffInfo4 string
+	// NeiGongWuXing 运行内功五行（wuxuebaseinfo nWuXing：内功 5=太极/
+	// 6=阴柔/7=阳刚；0＝缺目录/未收录——客户端 ≤0 退回缺省文案）。按
+	// CurNeiGong 动态取（旧版写死 5=ng_wd_001 土，换书重登被两仪护心功
+	// 覆盖的病灶之一）。fssoloworld 从 neigongdata 目录合成。
+	NeiGongWuXing int32
+	// CurHP/CurMP 本次进场下发的当前血/蓝（≤0＝满值——官方登录恒满血
+	// 口径的缺省；超上限钳制）。上限由 State.HP/MP+运行书 Add 推导，
+	// fssoloworld 从战斗会话态（切图重入）或存档 CurHP/CurMP（重登）取。
+	CurHP int
+	CurMP int
 	// GuideChoicePending 待选态（GameStep 未定且身在新手副本——guideEntryStep
 	// 同判据的无锁形）：进场簇在引导阶段帧之前补发黑幕窗门控属性
 	// FinishFreshmanRecStr 初值。已定档（GameStep≠0）不发——该属性值随

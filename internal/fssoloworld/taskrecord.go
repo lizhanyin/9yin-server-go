@@ -365,13 +365,15 @@ func (s *Server) npcTaskAcceptFrames(pl *Player, out *taskFrames, taskID int) bo
 	}
 	s.npcTaskMarkFrames(pl, out)
 	out.addAll(entergen.TaskAcceptNoticeFrames(id, taskID))
-	// 接取簇尾补发 m390 追踪栏刷新：官服客户端在 m209[9]（on_task_add →
-	// update_trace_info → m327）后自动把新任务纳入追踪，我方 fork 客户端
-	// 不走这条链（2026-11-26 真机：接取簇逐字节同官服、客户端不报 m327、
-	// 追踪栏空）——用 m390 触发 on_ready → load_trace_by_server 重读本地
-	// 表（新行 track=1）→ 上报 m327 → handleTaskTraceList 回写 0→1，整链
-	// 走已验证通路，效果等价官服（on_ready 链真机实证可通：进场空 m327）。
+	// 接取簇尾直写追踪列 track=0 → track=1（女号完整引导抓包 #1655-#1656，
+	// m1 9628 之后、m8/影像之前）：追踪栏窗体只认 0x13 列写，不读挂载批的
+	// 行内初值。此前改走 m390 → on_ready → m327 回写链，但 fork 客户端
+	// 整条自定义上行都不发（2026-11-27 真机抓包 c2s 零 0x1E 帧），任务栏
+	// 恒空——旧「#1557/1558 track 写格对拍证伪」系误判：那两帧实为 cooldown
+	// 表帧。m390 保留（进场已验证可通），列写才是官服正解。
 	out.add(entergen.TaskTrackRefreshFrame())
+	out.add(entergen.TaskAcceptedGridFrame(id.ObjectID, id.OwnerID, rowA, entergen.GridInt(entergen.TaskColTrack, 0)))
+	out.add(entergen.TaskAcceptedGridFrame(id.ObjectID, id.OwnerID, rowA, entergen.GridInt(entergen.TaskColTrack, 1)))
 	return true
 }
 
@@ -769,6 +771,40 @@ func npcTaskTraceList(list string) map[uint32]bool {
 		}
 	}
 	return tracked
+}
+
+// pushTaskTrackRefresh 登录/切图就绪后直写在身任务的追踪列：官服登录段在
+// 挂载批之后按行序连写 track=0、再连写 track=1（初始账号抓包 #601-#604，
+// 仅追踪中的行）——追踪栏窗体只认 0x13 列写，挂载批的行内初值不足以让
+// 任务栏显示（fork 客户端不走 m327 回报链，见接取簇尾注释）。
+func (s *Server) pushTaskTrackRefresh(pl *Player) {
+	if !pl.haveRoleState {
+		return
+	}
+	s.npcTaskLocked(pl, func() {
+		id := pl.entergenIdentity()
+		rows := make([]uint16, 0, 4)
+		for _, taskID := range pl.roleState.TaskAccepted {
+			track := pl.roleState.TaskTrackOf(taskID)
+			if track == nil || !track.Tracked {
+				continue
+			}
+			if row, ok := npcTaskAcceptedRow(pl, taskID); ok {
+				rows = append(rows, row)
+			}
+		}
+		if len(rows) == 0 {
+			return
+		}
+		out := s.taskFrameSink(pl)
+		for _, row := range rows {
+			out.add(entergen.TaskAcceptedGridFrame(id.ObjectID, id.OwnerID, row, entergen.GridInt(entergen.TaskColTrack, 0)))
+		}
+		for _, row := range rows {
+			out.add(entergen.TaskAcceptedGridFrame(id.ObjectID, id.OwnerID, row, entergen.GridInt(entergen.TaskColTrack, 1)))
+		}
+		s.sendTaskFrames(pl, out)
+	})
 }
 
 // handleTaskTraceList 客户端追踪列表（m327 [6,"id,…"]）回置追踪标志：列表

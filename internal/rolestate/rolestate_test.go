@@ -7,9 +7,11 @@ import (
 
 // TestBuildRoleStateBorn03 钉死默认建号状态（官方口径 2026-11-26 建号.pcapng：
 // 首登新手副本 born_single_01（BornCJ000100 锚）+ book2 出生地烟雨庄
-// ChushengCJ000002；RoleBaseProp 五维=3/HP70/MP40 + StarterSet 授予集）。
-// SP（怒气）例外：官服建号档 80、登录即满，本线 2026-11-26 定案改 0——
-// 怒气是会话值，不随档。
+// ChushengCJ000002；RoleBaseProp 五维=3/HP70/MP40）。SP（怒气）例外：官服
+// 建号档 80、登录即满，本线 2026-11-26 定案改 0——怒气是会话值，不随档。
+// 授予集=官服白板口径（2026-11-28 StarterSet 裁剪）：5 武学（4 项带
+// ShortcutPos 预置上栏）+ 快捷栏基线；无内功书/轻功/采集/任务门——
+// 由初出茅庐·再战江湖选择窗授予链落档。
 func TestBuildRoleStateBorn03(t *testing.T) {
 	state, err := BuildRoleState(DefaultBook, 1, "icon\\players\\boy01_create.png,obj\\char\\b_hair\\b_hair1", 0)
 	if err != nil {
@@ -38,29 +40,27 @@ func TestBuildRoleStateBorn03(t *testing.T) {
 	if state.NewbieSkill != 1 || state.InitTask != 22001 || state.BaishiTask != 49 {
 		t.Fatalf("NewbieSkill/InitTask/BaishiTask = %d/%d/%d", state.NewbieSkill, state.InitTask, state.BaishiTask)
 	}
-	if len(state.Skills) != 27 {
-		t.Fatalf("starter 武学 27 项（5 基本+7 花神+7 心佛掌+8 太极），得 %d", len(state.Skills))
+	// 白板武学 5 项：空手普攻 + 飞刀普攻（不上栏）+ 三式江湖粗功夫。
+	if len(state.Skills) != 5 {
+		t.Fatalf("starter 武学 5 项（白板口径），得 %d", len(state.Skills))
 	}
-	if len(state.NeiGong) != 6 || state.CurNeiGong != "ng_wd_001" {
-		t.Fatalf("初始内功 6 本/首本 ng_wd_001，得 %d 本 cur=%s", len(state.NeiGong), state.CurNeiGong)
+	for i, want := range []string{"zs_normal_00", "hw_normal_fd", "CS_jh_cqgf01", "CS_jh_cqgf04", "CS_jh_cqgf06"} {
+		if state.Skills[i].ConfigID != want {
+			t.Fatalf("starter 武学[%d] = %s，want %s", i, state.Skills[i].ConfigID, want)
+		}
 	}
-	if state.NeiGong[0].Total != 273200 || state.NeiGong[0].Power != 4550 || state.NeiGong[0].MaxHPAdd != 1630 {
-		t.Fatalf("首本内功 30 级数值： %+v", state.NeiGong[0])
+	// 白板无内功书/轻功/采集/任务门（选择窗授予链落档后才出现）。
+	if len(state.NeiGong) != 0 || state.CurNeiGong != "" {
+		t.Fatalf("白板建号无内功书，得 %d 本 cur=%q", len(state.NeiGong), state.CurNeiGong)
 	}
-	if len(state.QingGongCategories) != 18 || len(state.QingGongSkills) != 52 {
-		t.Fatalf("轻功类别 18/实例 52（b-line starterQingGongSkillIDs 全集），得 %d/%d", len(state.QingGongCategories), len(state.QingGongSkills))
+	if len(state.QingGongCategories) != 0 || len(state.QingGongSkills) != 0 {
+		t.Fatalf("白板建号无轻功，得 %d/%d", len(state.QingGongCategories), len(state.QingGongSkills))
 	}
-	if len(state.CollectSkills) != 204 {
-		t.Fatalf("采集技能 204 项，得 %d", len(state.CollectSkills))
+	if len(state.CollectSkills) != 0 {
+		t.Fatalf("白板建号无采集技能，得 %d", len(state.CollectSkills))
 	}
-	// 任务门：Guide 1069..1073(5) + Alt 1344 + SchoolLead 1555..1562(8) +
-	// Act 1140..1147(8) + ActAlt 51002 = 23 行（b-line facultyAcceptedTaskIDs）。
-	if len(state.TaskAccepted) != 23 || state.TaskAccepted[0] != 1069 || state.TaskAccepted[len(state.TaskAccepted)-1] != 51002 {
-		t.Fatalf("Task_Accepted 23 行： %v", state.TaskAccepted)
-	}
-	// Task_Completed：Unlock 1346 + OpenGate 49634 + FuncGate 19 项 = 21。
-	if len(state.TaskCompleted) != 21 || state.TaskCompleted[0] != 1346 || state.TaskCompleted[1] != 49634 {
-		t.Fatalf("Task_Completed 21 项： %v", state.TaskCompleted)
+	if len(state.TaskAccepted) != 0 || len(state.TaskCompleted) != 0 {
+		t.Fatalf("白板建号无任务门： accepted=%v completed=%v", state.TaskAccepted, state.TaskCompleted)
 	}
 }
 
@@ -125,11 +125,15 @@ func TestBuildRoleStateBooks(t *testing.T) {
 }
 
 // TestRoleStateJSONRoundTrip JSON 序列化回读（nx_roles.role_state_json 通道）。
+// 白板建号无书——内功字段往返用注入书（授予链/换书落档形态）验证。
 func TestRoleStateJSONRoundTrip(t *testing.T) {
 	state, err := BuildRoleState(DefaultBook, 2, "icon\\players\\girl01_create.png", 0)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
+	state.NeiGong = []NeiGongBook{{ConfigID: "ng_wd_001", StaticData: 5, ItemType: 1002,
+		Level: 30, MaxLevel: 36, MaxHPAdd: 1630}}
+	state.CurNeiGong = "ng_wd_001"
 	raw, err := MarshalRoleState(state)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -141,7 +145,7 @@ func TestRoleStateJSONRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if back.Sex != 2 || len(back.Skills) != 27 || back.Position != state.Position {
+	if back.Sex != 2 || len(back.Skills) != 5 || back.Position != state.Position {
 		t.Fatalf("回读不一致： %+v", back)
 	}
 	empty, err := UnmarshalRoleState("")

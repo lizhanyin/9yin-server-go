@@ -6,6 +6,8 @@ package entergen
 import (
 	"strconv"
 	"testing"
+
+	"github.com/lizhanyin/9yin-server-go/internal/rolestate"
 )
 
 func TestNeiGongRageCapAddTiers(t *testing.T) {
@@ -35,12 +37,15 @@ func TestNeiGongRageCapAddTiers(t *testing.T) {
 }
 
 // TestRageCapFollowsRunningNeiGong 上限只看【运行】的那本（非叠加：会的书
-// 再多也不累计）；CurNeiGong 悬空时与人物数据大批同法回落首本。
+// 再多也不累计）；CurNeiGong 悬空时与人物数据大批同法回落首本。白板
+// 建号无书——书布局注入（授予链/换书落档形态）。
 func TestRageCapFollowsRunningNeiGong(t *testing.T) {
 	ctx := testContext(t)
-	if ctx.State.CurNeiGong != "ng_wd_001" || len(ctx.State.NeiGong) < 2 {
-		t.Fatalf("建号运行内功 = %q（会 %d 本）, want 首本 ng_wd_001", ctx.State.CurNeiGong, len(ctx.State.NeiGong))
+	ctx.State.NeiGong = []rolestate.NeiGongBook{
+		{ConfigID: "ng_wd_001", StaticData: 5, ItemType: 1002, Level: 30, MaxLevel: 36},
+		{ConfigID: "ng_yh_001", StaticData: 114, ItemType: 1002, Level: 30, MaxLevel: 71},
 	}
+	ctx.State.CurNeiGong = "ng_wd_001"
 	for _, tc := range []struct {
 		running string
 		want    int32

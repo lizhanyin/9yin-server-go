@@ -3,27 +3,29 @@ package fssoloworld
 // guide.go 新手引导选择流（官服女号「完整引导」/ 男号「跳过引导」两份抓包
 // 定版；帧编码见 entergen/guide.go）：
 //
-//	进场（新手副本 born_single_01，就绪簇收尾）
-//	      m414 ["gamestep", 主步, 5] → 0x10 HelpStepID → 待选态 0x10
-//	      CanntOperator=1（锁输入，等客户端黑幕窗「初出茅庐／再战江湖」）
-//	      → m390 [5, 0]（所有角色：刷新任务追踪栏）
-//	C2S m972 [4]（初出茅庐）   0x10 CanntOperator=0 → 约 1 秒后自动接取引导链根
+//	进场（新手副本 born_single_01，进场簇 0x0B 前）
+//	      m414 ["gamestep", 主步, 5] → 0x10 HelpStepID →（待选态先补 0x10
+//	      FinishFreshmanRecStr 初值）
+//	就绪（客户端 op09 之后，就绪簇收尾）
+//	      待选态：m346 [2, 0] → m427 []（黑幕窗由这一帧弹出）→ 0x10
+//	      CanntOperator=1（锁输入，等客户端点「初出茅庐／再战江湖」）
+//	      → m390 [5, 0]（所有角色：之后追踪栏才显示）
+//	C2S [972, 4]（初出茅庐）  0x10 CanntOperator=0 → 约 1 秒后自动接取引导链根
 //	                          （1340 接取簇 + 接取影像，taskrecord/taskmovie）
-//	C2S m972 [5]（再战江湖）   跳过簇（男号 #1612..#1989）：后续任务接取 → 复活点
+//	C2S [972, 5]（再战江湖）   跳过簇（男号 #1612..#1989）：后续任务接取 → 复活点
 //	                          → 引导链逐个置完成位 → 奖励（item_skipsp_001、
 //	                          历练、江湖声望 700）→ 解锁 → 切出副本进鸡鸣驿
-//	C2S m950 [0, 步骤]        新手帮助步骤链推进：回写 0x10 HelpStepID
+//	C2S [950, 0, 步骤]        新手帮助步骤链推进：回写 0x10 HelpStepID
 //
 // 待选态只认「身在新手副本 + 引导阶段未定 + 引导链未开始」的角色；其余角色
-// 行为不变（链根延时自动接取照旧）。黑幕窗由客户端引擎弹出，服务端只在
-// 点选后收到 m972；客户端一直不上报时按兜底计时视同初出茅庐
-// （NINEYIN_GUIDE_CHOICE_TIMEOUT 秒，0＝一直等）。
+// 行为不变（链根延时自动接取照旧）。黑幕窗是客户端 lua
+// custom_handler.on_query_fresh_man（引擎按消息号 427 调 lua 全局函数）弹
+// 的；点选经 0x0A 信封 [972, 步骤] 回传。服务端不设兜底，一直等点选
+// （2026-11-28 去掉超时自动选：黑幕窗触发链已真机验证必弹，官服也无兜底）。
 
 import (
 	"fmt"
 	"net"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,6 +57,10 @@ const (
 	guideSkipItem       = "item_skipsp_001" // 再战江湖奖励物品（#1695..#1698）
 	guideSkipRepute     = "repute_jianghu"  // 江湖声望奖励（#1720..#1722）
 	guideSkipReputeFlag = int32(2)          // 跳过奖励的声望行标志列（任务完成奖励是 1）
+
+	// guideZuoWangGong 坐忘功：再战江湖学习的江湖内功（官服建号-04
+	// 26.748s #455 View43 行 + m141 ["ng_jh_001","NeiGong"]）。
+	guideZuoWangGong = "ng_jh_001"
 )
 
 // guideHelpStepOf 出生地 resource → freshmanhelp 帮助链名（归纳文档 §5
@@ -92,24 +98,9 @@ var guideSkipDoneTasks = []int{1339, 1340, 1341, 1342, 1343, 1344, 1345, 1346, 1
 // 1000（女 #1367 / 男 #1461）；本服建号基线是 0，余额相应少 1000。
 var guideSkipLiveGrooves = [][2]int32{{1, 5000}, {2, 5000}, {3, 10000}, {4, 15000}, {5, 32000}}
 
-var (
-	// guideStartDelay m972 [4] 之后到引导链根接取簇的间隔（女号 31.924s 点选
-	// → 32.969s 接取簇）。
-	guideStartDelay = time.Second
-	// guideChoiceTimeoutDefault 待选兜底：客户端一直不上报 m972 时按性别
-	// 焦点线自动选（男=再战江湖、女=初出茅庐）。官服没有兜底（黑幕窗必
-	// 弹）；本服黑幕窗弹不出来（弹出条件在引擎里），20 秒兜底让新号零操
-	// 作也能进游戏。
-	guideChoiceTimeoutDefault = 20 * time.Second
-)
-
-// guideChoiceTimeout 待选兜底时长（NINEYIN_GUIDE_CHOICE_TIMEOUT 秒，0＝一直等）。
-func guideChoiceTimeout() time.Duration {
-	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("NINEYIN_GUIDE_CHOICE_TIMEOUT"))); err == nil && v >= 0 {
-		return time.Duration(v) * time.Second
-	}
-	return guideChoiceTimeoutDefault
-}
+// guideStartDelay m972 [4] 之后到引导链根接取簇的间隔（女号 31.924s 点选
+// → 32.969s 接取簇）。
+var guideStartDelay = time.Second
 
 // guideSceneOf 玩家是否身在新手副本。
 func guideSceneOf(pl *Player) bool {
@@ -199,18 +190,11 @@ func (s *Server) guideChoicePending(pl *Player) bool {
 	return true
 }
 
-// guideIsPending 会话待选标志（taskMu 保护）。
-func (s *Server) guideIsPending(pl *Player) bool {
-	pending := false
-	s.npcTaskLocked(pl, func() { pending = pl.guidePending })
-	return pending
-}
-
 // readyTail 就绪簇收尾（首次进场与切图重入共用）：引导阶段簇（m414/
 // BornServerGameStep/HelpStepID）已在进场簇下发（entergen.GuideEntryFrames，
-// m655 后、0x0B 前——黑幕窗时机），此处只剩待选态锁输入（官服 49.62s
-// idx249=1，NPC 物化之后的就绪簇）+ 所有角色 m390 刷新任务追踪栏（追踪栏
-// 窗体进场预载后是隐藏的，只在它之后显示；官服 50.24s）。
+// m655 后、0x0B 前），此处是待选态弹窗帧＋锁输入（官服客户端 op09 后 40ms：
+// m346 [2,0] → m427 → idx249=1，NPC 物化之后的就绪簇）+ 所有角色 m390
+// （追踪栏窗体进场预载后是隐藏的，只在它之后显示；官服 50.24s）。
 func (s *Server) readyTail(pl *Player) {
 	defer func() {
 		if frame, err := entergen.TaskTrackRefreshFrame(); err != nil {
@@ -218,6 +202,7 @@ func (s *Server) readyTail(pl *Player) {
 		} else {
 			s.sendToClient(pl, frame)
 		}
+		s.pushTaskTrackRefresh(pl)
 	}()
 	if !pl.haveRoleState {
 		return
@@ -235,29 +220,23 @@ func (s *Server) readyTail(pl *Player) {
 	if !pending {
 		return
 	}
+	// 黑幕窗弹出帧先于锁输入：427 上客户端 lua on_query_fresh_man 对
+	// form_single_blackback ShowModal，随后锁输入等点选。
+	if frames, err := entergen.FreshmanQueryFrames(); err != nil {
+		s.trace("npc task guide: 黑幕窗弹出帧编码失败 client=%d: %v", pl.Conn1, err)
+	} else {
+		for _, frame := range frames {
+			s.sendToClient(pl, frame)
+		}
+	}
 	if frame, err := entergen.InputLockFrame(pl.entergenIdentity(), true); err == nil {
 		s.sendToClient(pl, frame)
 	}
-	timeout := guideChoiceTimeout()
-	s.trace("npc task guide: 待选态 client=%d scene=%s（锁输入，等 m972 [4]/[5]；兜底 %s）",
-		pl.Conn1, pl.roleState.Resource, timeout)
-	if timeout <= 0 {
-		return
-	}
-	sex := pl.roleState.Sex
-	time.AfterFunc(timeout, func() {
-		if pl.State != PlOnline || !s.guideIsPending(pl) {
-			return
-		}
-		// 2026-11-27：黑幕窗（form_single_blackback，引擎按号弹）在本服
-		// 客户端弹不出来，玩家面对锁死的场景（真机「NPC 不物化、任务列
-		// 表空」实为待选态卡住）——兜底从 300s 降为 20s，且按性别焦点线
-		// 自动选（与 m414 下发的默认焦点一致：男=再战江湖切出副本、女=
-		// 初出茅庐进引导），玩家零操作也能进游戏。
-		s.trace("npc task guide: 待选态 %s 未收到 m972，按性别焦点（sex=%d → step=%d）推进 client=%d",
-			timeout, sex, guideDefaultStep(sex), pl.Conn1)
-		s.guideChoose(pl, guideDefaultStep(sex))
-	})
+	// 2026-11-28 去掉超时兜底：黑幕窗（form_single_blackback）触发链已在
+	// 真机验证必弹（m427），自动选会把没操作的男号按性别默认再战江湖、
+	// 传送出新手副本——官服也没有兜底，一直等 [972, 4]/[972, 5]。
+	s.trace("npc task guide: 待选态 client=%d scene=%s（已发黑幕窗 m427 并锁输入，等 [972, 4]/[972, 5]，无兜底）",
+		pl.Conn1, pl.roleState.Resource)
 }
 
 // guideChoose 引导选择（C2S m972 与 gm guide 共用入口）：4＝初出茅庐，
@@ -394,6 +373,13 @@ func (s *Server) guideSkipFrames(pl *Player, place rolestate.Birthplace) {
 	out.add(entergen.FunctionOpenNoticeFrame(177))
 	out.add(entergen.TaskReputeNotice(guideSkipRepute, guideSkipReputeCount))
 	out.addAll(entergen.LifeHelpUnlockFrames())
+	// 4.5 学坐忘功＋开通十六经脉（官服建号-04 26.748s 簇：#455..#459
+	//     ng_jh_001（View43 行 → m371 → m141 → m1）→ #468..#679 每脉
+	//     （View45 行 → 0x10 MaxLevel=180 → m98 860 → m141 → m1）。
+	//     运行内功静默切到坐忘功——官服不在簇内发 CurNeiGong/资源帧，由
+	//     随后 0x0B 切出副本的整批属性重建携带。
+	s.guideLearnZuoWangGong(pl, out)
+	s.guideOpenMeridians(pl, out)
 	// 5. 入江湖：帮助链切到出生地对应 freshmanhelp 链 → PowerLevel/
 	//    YinLevel → 解锁输入（#1946..#1948；官服男号=鸡鸣驿 jimingyi_00，
 	//    链名按出生地 resource 映射，未收录的出生地直接结链 Freshman_End
@@ -404,6 +390,95 @@ func (s *Server) guideSkipFrames(pl *Player, place rolestate.Birthplace) {
 	out.addAll(entergen.EnterWorldFrames(id))
 	out.add(entergen.InputLockFrame(id, false))
 	s.sendTaskFrames(pl, out)
+}
+
+// guideLearnZuoWangGong 再战江湖学坐忘功（官服建号-04 #455..#459：View43
+// 行 → m371 ["gong_help"] → m141 ["ng_jh_001","NeiGong"] → m1
+// [2,"9491",id]）。书行数值 StarterSet 旧档同源（StaticData=1/Level=1/
+// MaxLevel=36/Total=750），五维 Add 随 neigongdata 目录档行重取（档缺保
+// 兜底 2/3/2/2/2——官服抓包原值）。已学（重复点选/gm 补发）只重发学会
+// 簇，不再入档。调用方持 taskMu。
+func (s *Server) guideLearnZuoWangGong(pl *Player, out *taskFrames) {
+	st := &pl.roleState
+	if equipBookOf(st, guideZuoWangGong) == nil {
+		st.NeiGong = append(st.NeiGong, rolestate.NeiGongBook{
+			ConfigID:   guideZuoWangGong,
+			StaticData: 1,
+			ItemType:   1002,
+			Level:      1,
+			MaxLevel:   36,
+			Total:      750,
+			Power:      120,
+			MaxPower:   120,
+			StrAdd:     2,
+			StaAdd:     3,
+			DexAdd:     2,
+			IngAdd:     2,
+			SpiAdd:     2,
+		})
+		refreshNeiGongBooks(s.neiGongCatalogOf(), st)
+		out.add(entergen.NeiGongRowFrame(len(st.NeiGong)-1, st.NeiGong[len(st.NeiGong)-1]))
+	}
+	if st.CurNeiGong == "" {
+		st.CurNeiGong = guideZuoWangGong
+	}
+	// 面板/生存态跟新书（215 换书同口径）：白板→坐忘功上限只增不减，钳制
+	// 无损；官方簇不发资源帧，重进整批（0x0B）带新 CurNeiGong/上限。
+	pl.combat.mu.Lock()
+	pl.panel = nil
+	if pl.combat.live.ready {
+		book := derefBookOrZero(runningBookOf(st))
+		if maxHP := int(entergen.DerivedMaxHP(*st, book)); maxHP > 0 {
+			pl.combat.live.maxHP = maxHP
+			pl.combat.live.hp = clampInt(pl.combat.live.hp, 1, maxHP)
+		}
+		if maxSP := int(entergen.RageCapOf(guideZuoWangGong)); maxSP > 0 {
+			pl.combat.live.maxSP = maxSP
+			pl.combat.live.sp = clampInt(pl.combat.live.sp, 0, maxSP)
+		}
+	}
+	pl.combat.mu.Unlock()
+	out.add(entergen.CustomMessageFrame(371, entergen.CustomString("gong_help")))
+	out.add(entergen.CustomMessageFrame(141,
+		entergen.CustomString(guideZuoWangGong), entergen.CustomString("NeiGong")))
+	out.add(entergen.CustomMessageFrame(1,
+		entergen.CustomInt(2), entergen.CustomString("9491"), entergen.CustomString(guideZuoWangGong)))
+	s.trace("npc task guide: 再战江湖学坐忘功 %s（运行 %s）client=%d",
+		guideZuoWangGong, st.CurNeiGong, pl.Conn1)
+}
+
+// guideOpenMeridians 再战江湖开通十六经脉（官服建号-04 #468..#679：每脉
+// View45 行 → 0x10 [View45,行] MaxLevel=180 → m98 [860] → m141
+// [id,"JingMai"] → m1 [2,"8303",id]；行集=rolestate.GuideMeridians 官服
+// 照抄）。已开脉跳过（幂等）。调用方持 taskMu。
+func (s *Server) guideOpenMeridians(pl *Player, out *taskFrames) {
+	st := &pl.roleState
+	opened := 0
+	for _, m := range rolestate.GuideMeridians {
+		known := false
+		for i := range st.JingMai {
+			if st.JingMai[i].ConfigID == m.ConfigID {
+				known = true
+				break
+			}
+		}
+		if known {
+			continue
+		}
+		index := len(st.JingMai)
+		st.JingMai = append(st.JingMai, m)
+		out.add(entergen.JingMaiRowFrame(index, m))
+		out.add(entergen.JingMaiMaxLevelFrame(index))
+		out.add(entergen.CustomMessageFrame(98, entergen.CustomInt(860)))
+		out.add(entergen.CustomMessageFrame(141,
+			entergen.CustomString(m.ConfigID), entergen.CustomString("JingMai")))
+		out.add(entergen.CustomMessageFrame(1,
+			entergen.CustomInt(2), entergen.CustomString("8303"), entergen.CustomString(m.ConfigID)))
+		opened++
+	}
+	if opened > 0 {
+		s.trace("npc task guide: 再战江湖开通经脉 %d 脉 client=%d", opened, pl.Conn1)
+	}
 }
 
 // handleGuideChoice C2S m972 单机引导步骤：黑幕窗点选回传 [4]（初出茅庐）

@@ -7,6 +7,7 @@ package fssoloworld
 // inner 下 sendToClient 静默）。
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/lizhanyin/9yin-server-go/internal/entergen"
@@ -128,32 +129,31 @@ func repeatSemicolon(n int) string {
 	return out
 }
 
-// TestShortcutEditLifecycle 200/201：首次编辑物化基线（starter 打坐
-// 条目入列）→ 替换/删除 → 删除 starter 不复活。
+// TestShortcutEditLifecycle 200/201：建号基线＝StarterSet ShortcutPos
+// 预置行 + 合成的 starter 打坐条目（未物化）→ 首次编辑物化基线（所见
+// 即所存）→ 替换预置行/删除 → 删除 starter 不复活。
 func TestShortcutEditLifecycle(t *testing.T) {
 	s, pl := newCustomTestServer(t)
-	if got := pl.roleState.EffectiveShortcuts(); len(got) != 1 || got[0].ID != "zs_default_01" {
-		t.Fatalf("fresh effective shortcuts: %+v", got)
+	fresh := pl.roleState.EffectiveShortcuts()
+	if len(fresh) != 5 || fresh[0].ID != "zs_normal_00" || fresh[4] != rolestate.StarterSitcrossShortcut ||
+		len(pl.roleState.Shortcuts) != 4 || pl.roleState.ShortcutsSet {
+		t.Fatalf("fresh shortcuts: effective=%+v stored=%+v set=%t",
+			fresh, pl.roleState.Shortcuts, pl.roleState.ShortcutsSet)
 	}
-	// 首次编辑：基线物化 = starter 行 + 新行。
-	s.handleShortcutSet(pl, customMsg(200, customInt(0), customStr("skill"), customStr("CS_wd_tjq01")))
-	if len(pl.roleState.Shortcuts) != 2 || !pl.roleState.ShortcutsSet {
+	// 首次编辑落在空栏位：基线物化 = 预置行 + starter 打坐条目 + 新行。
+	s.handleShortcutSet(pl, customMsg(200, customInt(7), customStr("skill"), customStr("CS_wd_tjq01")))
+	if len(pl.roleState.Shortcuts) != 6 || !pl.roleState.ShortcutsSet {
 		t.Fatalf("baseline not materialized: %+v", pl.roleState.Shortcuts)
 	}
 	// 同值重设：无变更（行数不变）。
-	s.handleShortcutSet(pl, customMsg(200, customInt(0), customStr("skill"), customStr("CS_wd_tjq01")))
-	if len(pl.roleState.Shortcuts) != 2 {
+	s.handleShortcutSet(pl, customMsg(200, customInt(7), customStr("skill"), customStr("CS_wd_tjq01")))
+	if len(pl.roleState.Shortcuts) != 6 {
 		t.Fatalf("unchanged set mutated rows: %+v", pl.roleState.Shortcuts)
 	}
-	// 替换同索引行。
+	// 覆盖预置行所在栏位 0：原位替换（一行一栏），打坐条目不受牵连。
 	s.handleShortcutSet(pl, customMsg(200, customInt(0), customStr("skill"), customStr("CS_wd_tjq02")))
-	replaced := false
-	for _, row := range pl.roleState.Shortcuts {
-		if row.Index == 0 {
-			replaced = row.ID == "CS_wd_tjq02"
-		}
-	}
-	if !replaced || len(pl.roleState.Shortcuts) != 2 {
+	if shortcutRowOf(pl.roleState.Shortcuts, 0).ID != "CS_wd_tjq02" || len(pl.roleState.Shortcuts) != 6 ||
+		shortcutRowOf(pl.roleState.Shortcuts, 9) != rolestate.StarterSitcrossShortcut {
 		t.Fatalf("replace failed: %+v", pl.roleState.Shortcuts)
 	}
 	// 删除 starter：不复活。
@@ -163,17 +163,30 @@ func TestShortcutEditLifecycle(t *testing.T) {
 			t.Fatalf("starter resurrected: %+v", pl.roleState.Shortcuts)
 		}
 	}
+	if len(pl.roleState.Shortcuts) != 5 {
+		t.Fatalf("remove starter: %+v", pl.roleState.Shortcuts)
+	}
 	// 删除缺失索引：静默忽略。
 	s.handleShortcutRemove(pl, customMsg(201, customInt(77)))
-	if len(pl.roleState.Shortcuts) != 1 {
+	if len(pl.roleState.Shortcuts) != 5 {
 		t.Fatalf("missing remove mutated rows: %+v", pl.roleState.Shortcuts)
 	}
 	// 非法输入拒收：越界索引/空 kind/double 枚举索引。
 	s.handleShortcutSet(pl, customMsg(200, customInt(5000), customStr("skill"), customStr("x")))
 	s.handleShortcutSet(pl, customMsg(200, customDouble(1), customStr("skill"), customStr("x")))
-	if len(pl.roleState.Shortcuts) != 1 {
+	if len(pl.roleState.Shortcuts) != 5 {
 		t.Fatalf("invalid set accepted: %+v", pl.roleState.Shortcuts)
 	}
+}
+
+// shortcutRowOf 快捷栏表里指定栏位的行（缺席零值）。
+func shortcutRowOf(rows []rolestate.ShortcutRow, index int32) rolestate.ShortcutRow {
+	for _, row := range rows {
+		if row.Index == index {
+			return row
+		}
+	}
+	return rolestate.ShortcutRow{}
 }
 
 // TestClientCustomRoutes 0x1E 直发与 0x0A 活动信封双入口同归分发；
@@ -209,15 +222,16 @@ func TestClientCustomRoutes(t *testing.T) {
 	}
 }
 
-// TestCustomRejectedWithoutRoleState 无 roleState（旧档 replay 会话）：
-// 编辑拒收不落空账号。
+// TestCustomRejectedWithoutRoleState 无 roleState（未进场/旧档 replay
+// 会话）：编辑拒收，快捷栏建号预置行原样不动。
 func TestCustomRejectedWithoutRoleState(t *testing.T) {
 	s, pl := newCustomTestServer(t)
 	pl.haveRoleState = false
+	before := append([]rolestate.ShortcutRow(nil), pl.roleState.Shortcuts...)
 	s.handleCustomizingUpload(pl, customMsg(107, customStr("X")))
 	s.handleShortcutSet(pl, customMsg(200, customInt(0), customStr("skill"), customStr("x")))
-	if pl.roleState.Customizing != "" || len(pl.roleState.Shortcuts) != 0 {
-		t.Fatalf("edits accepted without role state: %+v", pl.roleState)
+	if pl.roleState.Customizing != "" || !slices.Equal(pl.roleState.Shortcuts, before) {
+		t.Fatalf("edits accepted without role state: %q %+v", pl.roleState.Customizing, pl.roleState.Shortcuts)
 	}
 }
 // TestCustomizingPoisonedUploadRejected 客户端本地配置被历史坏串污染后，

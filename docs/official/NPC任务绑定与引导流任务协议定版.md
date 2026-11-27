@@ -477,12 +477,23 @@ NPC 任务标记 `m209 [15, obj, state]`（引擎侧消费，NPC 头顶任务图
 对，窗体没建出来。现在 `readyTail` 在首次进场（`clientReady`）与切图重入
 （`reentryReady`）的就绪簇末尾、任务记录行之后下发。
 
+2026-11-27 订正：引擎 handler 表里 m390 是原生处理，lua 的 `custom_refresh_track_info`
+是 m52 [1, 服务器时间]——上面把两者当成了一个。m390 的语义没解出来；表见
+`docs/verified/s2c-custommsg-handler-table-*.tsv`。
+
 ### 选择窗
 
 客户端引擎窗体 `form_single_blackback`（黑幕，两个按钮）→ `custom_send_single_step`
 → **C2S m972 [4]**（初出茅庐，文案 `ui_xsyd_ccml_001`「选择“初出茅庐”进入单机引导
 剧情」）/ **[5]**（再战江湖，`ui_xsyd_zzjh_001`「选择“再战江湖”进入江湖世界，将
-跳过初始引导剧情」）。Lua 数值到线是 double。点选之前是引导阶段通知与输入锁：
+跳过初始引导剧情」）。Lua 数值到线是 double。点选之前是引导阶段通知与输入锁。
+
+**选择窗的触发帧是 m427**（2026-11-27 订正，真机已验证）：官服在客户端 op09 之后的
+就绪簇发 `m346 [2, 0]` → `m427 []` → `CanntOperator=1`，五个弹窗会话逐字节相同，已定档的
+角色没有这一块；客户端引擎按消息号调 lua `on_query_fresh_man`，对 `form_single_blackback`
+做 `ShowModal`。`FinishFreshmanRecStr`（idx225）不是弹窗条件，只是新手进度条的数据源。
+下表帧号沿用旧工具的编号；触发帧与证据见
+`docs/verified/新手引导选择窗触发帧m427.md`：
 
 | 帧 | 女号（引导线） | 男号（跳过线） |
 |---|---|---|
@@ -537,9 +548,10 @@ C2S m950 [0,"chengdu_02"]（影像结束后）→ 0x10 HelpStepID="chengdu_02"�
 - **状态**：`roleState.GameStep`（0 未定／4／5）、`HelpStepID`、`RelivePositon`
   随 0x04 存档；档案帧 0x28 取存档的帮助步骤与复活点（未入链仍是外服常量）。
 - **待选态**只认「身在新手副本 + 阶段未定 + 引导链未开始」的角色：锁输入、
-  不排链根的延时自动接取；其余角色行为不变。黑幕窗由引擎弹出，服务端只在
-  点选后收到 m972——一直不上报时 `NINEYIN_GUIDE_CHOICE_TIMEOUT` 秒（缺省 300，
-  0＝一直等）后视同初出茅庐。
+  不排链根的延时自动接取；其余角色行为不变。黑幕窗由服务端就绪簇的 m427 请求
+  弹出（2026-11-27 订正：`readyTail` 在锁输入前发 m346 → m427），点选后收到 0x0A
+  信封 `[972, 步骤]`——2026-11-28 订正：超时兜底（`NINEYIN_GUIDE_CHOICE_TIMEOUT` 秒，
+  缺省 20、0＝一直等、按性别焦点线自动选）已整个去掉，服务端一直等点选，与官服一致。
 - **m972 [5]** 只在待选态受理（引导链已在进行则拒绝），办过再点零帧。
 - **新号默认出生在新手副本 born_single_01**（`rolestate.DefaultBirthScene`，
   2026-11-26 晚改，此前是烟雨庄 born03）：落点 `rolestate.GuideSceneLanding`
@@ -555,8 +567,8 @@ C2S m950 [0,"chengdu_02"]（影像结束后）→ 0x10 HelpStepID="chengdu_02"�
 - 后续任务两张的次序：官服先发两张任务的行、再逆序发通知（28111 后 1647）；
   本服按任务逐张「行＋通知」。
 - **未建模**：内功对象帧与 14 条经脉、GiveItemRec 挂载 0x14、m711 sns 事件、
-  HomePointList 行、切图簇尾段（本服走自己的重入簇）；官方黑幕窗弹出条件
-  （引擎内）。
+  HomePointList 行、切图簇尾段（本服走自己的重入簇）、官服首登在触发帧之前的
+  `SingleState / m8 / m250 / m252`。
 
 ### 抓包工具更正
 
@@ -570,3 +582,7 @@ C2S m950 [0,"chengdu_02"]（影像结束后）→ 0x10 HelpStepID="chengdu_02"�
 锁输入、待选不排自动接取、初出茅庐、再战江湖跳过簇逐行、非待选零帧、帮助步骤、
 gm guide），`-race` 在 GOMAXPROCS=1/2/4 下稳定；全仓 71 包通过
 （`fssolopublic TestBootChainOverTCP` 为既有负载偶发，单独跑 3/3 过）。**未真机。**
+
+2026-11-27：选择窗弹出与「再战江湖」线真机已验证（本服线路抓取：m346 → m427 → 锁输入
+→ 客户端 `[972, 5.0]` → 跳过簇 → 解锁 → 切出副本），见
+`docs/verified/新手引导选择窗触发帧m427.md`；「初出茅庐」线与其余各项仍未真机。

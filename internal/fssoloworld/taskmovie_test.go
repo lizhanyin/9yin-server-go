@@ -6,6 +6,7 @@ package fssoloworld
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"testing"
 	"time"
@@ -150,16 +151,28 @@ func TestTaskMovieMovementAndRepush(t *testing.T) {
 	if pl.roleState.Position != origin {
 		t.Fatalf("影像期间的位移不应收编: %v", pl.roleState.Position)
 	}
-	// 等重发：m8、m104 之后全部是 NPC 物化帧（0x28），条数=视口 NPC 数。
-	got := waitFrames(t, frames, 2+visible)
+	// 等重发：m8、m104 之后是每 NPC「0x0E 移除 + 0x28 重加」（先删后加幂等
+	// ——现行客户端对影像不清场景对象，官服式盲重发一轮就在原位置叠一份，
+	// 2026-11-28 真机「任务接取后原位置出现多个 NPC」）。
+	got := waitFrames(t, frames, 2+2*visible)
+	removed := map[uint32]bool{}
 	op28 := 0
 	for _, f := range got[2:] {
-		if f[0] == 0x28 {
+		switch f[0] {
+		case 0x0E:
+			removed[binary.LittleEndian.Uint32(f[1:5])] = true
+		case 0x28:
 			op28++
+			// 0x28 帧头 [28][46][len-1:4][len:4] 后才是 body（ObjectID
+			// 打头）——对象号在 f[10:14]。
+			if !removed[binary.LittleEndian.Uint32(f[10:14])] {
+				t.Fatalf("0x28 重加前缺同对象 0x0E 移除: obj=%08x %x",
+					binary.LittleEndian.Uint32(f[10:14]), f[:14])
+			}
 		}
 	}
-	if op28 != visible {
-		t.Fatalf("视口重发 0x28 帧 %d 条, want %d（共 %d 帧）", op28, visible, len(got))
+	if op28 != visible || len(removed) != visible {
+		t.Fatalf("视口重发应先删后加各 %d 条：0x0E %d + 0x28 %d", visible, len(removed), op28)
 	}
 	// 视口簿记不变（重发不是对账）。
 	pl.npcMu.Lock()

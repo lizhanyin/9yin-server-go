@@ -539,9 +539,10 @@ func TestSkillRushExpiryClears(t *testing.T) {
 	}
 }
 
-// MP 回复：每秒 ceil(上限/10)/2（55 → 3），变化即推 MP 帧，回满即停。
+// MP 回复：五维公式（罡气每 5 秒 +0.2 蓝），变化即推 MP 帧；旧 ceil(上限/10)/2 口径已废。
 func TestCombatTickRegeneratesMP(t *testing.T) {
 	f := newSkillFixture(t)
+	f.pl.roleState.Spi = 25 // 0.2·25/5 = 1 MP/秒（五维公式）
 	f.pl.combat.mu.Lock()
 	f.pl.combat.mp, f.pl.combat.mpReady = 40, true
 	f.pl.combat.mu.Unlock()
@@ -550,8 +551,31 @@ func TestCombatTickRegeneratesMP(t *testing.T) {
 		f.s.combatTick()
 		got = append(got, frameTokens(strings.Join(describeFrames(t, f.take(), f.origin), " | ")))
 	}
-	want := []string{"MP=43", "MP=46", "MP=49", "MP=52", "MP=55", "", ""}
+	want := []string{"MP=41", "MP=42", "MP=43", "MP=44", "MP=45", "MP=46", "MP=47"}
 	if strings.Join(got, ";") != strings.Join(want, ";") {
 		t.Errorf("MP 回复帧 = %v, want %v", got, want)
+	}
+}
+
+// HP 站立回复：体魄公式（每 5 秒 +0.07·Sta——Sta 100 = 1.4/秒，小数
+// 累积），变化即推 HPRatio/HP 帧。招架耐力拉满隔离 parryRegen 帧。
+func TestCombatTickRegeneratesHP(t *testing.T) {
+	f := newSkillFixture(t)
+	f.pl.roleState.Sta = 100   // 0.07·100/5 = 1.4 HP/秒
+	f.pl.roleState.Parry = 100 // 招架已满：隔离招架回复帧
+	f.pl.combat.mu.Lock()
+	f.pl.combat.mp, f.pl.combat.mpReady = 0, true
+	f.pl.combat.live = playerLive{ready: true, hp: 10, maxHP: 100, maxSP: 90, parry: 100}
+	f.pl.combat.mu.Unlock()
+	var got []string
+	for i := 0; i < 5; i++ {
+		f.s.combatTick()
+		got = append(got, frameTokens(strings.Join(describeFrames(t, f.take(), f.origin), " | ")))
+	}
+	// 小数累积（浮点尾差 2.0→1.999…）：+1(.4)、+1(.8)、+2(.2)、+1(.6)、+1。
+	want := []string{"HPRatio=11 HP=11", "HPRatio=12 HP=12", "HPRatio=14 HP=14",
+		"HPRatio=15 HP=15", "HPRatio=16 HP=16"}
+	if strings.Join(got, ";") != strings.Join(want, ";") {
+		t.Errorf("HP 回复帧 = %v, want %v", got, want)
 	}
 }

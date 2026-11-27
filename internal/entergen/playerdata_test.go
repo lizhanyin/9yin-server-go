@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/lizhanyin/9yin-server-go/internal/clientdata"
+	"github.com/lizhanyin/9yin-server-go/internal/rolestate"
 )
 
 func f32At(b []byte, off int) float32 {
@@ -94,6 +95,14 @@ func decodeVitalProps(t *testing.T, frame []byte) (map[string]string, map[string
 
 func TestPlayerVitalBatchFrame(t *testing.T) {
 	ctx := testContext(t)
+	// 白板建号无书——书布局注入（授予链/换书落档形态，数值取旧 StarterSet
+	// 官方对拍值）：运行武当一内 ng_wd_001@30。
+	ctx.State.NeiGong = []rolestate.NeiGongBook{{
+		ConfigID: "ng_wd_001", StaticData: 5, ItemType: 1002, Level: 30, MaxLevel: 36,
+		StrAdd: 45, StaAdd: 31, DexAdd: 13, IngAdd: 46, SpiAdd: 13,
+		MaxHPAdd: 1630, MaxMPAdd: 490, MaxParryAdd: 840, MinMagicDefAdd: 45,
+	}}
+	ctx.State.CurNeiGong = "ng_wd_001"
 	state := ctx.State
 	frame, err := PlayerVitalBatchFrame(ctx)
 	if err != nil {
@@ -108,11 +117,12 @@ func TestPlayerVitalBatchFrame(t *testing.T) {
 
 	props, counts := decodeVitalProps(t, frame)
 
-	// 官方恢复公式：基础位 ceil(总/10)、Add 位 round(0.07·Sta)/round(0.2·Spi)。
+	// 官方恢复公式：基础列 0（站立回复只走 Add 列五维公式——旧 ceil(上限/10)
+	// 是打坐速率，塞基础列致客户端站立按打坐速回）；Add 位
+	// round(0.07·Sta)/round(0.2·Spi)。
 	book := state.NeiGong[0]
-	wantHPUp := sitcrossRecovery(int32(state.HP) + int32(book.MaxHPAdd))
-	if props["HPUpSpeed"] != strconv.Itoa(int(wantHPUp)) {
-		t.Fatalf("HPUpSpeed = %q want %d", props["HPUpSpeed"], wantHPUp)
+	if props["HPUpSpeed"] != "0" || props["MPUpSpeed"] != "0" {
+		t.Fatalf("UpSpeed 基础列应 0: HP=%q MP=%q", props["HPUpSpeed"], props["MPUpSpeed"])
 	}
 	wantSta := int32(state.Sta) + int32(book.StaAdd)
 	if props["HPUpSpeedAdd"] != strconv.Itoa(int(staHundredthsAdd(wantSta))) {

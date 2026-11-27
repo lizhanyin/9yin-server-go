@@ -17,13 +17,15 @@ package entergen
 //     捏脸二进制原样透传），档内缺席回退 captures/local 分支默认。
 //
 // 数值族：速度/物理常量取 #25 真机值；PhyDef 装备合计（官服 0 基线 +
-// 布衣每件 +6）；五维/资源/内功从 rolestate 首本书推（官服白板口径
-// RoleBaseProp + StarterSet ng_wd_001 加成）。
+// 布衣每件 +6）；五维/资源/内功从 rolestate 运行书（CurNeiGong 匹配，
+// 缺席回退首本）推——官服白板口径 RoleBaseProp + varprop 加成；buff 串/
+// BufferInfo4/五行按运行书动态（旧版写死 StarterSet ng_wd_001 建号态）。
 
 import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/lizhanyin/9yin-server-go/internal/rolestate"
 )
@@ -49,11 +51,24 @@ const appearanceShortcutKey = "1,87;2,83;3,81;4,69;5,65;6,68;7,32;8,90;9,144;10,
 	"722,1114161;723,1114162;724,1114163;725,1114164;726,1114165;727,1114166;728,1114167;729,1114168;730,1114169;731,1114160;" +
 	"732,112;733,113;734,114;735,115;736,116;"
 
-// appearanceBufferList #25 登录 buff 串（新手标志 + 报伤 + 装备内功
-// ng_wd_001——StarterSet 首本书 buff，建号态回放值）。
-const appearanceBufferList = "buff_group_flag_101,local-1,1,285589731-64945070,0,1,0|" +
-	"buf_baosd_02,local-2,0,285589731-64945070,0,1,0|" +
-	"buf_ng_wd_001,local-4,3,285589731-64945070,1795354397233,1,0|"
+// bufferListString 登录 buff 串（#25 建号态回放形）：新手组标志 + 报伤
+// + 装备内功可见 buff。第三段按 CurNeiGong 书动态合成（旧版写死
+// buf_ng_wd_001——换书重登被两仪护心功覆盖的病灶之一）；书无 buff
+//（BuffID 空）时省略。条形 "名,local-槽,级,obj-own,unix毫秒,1,0|"，
+// 时间戳取 ctx.Stamp（0=当前，测试面注入定值）。
+func bufferListString(ctx Context) string {
+	objOwn := fmt.Sprintf("%d-%d", ctx.Identity.ObjectID, ctx.Identity.OwnerID)
+	buf := "buff_group_flag_101,local-1,1," + objOwn + ",0,1,0|" +
+		"buf_baosd_02,local-2,0," + objOwn + ",0,1,0|"
+	if book := vitalBook(ctx); book.BuffID != "" {
+		stamp := ctx.Stamp
+		if stamp == 0 {
+			stamp = time.Now().UnixMilli()
+		}
+		buf += fmt.Sprintf("%s,local-4,%d,%s,%d,1,0|", book.BuffID, book.BuffLevel, objOwn, stamp)
+	}
+	return buf
+}
 
 // appearanceProp 一步一条（名→表项 + 值）。
 func ap(name string, value PropertyValue) IndexedProperty {
@@ -139,13 +154,18 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		curNeiGong = state.NeiGong[0].ConfigID
 	}
 
-	// 五维/资源（官服白板 + 首本书 Add）。
+	// 五维/资源（官服白板 + 运行书 Add；资源 Add 走五维系数推导
+	// resourceadds.go——2·Str+7·Sta 系官方公式层）。
 	str := state.Str + book.StrAdd
 	sta := state.Sta + book.StaAdd
 	dex := state.Dex + book.DexAdd
 	ing := state.Ing + book.IngAdd
 	spi := state.Spi + book.SpiAdd
-	maxHP, maxMP, maxParry := state.HP+book.MaxHPAdd, state.MP+book.MaxMPAdd, state.Parry+book.MaxParryAdd
+	adds := DerivedResourceAdds(state, book)
+	maxHP := int(DerivedMaxHP(state, book))
+	maxMP := int(DerivedMaxMP(state, book))
+	maxParry := state.Parry + int(adds.MaxParryAdd)
+	curHP, curMP, hpRatio, mpRatio := currentVitals(ctx, int32(maxHP), int32(maxMP))
 
 	objHex := fmt.Sprintf("%X", ctx.Identity.ObjectID)
 	ownHex := fmt.Sprintf("%X", ctx.Identity.OwnerID)
@@ -182,12 +202,12 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("RunSpeed", Float32Value(3.9)),
 		ap("SpeedRatio", Int32Value(100)),
 		ap("CantJump", ByteValue(0)),
-		ap("HPRatio", Int32Value(100)),
-		ap("MPRatio", Int32Value(100)),
+		ap("HPRatio", Int32Value(hpRatio)),
+		ap("MPRatio", Int32Value(mpRatio)),
 		ap("MaxHP", Int32Value(int32(state.HP))),
 		ap("MaxMP", Int32Value(int32(state.MP))),
-		ap("HP", Int32Value(int32(maxHP))),
-		ap("MP", Int32Value(int32(maxMP))),
+		ap("HP", Int32Value(int32(curHP))),
+		ap("MP", Int32Value(int32(curMP))),
 		ap("HitHP", Int32Value(int32(state.HP))),
 		ap("HitHPRatio", Int32Value(100)),
 		ap("QingGongPoint", Int32Value(150)),
@@ -205,7 +225,7 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("CurSkillID", StringValue("")),
 		ap("CurSkillTarget", ObjectValue(0, 0)),
 		ap("ModifySkillLockTime", Int32Value(200)),
-		ap("BufferListStr", StringValue(appearanceBufferList)),
+		ap("BufferListStr", StringValue(bufferListString(ctx))),
 		ap("Gravity", Float32Value(9.8)),
 		ap("GravityAdd", Float32Value(0)),
 		ap("DropHeightPub", Float32Value(100000)),
@@ -312,12 +332,12 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("JujDef", Int32Value(50)),
 		ap("MinMeleeDamage", Int32Value(20)),
 		ap("MaxMeleeDamage", Int32Value(35)),
-		ap("MaxHPAdd", Int32Value(int32(book.MaxHPAdd))),
-		ap("MaxMPAdd", Int32Value(int32(book.MaxMPAdd))),
-		ap("MaxParryAdd", Int32Value(int32(book.MaxParryAdd))),
-		ap("MinMagicDefAdd", Int32Value(int32(book.MinMagicDefAdd))),
+		ap("MaxHPAdd", Int32Value(adds.MaxHPAdd)),
+		ap("MaxMPAdd", Int32Value(adds.MaxMPAdd)),
+		ap("MaxParryAdd", Int32Value(adds.MaxParryAdd)),
+		ap("MinMagicDefAdd", Int32Value(adds.MinMagicDefAdd)),
 		ap("MaxLevel", Int32Value(int32(book.MaxLevel))),
-		ap("CurNeiGongWuXing", Int32Value(5)), // ng_wd_001 五行土（StarterSet 首本书）
+		ap("CurNeiGongWuXing", Int32Value(ctx.NeiGongWuXing)), // 按 CurNeiGong 目录取（0=缺档降级）
 		ap("WuJiPoint", Int32Value(0)),
 		ap("MaxWuJiPoint", Int32Value(0)),
 		ap("CurJingMai", StringValue("")),
@@ -334,7 +354,7 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("CollideRadius", Float32Value(0.9)),
 		ap("State", StringValue("stand")),
 		ap("ActionSpeed", Float32Value(1.0)),
-		ap("HPRatio", Int32Value(100)),
+		ap("HPRatio", Int32Value(hpRatio)),
 		ap("ParryRatio", Int32Value(100)),
 		ap("HitHPRatio", Int32Value(100)),
 		ap("InParry", Int32Value(0)),

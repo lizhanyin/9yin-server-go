@@ -2,6 +2,7 @@ package entergen
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/lizhanyin/9yin-server-go/internal/clientdata"
@@ -44,16 +45,56 @@ func TestMountPlanShape(t *testing.T) {
 }
 
 // TestMountSequenceFrames 行推序列（2026-11-22 晚定案：0x14 挂载帧不发
-// ——aow/golden 方言遗物，2433 fork 官服对拍零 0x14）：Task_Completed
-// 位图行、Task_Accepted 0x29 批量、QingGongRec 18 行、无 0x14 帧。
+// ——aow/golden 方言遗物，2433 fork 官服对拍零 0x14）。白板建号无任务门/
+// 轻功——零行推；有门档（授予链落档形态）带 Task_Completed 位图行、
+// Task_Accepted 0x29 批量、QingGongRec 18 行。
 func TestMountSequenceFrames(t *testing.T) {
 	ctx := testContext(t)
 	frames, err := MountSequenceFrames(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mounts, bitmapRows, qgRows int
-	var accepted29 bool
+	mounts, bitmapRows, qgRows, accepted29 := countMountShapes(t, frames)
+	if mounts != 0 {
+		t.Fatalf("0x14 挂载帧应为 0（fork 方言不发），得 %d", mounts)
+	}
+	if accepted29 {
+		t.Fatal("白板建号无任务门不应有 Task_Accepted 0x29 批量")
+	}
+	if bitmapRows != 0 || qgRows != 0 {
+		t.Fatalf("白板建号零行推，得 位图 %d / 轻功 %d", bitmapRows, qgRows)
+	}
+
+	// 有门档：OpenGate 49634 → 位图 final row 1551 → 1552 行（含全零行）。
+	ctx.State.TaskAccepted = []uint32{1340}
+	ctx.State.TaskCompleted = []uint32{49634, 1346}
+	for i := 1; i <= 17; i++ {
+		ctx.State.QingGongCategories = append(ctx.State.QingGongCategories, fmt.Sprintf("qinggong_%d", i))
+	}
+	ctx.State.QingGongCategories = append(ctx.State.QingGongCategories, "qinggong_gaojie")
+	frames, err = MountSequenceFrames(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mounts, bitmapRows, qgRows, accepted29 = countMountShapes(t, frames)
+	if mounts != 0 {
+		t.Fatalf("0x14 挂载帧应为 0（fork 方言不发），得 %d", mounts)
+	}
+	if !accepted29 {
+		t.Fatal("Task_Accepted 0x29 批量缺席")
+	}
+	if qgRows != 18 {
+		t.Fatalf("QingGongRec 18 行，得 %d", qgRows)
+	}
+	if bitmapRows != 1552 {
+		t.Fatalf("位图 0x11 行 1552（final-row 前全零行），得 %d", bitmapRows)
+	}
+}
+
+// countMountShapes 行推族形状计数：0x14 挂载帧、Task_Completed 位图 0x11
+// 行、QingGongRec 0x11 行、Task_Accepted 0x29 批量。
+func countMountShapes(t *testing.T, frames [][]byte) (mounts, bitmapRows, qgRows int, accepted29 bool) {
+	t.Helper()
 	for _, f := range frames {
 		switch f[0] {
 		case 0x14:
@@ -72,19 +113,7 @@ func TestMountSequenceFrames(t *testing.T) {
 			accepted29 = true
 		}
 	}
-	if mounts != 0 {
-		t.Fatalf("0x14 挂载帧应为 0（fork 方言不发），得 %d", mounts)
-	}
-	if !accepted29 {
-		t.Fatal("Task_Accepted 0x29 批量缺席")
-	}
-	if qgRows != 18 {
-		t.Fatalf("QingGongRec 18 行，得 %d", qgRows)
-	}
-	// Task_Completed 位图：OpenGate 49634 → final row 1551 → 1552 行。
-	if bitmapRows != 1552 {
-		t.Fatalf("位图 0x11 行 1552（final-row 前全零行），得 %d", bitmapRows)
-	}
+	return mounts, bitmapRows, qgRows, accepted29
 }
 
 // mountName 从 0x14 帧反查记录名（测试用）。

@@ -171,10 +171,10 @@ func TestTaskCompletedSetFramesSkipOfficial(t *testing.T) {
 	assertOfficialFrames(t, grid, nil, want, "完成位图逐格写")
 }
 
-// TestFreshmanRecFrameOfficial 黑幕窗门控属性 FinishFreshmanRecStr 初值：
-// 建号.pcapng 男号 #134（进场簇、0x0B 前）——idx225、串线型携裸字节
-// 45×0x01 尾 09 00、无 NUL。引擎按此属性本地弹「初出茅庐/再战江湖」
-// 选择窗（form_single_blackback），缺发＝待选态窗不弹。
+// TestFreshmanRecFrameOfficial 引导记录 FinishFreshmanRecStr 初值：建号.
+// pcapng 男号 #134（进场簇、0x0B 前）——idx225、串线型携裸字节 45×0x01
+// 尾 09 00、无 NUL。官服待选新号照发；它不是弹窗条件（弹窗见
+// TestFreshmanQueryFramesOfficial）。
 func TestFreshmanRecFrameOfficial(t *testing.T) {
 	frame, err := FreshmanRecFrame(officialCreate)
 	assertOfficial(t, frame, err,
@@ -182,7 +182,20 @@ func TestFreshmanRecFrameOfficial(t *testing.T) {
 		"FinishFreshmanRecStr 初值")
 }
 
-// TestGuideEntryFramesFreshmanGate 待选态在引导阶段帧之前补门控属性；
+// TestFreshmanQueryFramesOfficial 黑幕窗弹出帧 m346 [2, 0] → m427 []：五个
+// 官服弹窗会话同一对字节（建号-01 #898/#899 首登即退、建号-02 #71/#72
+// 重登后点初出茅庐、建号.pcapng #929/#930、女号 #914/#915、男号
+// #1067/#1068）。427＝引擎 handler 表的 on_query_fresh_man（lua，零参）；
+// 已选过的存量号就绪簇没有这一对。
+func TestFreshmanQueryFramesOfficial(t *testing.T) {
+	frames, err := FreshmanQueryFrames()
+	assertOfficialFrames(t, frames, err, []string{
+		"1e 03 00 02 5a 01 00 00 02 02 00 00 00 02 00 00 00 00",
+		"1e 01 00 02 ab 01 00 00",
+	}, "黑幕窗弹出帧")
+}
+
+// TestGuideEntryFramesFreshmanGate 待选态在引导阶段帧之前补引导记录；
 // 已定档/存量号不加。
 func TestGuideEntryFramesFreshmanGate(t *testing.T) {
 	ctx := Context{

@@ -135,6 +135,73 @@ func NeiGongViewFrames(state rolestate.RoleState) ([][]byte, error) {
 	return frames, nil
 }
 
+// NeiGongRowFrame View43 追加一行（行号 = 在 roleState.NeiGong 里的
+// 0 基下标 + 1；再战江湖学坐忘功在登录行集之后追加——官服建号-04
+// 26.748s #455 `0x18 view=43 idx=1` 同形）。
+func NeiGongRowFrame(index int, book rolestate.NeiGongBook) ([]byte, error) {
+	return ViewAddFrame(ViewportNeiGong, uint16(index+1), bookViewRow(book))
+}
+
+// jingMaiViewCapacity 经脉容器容量（官服登录建视图帧实测 32——原
+// emptyContainerViews {45,32} 同值，容器改由 JingMaiViewFrames 建）。
+const jingMaiViewCapacity = 32
+
+// jingMaiMaxLevelOfficial 官服每脉随行的 0x10 [View45, 行] MaxLevel 值
+//（建号-04 #613 等：恒 180）。
+const jingMaiMaxLevelOfficial int32 = 180
+
+// jingMaiViewRow View45 单行属性集（官服建号-04 0x18 行照抄：ConfigID/
+// ItemType 恒 1003/VarPropNo/StaticData/Level/TotalFillValue；前十三脉
+// 另带 Quality/WuXing——零值省列即官服末三脉形状）。
+func jingMaiViewRow(m rolestate.Meridian) []ViewProperty {
+	level := m.Level
+	if level <= 0 {
+		level = 1
+	}
+	props := []ViewProperty{
+		{playerIdx("ConfigID"), StringValue(m.ConfigID)},
+		{playerIdx("ItemType"), Int32Value(1003)},
+		{playerIdx("VarPropNo"), Int32Value(int32(m.VarPropNo))},
+		{playerIdx("StaticData"), Int32Value(int32(m.StaticData))},
+		{playerIdx("Level"), ByteValue(byte(clampU8(level)))},
+		{playerIdx("TotalFillValue"), Int32Value(int32(m.Total))},
+	}
+	if m.Quality > 0 {
+		props = append(props, ViewProperty{playerIdx("Quality"), ByteValue(byte(clampU8(m.Quality)))})
+	}
+	if m.WuXing > 0 {
+		props = append(props, ViewProperty{playerIdx("WuXing"), Int32Value(int32(m.WuXing))})
+	}
+	return props
+}
+
+// JingMaiRowFrame View45 追加一行（行号 = 在 roleState.JingMai 里的
+// 0 基下标 + 1）。
+func JingMaiRowFrame(index int, m rolestate.Meridian) ([]byte, error) {
+	return ViewAddFrame(ViewportJingMai, uint16(index+1), jingMaiViewRow(m))
+}
+
+// JingMaiMaxLevelFrame 0x10 [View45, 行] MaxLevel（官服每脉行后随发，
+// 恒 180；itemuse.go 技能行 MaxLevel 同形）。
+func JingMaiMaxLevelFrame(index int) ([]byte, error) {
+	return ObjectPropertyFrame(uint32(ViewportJingMai), uint32(index+1), 1,
+		[]IndexedProperty{NamedProperty("MaxLevel", Int32Value(jingMaiMaxLevelOfficial))})
+}
+
+// JingMaiViewFrames View45：建视图 + 每脉一行（登录/切图重入整推——
+// 0x0C 清场后随 View40/43/46 族一起重建）。
+func JingMaiViewFrames(state rolestate.RoleState) ([][]byte, error) {
+	frames := [][]byte{mustCreateView(ViewportJingMai, jingMaiViewCapacity)}
+	for index, m := range state.JingMai {
+		frame, err := JingMaiRowFrame(index, m)
+		if err != nil {
+			return nil, err
+		}
+		frames = append(frames, frame)
+	}
+	return frames, nil
+}
+
 // QingGongViewFrames View46 轻功容器（b-line grantStarterQingGong：
 // 建视图 + 每实例一行 ConfigID@场景域 idx7 + IsActive）。
 func QingGongViewFrames(state rolestate.RoleState) ([][]byte, error) {
@@ -158,13 +225,14 @@ func QingGongViewFrames(state rolestate.RoleState) ([][]byte, error) {
 }
 
 // emptyContainerViews 官方登录簇的空容器视图（初始账号 30 视图集减
-// 40/43/44/45/46 数据视图与背包视图族——44/45 经脉穴位建号态为空容器，
-// 背包族见 BagViewCreateFrames）。
+// 40/43/44/45/46 数据视图与背包视图族——44 穴位建号态为空容器；45 经脉
+// 容器改由 JingMaiViewFrames 建（行集随开脉状态），背包族见
+// BagViewCreateFrames）。
 var emptyContainerViews = []struct {
 	ID  uint16
 	Cap uint16
 }{
-	{165, 6}, {128, 5}, {41, 20}, {47, 32}, {48, 32}, {44, 128}, {45, 32},
+	{165, 6}, {128, 5}, {41, 20}, {47, 32}, {48, 32}, {44, 128},
 	{170, 8}, {64, 32}, {159, 16},
 }
 

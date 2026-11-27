@@ -56,6 +56,11 @@ type RoleState struct {
 	HP                 int            `json:"hp"`
 	MP                 int            `json:"mp"`
 	SP                 int            `json:"sp"`
+	// CurHP/CurMP 当前血/蓝（fssoloworld 战斗会话态存档写回；0＝未持久化
+	// 按满值处理——旧档兼容）。HP/MP 是上限基数（RoleBaseProp 白板），
+	// 内功 MaxHPAdd/MaxMPAdd 另行叠加（上限=基数+Add）。
+	CurHP              int            `json:"curHP,omitempty"`
+	CurMP              int            `json:"curMP,omitempty"`
 	Parry              int            `json:"parry"`
 	NewbieSkill        uint32         `json:"newbieSkill"`
 	InitTask           uint32         `json:"initTask"`
@@ -68,6 +73,9 @@ type RoleState struct {
 	CollectSkills      []string       `json:"collectSkills"`
 	NeiGong            []NeiGongBook  `json:"neigong"`
 	CurNeiGong         string         `json:"curNeiGong"`
+	// JingMai 已开通经脉（View45 行；再战江湖建号官服十六脉全集，建号-04
+	// 抓包 26.748s 簇逐行定版）。空＝未开（待选态/初出茅庐未到）。
+	JingMai []Meridian `json:"jingmai,omitempty"`
 	FacultySeed        int64          `json:"facultySeed"`
 	// 货币三币（0x10 属性按名寻址下发，各一帧 Int64 单属性——2433 线
 	// currenciesUpdate 口径）：碎银 CapitalType1（商店购销/任务奖励）、
@@ -114,6 +122,7 @@ type RoleState struct {
 	// NeiGongBind 内功栏绑定串（C2S 199 → 属性 201；25 格 "v;"+尾分号）。
 	NeiGongBind string `json:"neiGongBind,omitempty"`
 	// Shortcuts 快捷栏基线（C2S 200/201 编辑 → shortcut_rec 0x11 行重放）。
+	// 建号时由 StarterSet 的 ShortcutPos 预置（Set=false 的未编辑基线）。
 	// Set=true 即玩家已编辑（空表也是基线）：starter 打坐条目不复活。
 	Shortcuts    []ShortcutRow `json:"shortcuts,omitempty"`
 	ShortcutsSet bool          `json:"shortcutsSet,omitempty"`
@@ -323,8 +332,9 @@ type ShortcutRow struct {
 var StarterSitcrossShortcut = ShortcutRow{Index: 9, Kind: "skill", ID: "zs_default_01"}
 
 // EffectiveShortcuts 快捷栏生效表：无玩家编辑基线（ShortcutsSet=false）
-// 且索引 9 空缺时补 starter 打坐条目；有基线以编辑结果为准（删除即
-// 删除，不复活）。帧生成与编辑应答（整表重建方言）共用本口径。
+// 时在档内行（含建号预置行）之上、索引 9 空缺时补 starter 打坐条目；
+// 有基线以编辑结果为准（删除即删除，不复活）。帧生成与编辑应答（整表
+// 重建方言）共用本口径。
 func (s RoleState) EffectiveShortcuts() []ShortcutRow {
 	rows := append([]ShortcutRow(nil), s.Shortcuts...)
 	if s.ShortcutsSet {
@@ -347,6 +357,60 @@ type StarterSkill struct {
 	MaxLevel   int     `json:"maxLevel"`
 	Total      int     `json:"total,omitempty"`
 	PauseTime  float64 `json:"pauseTime,omitempty"`
+}
+
+// shortcutIndexMax 栏位索引上限（fssoloworld 快捷栏编辑链同口径）。
+const shortcutIndexMax = 4096
+
+// parseShortcutPos StarterSet 的 ShortcutPos → 0 基栏位索引（ok=false
+// ＝不上栏）。
+//
+// ShortcutPos 是 1 基栏位序号：索引 0..199＝下方数字栏 20 页×10 格
+// （客户端 shortcut_game.lua：索引 = 格号 + 页×10 + 栏起始 0），200 起
+// 为上方 Ctrl 栏（grid_shortcut_2）。官服新号登录 0x29 批实证
+// （建号.pcapng 42.430s、建号-04 10.561s、完整引导-女 17.663s 等同构）：
+//
+//	[0,func,normal_attack] [1,skill,CS_jh_cqgf01]
+//	[2,skill,CS_jh_cqgf04] [3,skill,CS_jh_cqgf06]
+//
+// 即 StarterSet 的 ShortcutPos 1..4。空/缺省＝不上栏；非整数或超出
+// 1..4097 报错（内嵌资产的编写错误，建号即败好过静默不上栏）。
+func parseShortcutPos(configID, raw string) (index int32, ok bool, err error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, false, nil
+	}
+	pos, perr := strconv.Atoi(raw)
+	if perr != nil || pos < 1 || pos-1 > shortcutIndexMax {
+		return 0, false, fmt.Errorf("rolestate: StarterSet.xml Skill %s: ShortcutPos %q 须为 1..%d 的整数（1 基栏位序号）",
+			configID, raw, shortcutIndexMax+1)
+	}
+	return int32(pos - 1), true, nil
+}
+
+// starterShortcutRows StarterSkills 行 → 快捷栏建号基线（kind 恒
+// "skill"、id＝ConfigID；栏位升序）。栏位是行主键（编辑链同索引原位
+// 替换）：两个 Skill 写同一位置即资产自相矛盾，报错。
+func starterShortcutRows(skills []starterSkillXML) ([]ShortcutRow, error) {
+	var rows []ShortcutRow
+	for _, sk := range skills {
+		index, ok, err := parseShortcutPos(sk.ConfigID, sk.ShortcutPos)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		for _, row := range rows {
+			if row.Index == index {
+				return nil, fmt.Errorf("rolestate: StarterSet.xml ShortcutPos %d 重复（%s 与 %s）",
+					index+1, row.ID, sk.ConfigID)
+			}
+		}
+		rows = append(rows, ShortcutRow{Index: index, Kind: "skill", ID: sk.ConfigID})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Index < rows[j].Index })
+	return rows, nil
 }
 
 // NeiGongBook 初始内功书（View43 行 + 修为/五维加成来源）。
@@ -378,6 +442,43 @@ type NeiGongBook struct {
 // 测试口径；官方建号货币基线未逆向，先对齐 fork 线便于对拍）。
 const starterMoney = 99999
 
+// Meridian 已开通经脉行（View45；官服 0x18 行属性集：ConfigID/ItemType
+// 恒 1003/VarPropNo/StaticData/Level/TotalFillValue，前十三脉另带
+// Quality/WuXing）。StaticData 是经脉模板行号（抓包原值），升级链
+// （内功修炼贯通）后续接。
+type Meridian struct {
+	ConfigID   string `json:"configID"`
+	VarPropNo  int    `json:"varPropNo,omitempty"`
+	StaticData int    `json:"staticData"`
+	Level      int    `json:"level,omitempty"`
+	Total      int    `json:"total,omitempty"`
+	Quality    int    `json:"quality,omitempty"`
+	WuXing     int    `json:"wuXing,omitempty"`
+}
+
+// GuideMeridians 再战江湖开通的十六脉（官服建号-04.pcapng 26.748s 簇
+// #468..#612 逐行照抄：slot 序＝下发序＝丹田、手三阴三阳、足三阴三阳、
+// 带脉/阴阳跷维；末三脉（带脉 jm_zutaiyang_jin 与阴跷/阳跷维脉）官服行
+// 无 Quality/WuXing 列）。Level 恒 1、ItemType 恒 1003（行编码器常量）。
+var GuideMeridians = []Meridian{
+	{"jm_dantian", 141001, 41, 1, 20100, 1, 3},
+	{"jm_zuyangming", 111001, 11, 1, 10528, 6, 5},
+	{"jm_zushaoyin", 107001, 7, 1, 10528, 3, 3},
+	{"jm_shoutaiyin", 103001, 3, 1, 10528, 2, 1},
+	{"jm_shoutaiyang", 106001, 6, 1, 10528, 6, 4},
+	{"jm_zutaiyin", 109001, 9, 1, 10528, 3, 5},
+	{"jm_zushaoyang", 110001, 10, 1, 10528, 3, 2},
+	{"jm_zujueyin", 108001, 8, 1, 10528, 3, 2},
+	{"jm_shoushaoyang", 104001, 4, 1, 10528, 2, 7},
+	{"jm_shouyangming", 105001, 5, 1, 10528, 6, 1},
+	{"jm_zutaiyang", 112001, 12, 1, 10528, 6, 3},
+	{"jm_shoushaoyin", 101001, 1, 1, 10528, 2, 4},
+	{"jm_shoujueyin", 102001, 2, 1, 10528, 2, 4},
+	{"jm_zutaiyang_jin", 150001, 50, 1, 10528, 0, 0},
+	{"jm_yinqiao_wei", 143001, 43, 1, 15800, 0, 0},
+	{"jm_yangqiao_wei", 142001, 42, 1, 15800, 0, 0},
+}
+
 // ---- RoleBaseProp.xml ----
 
 type roleBasePropXML struct {
@@ -404,17 +505,23 @@ type roleBasePropRow struct {
 
 // ---- StarterSet.xml ----
 
+// starterSkillXML StarterSkills/Skill 行（属性串原样保留，BuildRoleState
+// 折算成 StarterSkill 与快捷栏行）。
+type starterSkillXML struct {
+	ConfigID   string `xml:"ConfigID,attr"`
+	StaticData string `xml:"StaticData,attr"`
+	ItemType   string `xml:"ItemType,attr"`
+	Level      string `xml:"Level,attr"`
+	MaxLevel   string `xml:"MaxLevel,attr"`
+	Total      string `xml:"Total,attr"`
+	PauseTime  string `xml:"PauseTime,attr"`
+	// ShortcutPos 快捷栏位置（1 基栏位序号）；空/缺省＝不上栏。
+	ShortcutPos string `xml:"ShortcutPos,attr"`
+}
+
 type starterSetXML struct {
 	Skills struct {
-		Skill []struct {
-			ConfigID   string `xml:"ConfigID,attr"`
-			StaticData string `xml:"StaticData,attr"`
-			ItemType   string `xml:"ItemType,attr"`
-			Level      string `xml:"Level,attr"`
-			MaxLevel   string `xml:"MaxLevel,attr"`
-			Total      string `xml:"Total,attr"`
-			PauseTime  string `xml:"PauseTime,attr"`
-		} `xml:"Skill"`
+		Skill []starterSkillXML `xml:"Skill"`
 	} `xml:"StarterSkills"`
 	QingGong struct {
 		Category struct {
@@ -976,6 +1083,8 @@ func FindSceneOption(key string) (SceneOption, bool) {
 // 场景一律新手副本 GuideScene（官服建号.pcapng：首登 0x0B=
 // ini\scene\born_single_01，引导完成/再战江湖后按 Birth* 落位）。book
 // 空/查无回落 DefaultBook；facultySeed 为修为种子（b-line 口径，可配）。
+// 快捷栏基线取 StarterSkills 的 ShortcutPos（1 基栏位序号，空＝不上栏；
+// 未编辑基线，ShortcutsSet=false）。
 func BuildRoleState(book string, sex int, para string, facultySeed int64) (RoleState, error) {
 	if book == "" {
 		book = DefaultBook
@@ -1048,6 +1157,14 @@ func BuildRoleState(book string, sex int, para string, facultySeed int64) (RoleS
 			Total: atoi(sk.Total), PauseTime: atof(sk.PauseTime),
 		})
 	}
+	// 快捷栏建号基线：带 ShortcutPos 的武学预置上栏（栏位口径见
+	// parseShortcutPos）。ShortcutsSet 保持 false——未编辑基线照旧由
+	// EffectiveShortcuts 合成 starter 打坐条目，玩家首次编辑才物化。
+	shortcuts, err := starterShortcutRows(starter.Skills.Skill)
+	if err != nil {
+		return RoleState{}, err
+	}
+	state.Shortcuts = shortcuts
 	for _, bk := range starter.NeiGong.Book {
 		state.NeiGong = append(state.NeiGong, NeiGongBook{
 			ConfigID: bk.ConfigID, StaticData: atoi(bk.StaticData), ItemType: atoi(bk.ItemType),

@@ -84,23 +84,28 @@ func (s *Server) combatLua() *combatLua {
 // ---- 玩家生存态与面板 ----
 
 // ensureLiveLocked 首次进入战斗时按登录面板口径初始化生存态（调用方持
-// combatState.mu）。
+// combatState.mu）。血上限 = 白板 + 五维系数推导 Add（entergen
+// DerivedMaxHP——与 0x0D/0x10 帧同一取值面，书跟 CurNeiGong 匹配）；
+// 当前血取存档持久值（CurHP，钳上限；0=未持久化按满值——官方重登恒满
+// 血口径的旧档兼容）。
 func (s *Server) ensureLiveLocked(st *combatState, pl *Player) {
 	if st.live.ready {
 		return
 	}
-	maxHP := pl.roleState.HP
-	if len(pl.roleState.NeiGong) > 0 {
-		maxHP += pl.roleState.NeiGong[0].MaxHPAdd
-	}
+	// 系数层是属性分量，无装备书也生效（零书=纯系数，书分量缺席）。
+	maxHP := int(entergen.DerivedMaxHP(pl.roleState, derefBookOrZero(runningBookOf(&pl.roleState))))
 	if maxHP <= 0 {
 		maxHP = 1
+	}
+	hp := maxHP
+	if pl.roleState.CurHP > 0 {
+		hp = clampInt(pl.roleState.CurHP, 1, maxHP)
 	}
 	maxSP := int(s.playerPanel(pl)["MaxSP"])
 	if maxSP <= 0 {
 		maxSP = 50
 	}
-	st.live = playerLive{ready: true, hp: maxHP, maxHP: maxHP, maxSP: maxSP,
+	st.live = playerLive{ready: true, hp: hp, maxHP: maxHP, maxSP: maxSP,
 		parry: int(s.parryValueTotal(pl)), logic: logicNormal}
 }
 

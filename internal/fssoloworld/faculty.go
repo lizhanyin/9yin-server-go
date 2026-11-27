@@ -313,13 +313,10 @@ func (s *Server) facultyLevelUpLoop(st *rolestate.RoleState, book *rolestate.Nei
 		book.MaxPower += 20
 		book.Power = book.MaxPower
 	}
-	// varprop 档随等级推进：五维 Add 与 buff 档位重取（档缺保持原值）。
+	// varprop 档随等级推进：五维 Add/buff 档位重取＋资源 Add 补零
+	//（neigonguse.go applyVarPropRow——登录刷新同口径；档缺保持原值）。
 	if row, ok := catalog.VarPropRow(int32(book.StaticData), int32(book.Level)); ok {
-		book.StrAdd, book.StaAdd, book.DexAdd = int(row.StrAdd), int(row.StaAdd), int(row.DexAdd)
-		book.IngAdd, book.SpiAdd = int(row.IngAdd), int(row.SpiAdd)
-		if row.BufferID != "" {
-			book.BuffID, book.BuffLevel = row.BufferID, int(row.BufferLevel)
-		}
+		applyVarPropRow(book, row, catalog)
 	}
 }
 

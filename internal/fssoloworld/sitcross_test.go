@@ -210,14 +210,16 @@ func TestSitcrossTickRecoversHPAndMP(t *testing.T) {
 	assertNoFrames(t, f.take(), "已不在坐姿的打断")
 }
 
-// 站立 MP 回复（combatTick 非打坐分支）满蓝期间不蓄小数：站满一段时间后
-// 花掉的蓝仍按每秒速率回，不会一拍回满；不足 1/秒的速率在未满时照常
-// 隔拍累积，回满那一拍清零。
+// 站立 MP 回复（combatTick 非打坐分支，五维公式速率）满蓝期间不蓄小数：
+// 站满一段时间后花掉的蓝仍按每秒速率回，不会一拍回满；不足 1/秒的速率
+// 在未满时照常隔拍累积，回满那一拍清零。
 func TestCombatTickStandingMPRegenDoesNotBankCredit(t *testing.T) {
 	f := newSkillFixture(t)
+	f.pl.roleState.Spi = 25 // 0.2·25/5 = 1 MP/秒
 	st := &f.pl.combat
 	st.mu.Lock()
-	st.mp, st.mpReady = 55, true
+	maxMP := playerMaxMP(f.pl) // 白板 55 + 系数 25 = 80
+	st.mp, st.mpReady = maxMP, true
 	st.mu.Unlock()
 	for i := 0; i < 20; i++ {
 		f.s.combatTick()
@@ -227,16 +229,25 @@ func TestCombatTickStandingMPRegenDoesNotBankCredit(t *testing.T) {
 	st.mp -= 10
 	st.mu.Unlock()
 	f.s.combatTick()
-	assertSitFrames(t, f.take(), "MP=48")
+	assertSitFrames(t, f.take(), "MP=71")
 
-	f.pl.roleState.MP = 10 // 0.5/秒
+	// 慢速率（Spi 5 = 0.2/秒）隔拍累积：第 5 拍才 +1。
+	f.pl.roleState.Spi = 5
+	f.pl.roleState.MP = 10 // 上限 = 10 + 系数 5 = 15
 	st.mu.Lock()
 	st.mp, st.mpCredit = 8, 0
 	st.mu.Unlock()
-	for _, want := range []string{"", "MP=9", "", "MP=10"} {
+	for _, want := range []string{"", "", "", "", "MP=9"} {
 		f.s.combatTick()
 		assertSitFrames(t, f.take(), want)
 	}
+	// 回满那一拍清零小数：直取满值+残留小数，下一拍零帧零累积。
+	st.mu.Lock()
+	st.mp = playerMaxMP(f.pl)
+	st.mpCredit = 0.5
+	st.mu.Unlock()
+	f.s.combatTick()
+	assertSitFrames(t, f.take(), "")
 	st.mu.Lock()
 	credit := st.mpCredit
 	st.mu.Unlock()

@@ -29,8 +29,9 @@ func TestCatalogQueries(t *testing.T) {
 		"share/faculty/wuxuebaseinfo.ini": "[ng_wd_001]\nnWuXing=5\n[ng_jh_201]\nnWuXing=7\n",
 		"share/faculty/wuxuelevelinfo.ini": "[ng_wd_001]\nr=1,200,100\nr=2,600,100\n",
 		"share/skill/neigong/neigong_static.ini":   "[5459]\nMinVarPropNo=10\nMaxVarPropNo=12\n",
-		"share/skill/neigong/neigong_varprop.ini":  "[10]\nLevel=1\nNeiGongLevel=3\n[11]\nLevel=2\nNeiGongLevel=6\nBufferID=buf_x\nBufferLevel=2\nStrAdd=4\n",
+		"share/skill/neigong/neigong_varprop.ini":  "[10]\nLevel=1\nNeiGongLevel=3\n[11]\nLevel=2\nNeiGongLevel=6\nBufferID=buf_x\nBufferLevel=2\nStrAdd=4\n@PropModifyPackRec=20,21\n",
 		"share/skill/buff_new.ini":                 "[buf_x]\nStaticData=1742\n",
+		"share/modifypack/proppack.ini": "[20]\nr=,MaxHPAdd,1630,0\nr=,MinMagicDefAdd,45,0\nComment=x\n[21]\nr=,MaxMPAdd,10,0\nr=,StrAdd,3,0\n[30]\nr=someSkill,SomeName,5,0\nr=,MaxHPAdd,999,1\n",
 	})
 	catalog, err := Load(root)
 	if err != nil {
@@ -51,8 +52,17 @@ func TestCatalogQueries(t *testing.T) {
 	if _, ok := catalog.LevelTotal("ng_wd_001", 9); ok {
 		t.Fatal("曲线缺级应 ok=false")
 	}
-	if row, ok := catalog.VarPropRow(5459, 2); !ok || row.BufferID != "buf_x" || row.StrAdd != 4 || row.NeiGongLevel != 6 {
+	row, ok := catalog.VarPropRow(5459, 2)
+	if !ok || row.BufferID != "buf_x" || row.NeiGongLevel != 6 {
 		t.Fatalf("VarPropRow(5459,2)=%+v,%v", row, ok)
+	}
+	// proppack 合并：直列 StrAdd=4 + pack 21 的 StrAdd=3；资源 Add 全由
+	// pack 合成；技能形态行（30 节首位非数值）与 Mode≠0 行不入合并。
+	if row.StrAdd != 7 || row.MaxHPAdd != 1630 || row.MaxMPAdd != 10 || row.MinMagicDefAdd != 45 {
+		t.Fatalf("proppack 合并异常: %+v", row)
+	}
+	if row.MaxParryAdd != 0 {
+		t.Fatalf("无 MaxParryAdd 包行应 0: %+v", row)
 	}
 	if _, ok := catalog.VarPropRow(5459, 3); ok {
 		t.Fatal("档区间无该级应 ok=false")

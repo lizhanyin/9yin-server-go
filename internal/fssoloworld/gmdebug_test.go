@@ -369,9 +369,10 @@ func TestDecodePropertyFrameInt64(t *testing.T) {
 	}
 }
 
-// starterRageCap 建号运行武当一内（ng_wd_001）的怒气上限：基础 80 + 一内档 10
-//（entergen/ragecap.go 分档表）。
-const starterRageCap = 90
+// starterRageCap 夹具建号的怒气上限：白板无书 → 基础 80（2026-11-28
+// StarterSet 裁剪后建号无内功书；档位加成面见 entergen/ragecap_test.go
+// ——运行武当一内 90/势力 120 等）。
+const starterRageCap = 80
 
 // 怒气上限 = 登录批下发给客户端的 MaxSP（同源）：GM「回满」回到的就是
 // 客户端血条的上限，而不是回退值。
@@ -388,7 +389,7 @@ func TestGmRageCapIsPanelMaxSP(t *testing.T) {
 	if sent != starterRageCap {
 		t.Fatalf("登录批 MaxSP = %v, want %d", sent, starterRageCap)
 	}
-	if got := gm("rage", "acct", "max"); !strings.HasPrefix(got, ">gm rage acct: sp=90/90 ") {
+	if got := gm("rage", "acct", "max"); !strings.HasPrefix(got, ">gm rage acct: sp=80/80 ") {
 		t.Fatalf("回满应到登录批的 MaxSP: %q", got)
 	}
 	st := &pl.combat

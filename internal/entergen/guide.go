@@ -3,13 +3,16 @@ package entergen
 // guide.go 新手引导流的帧编码（官服女号「完整引导」/ 男号「跳过引导」两份
 // 抓包逐帧原字节定版；流程编排见 fssoloworld/guide.go）：
 //
-//	黑幕窗门控  0x10 FinishFreshmanRecStr=初值（idx225；待选态进场簇首位，
-//	            建号.pcapng 男号 #134——引擎按此属性本地弹「初出茅庐/
-//	            再战江湖」选择窗 form_single_blackback）
-//	追踪栏刷新  m390 [5, 0]（SERVER_CUSTOMMSG_REFRESH_TASK_TRACKINFO，女号
-//	            #1508 / 男号 #1604、#2258）：客户端 custom_refresh_track_info
-//	            → form_task_trace.on_ready——追踪栏窗体进场预载后是隐藏的，
-//	            只在这一帧之后才显示并按已接表追踪标志重建追踪列表。
+//	引导记录    0x10 FinishFreshmanRecStr=初值（idx225；待选态进场簇首位，
+//	            建号.pcapng 男号 #134 照抄）——引擎侧只当新手进度条的
+//	            数据源，不是弹窗条件
+//	黑幕窗      m346 [2, 0] → m427 []（on_query_fresh_man：客户端 lua 弹
+//	            「初出茅庐/再战江湖」选择窗 form_single_blackback）→ 锁输入；
+//	            官服五个弹窗会话恒此序，427 只在待选号上发、每场一帧
+//	追踪栏刷新  m390 [5, 0]（女号 #1508 / 男号 #1604、#2258）：引擎原生
+//	            handler（lua 的 custom_refresh_track_info 是 m52 [1, 服务器
+//	            时间]）——追踪栏窗体进场预载后是隐藏的，官服在这一帧之后
+//	            才显示并按已接表追踪标志重建追踪列表。
 //	引导阶段    m414 ["gamestep", 主步, 子步]（#437 女 4/5、#547 男 5/5）
 //	            ＋ 0x10 BornServerGameStep=主步×10+子步（#183=45、#293=55）
 //	新手帮助    0x10 HelpStepID=<步骤>（#466 "chengdu_00"、#1792 "chengdu_02"）
@@ -25,11 +28,15 @@ import (
 	"github.com/lizhanyin/9yin-server-go/internal/clientdata"
 )
 
-// 服务器自定义消息号（客户端 custom_handler.lua 处理函数名对应的引擎绑定）。
+// 服务器自定义消息号＝客户端引擎 handler 表的下标（2026-11-27 逐号对齐：
+// AOW 客户端脱壳镜像 .data 静态表 738 项、CN 2026 引擎 dump 堆表 765 项
+// 同序同义——名字串为 lua 全局函数名，空名＋函数指针＝引擎原生）。
 const (
-	serverCustomTaskTrackRefresh int32 = 390 // refresh_track_info
-	serverCustomGameStep         int32 = 414 // SwitchManager gamestep
-	serverCustomSingleMark       int32 = 543 // 跳过簇里 1346 置位后的空参消息（#1683）
+	serverCustomTaskTrackRefresh int32 = 390 // 引擎原生 handler（虚拟化，语义未解）
+	serverCustomGameStep         int32 = 414 // SwitchManager gamestep（引擎原生）
+	serverCustomSingleMark       int32 = 543 // on_addbtn_lead_info_open：跳过簇里 1346 置位后的空参消息（#1683）
+	serverCustomProcessSingle    int32 = 346 // process_single_msg [子型, 值]：2＝form_single_check.custom_single_set_form
+	serverCustomQueryFreshMan    int32 = 427 // on_query_fresh_man：弹「初出茅庐/再战江湖」黑幕窗，零参
 )
 
 var recordGiveItem = clientdata.MustRecordIndexByName("GiveItemRec")
@@ -50,11 +57,11 @@ func GameStepFrame(main, sub int32) ([]byte, error) {
 const guideStepSubOfficial int32 = 5
 
 // GuideEntryFrames 进场簇的引导阶段帧（PreReady m655 后、0x0B 前）：
-// 待选态先补 FinishFreshmanRecStr 初值（官服 #134 位、黑幕窗本地弹出
-// 门控）→ idx1309 BornServerGameStep=主步×10+子步 → m414 ["gamestep",
+// 待选态先补 FinishFreshmanRecStr 初值（官服 #134 位，照抄的引导记录）
+// → idx1309 BornServerGameStep=主步×10+子步 → m414 ["gamestep",
 // 主步, 子步] → idx129 HelpStepID。GuideStep=0（从未进引导流）零帧；
-// HelpStep 空时省略 idx129。锁输入与 m390 不在此处——它们在就绪簇收尾
-// （官服 49.62s idx249=1、50.24s m390，均在 NPC 物化之后）。
+// HelpStep 空时省略 idx129。弹窗帧（m346→m427）、锁输入与 m390 不在此处
+// ——它们在就绪簇收尾（官服 49.62s、50.24s，均在 NPC 物化之后）。
 func GuideEntryFrames(ctx Context) ([][]byte, error) {
 	var builders []func() ([]byte, error)
 	if ctx.GuideChoicePending {
@@ -87,17 +94,30 @@ func SingleStepMarkFrame() ([]byte, error) {
 	return CustomMessageFrame(serverCustomSingleMark)
 }
 
+// FreshmanQueryFrames 待选态弹窗帧 m346 [2, 0] → m427 []：官服五个弹窗会话
+// 恒此序（建号-01 #898/#899 首登、建号-02 #71/#72 重登——重登没有锁输入帧
+// 也照弹），锁输入由调用方紧随其后发。427 的 handler 是客户端 lua
+// custom_handler.on_query_fresh_man：util_get_form("form_single_blackback")
+// ＋ShowModal。
+func FreshmanQueryFrames() ([][]byte, error) {
+	return buildFrames(
+		func() ([]byte, error) {
+			return CustomMessageFrame(serverCustomProcessSingle, CustomInt(2), CustomInt(0))
+		},
+		func() ([]byte, error) { return CustomMessageFrame(serverCustomQueryFreshMan) },
+	)
+}
+
 // freshmanRecInitial 待选新号的 FinishFreshmanRecStr 初值（0x10 idx225，
 // 型 7 串线型携裸字节）：45×0x01 尾 09 00——官服建号.pcapng 男号 #134 原字节
 // （0x0B 前的进场属性簇）。语义未解（字节疑似按引导步骤的标志位），照抄。
 var freshmanRecInitial = append(append(make([]byte, 0, 47),
 	bytes.Repeat([]byte{1}, 45)...), 0x09, 0x00)
 
-// FreshmanRecFrame 黑幕窗门控属性 FinishFreshmanRecStr=初值。客户端引擎在
-// 进场景时读本属性决定是否本地弹「初出茅庐/再战江湖」选择窗（form_single_
-// blackback，custom_handler.on_query_fresh_man→ShowModal）——不发则待选态
-// 窗不弹、输入却锁着（2026-11-27 dump+建号.pcapng 定版；fork 方言此属性由
-// 客户端自行管理，官服进场簇下发存档值）。
+// FreshmanRecFrame 引导记录 FinishFreshmanRecStr=初值（官服待选新号进场簇
+// 照发）。引擎里读它的三处都是 form_main_map 新手进度条的回调，与弹窗
+// 无关——弹窗见 FreshmanQueryFrames（旧「黑幕窗门控属性」的说法 2026-11-27
+// 作废：只发本属性真机不弹窗，五个官服弹窗会话的共同帧是 m427）。
 func FreshmanRecFrame(player Identity) ([]byte, error) {
 	return ObjectPropertyFrame(player.ObjectID, player.OwnerID, 0,
 		[]IndexedProperty{NamedProperty("FinishFreshmanRecStr", BytesValue(freshmanRecInitial))})

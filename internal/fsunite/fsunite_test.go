@@ -539,28 +539,6 @@ func TestUniteClientLoginRoleFlow(t *testing.T) {
 	if err := conn.WriteMsg(append([]byte{0x04}, ch4...)); err != nil {
 		t.Fatalf("write op04: %v", err)
 	}
-	readAny := func() []byte {
-		t.Helper()
-		type res struct {
-			b   []byte
-			err error
-		}
-		ch := make(chan res, 1)
-		go func() {
-			b, err := conn.ReadMsg()
-			ch <- res{b, err}
-		}()
-		select {
-		case r := <-ch:
-			if r.err != nil {
-				t.Fatalf("read any: %v logs: %s", r.err, logs)
-			}
-			return r.b
-		case <-time.After(8 * time.Second):
-			t.Fatalf("read any timeout logs: %s", logs)
-		}
-		return nil
-	}
 	readFrame(0x09) // 属性表（大帧过真传输面；2433 口径：进场直发表，无 0x0C/0x32/0x0E 前导）
 	readFrame(0x0A) // 记录表镜像
 	// 新手引导阶段簇（官服位 705 后、0x0B 前——黑幕窗时机）：测试号
@@ -592,9 +570,10 @@ func TestUniteClientLoginRoleFlow(t *testing.T) {
 			}
 		}
 	}
-	for i := 0; i < 130; i++ { // 原生进场段其余帧（记录/化身/物理流/属性批）
-		checkMapFrame(readAny())
-	}
+	// 原生进场段其余帧（记录/化身/物理流/属性批）不逐帧读死——帧数随
+	// 建号数据可变（2026-11-28 StarterSet 裁剪后无任务位图行海），ClientReady
+	// 写出不必等客户端消费完（TCP 缓冲；旧 1552 行位图时代即如此），余帧
+	// 由下方 readSoft 排水循环消费（checkMapFrame 亦在彼处逐帧过）。
 	writeActivity := func() { // 首条活动消息：NPC 物化就绪屏障（双保险）
 		if err := conn.WriteMsg([]byte{0x0A}); err != nil {
 			t.Fatalf("write op0A: %v", err)

@@ -77,8 +77,9 @@ func TestRecordFrames(t *testing.T) {
 	}
 }
 
-// TestAvatarFrame 化身 0x46：头布局 + 字段数覆盖（41 基础 + 27 技能×17
-// 列 + CurNeiGong）+ 女号 Photo 覆盖。
+// TestAvatarFrame 化身 0x46：头布局 + 字段数覆盖（41 基础 + 5 技能×17
+// 列；运行内功身份对只在 CurNeiGong 非空时出现——白板建号无书不带，
+// 注入运行书后带）+ 女号 Photo 覆盖。
 func TestAvatarFrame(t *testing.T) {
 	ctx := testContext(t)
 	frame, count := AvatarFrame(ctx, false)
@@ -92,13 +93,24 @@ func TestAvatarFrame(t *testing.T) {
 	if binary.LittleEndian.Uint32(frame[10:]) != 1 || binary.LittleEndian.Uint32(frame[14:]) != 1 {
 		t.Fatalf("obj/own: %x", frame[10:18])
 	}
-	if count != 41+27*17+1 {
-		t.Fatalf("field count = %d (41 base + 27×17 rows + CurNeiGong)", count)
+	if count != 41+5*17 {
+		t.Fatalf("field count = %d (41 base + 5×17 rows)", count)
+	}
+	if bytes.Contains(frame, []byte("ng_wd_001")) {
+		t.Fatal("白板建号无书不应带 CurNeiGong 身份对（idx655 只在运行书非空时出现）")
+	}
+	// 运行内功身份对：注入运行书（授予链/换书落档形态）后出现。
+	ctx.State.NeiGong = []rolestate.NeiGongBook{{ConfigID: "ng_wd_001", StaticData: 5, ItemType: 1002, Level: 30, MaxLevel: 36}}
+	ctx.State.CurNeiGong = "ng_wd_001"
+	frame, count = AvatarFrame(ctx, false)
+	if count != 41+5*17+1 {
+		t.Fatalf("field count = %d (41 base + 5×17 rows + CurNeiGong)", count)
 	}
 	if !bytes.Contains(frame, []byte("ng_wd_001\x00")) {
 		t.Fatal("CurNeiGong missing")
 	}
-	// literal-47 变体：头 + outlen 可读。
+	// literal-47 变体：头 + outlen 可读（与注入后的 46 帧同体长）。
+	bodyLen = binary.LittleEndian.Uint32(frame[6:])
 	f47, _ := AvatarFrame(ctx, true)
 	if f47[0] != 0x28 || f47[1] != 0x47 || binary.LittleEndian.Uint32(f47[6:]) != bodyLen {
 		t.Fatalf("47 head: %x", f47[:10])
@@ -141,9 +153,13 @@ func TestSequenceShape(t *testing.T) {
 	if last[0] != 0x1F || len(last) != 25 {
 		t.Fatalf("ready tail = %#x len=%d（应 0x1F/25B 位置帧）", last[0], len(last))
 	}
-	// Task_Completed 位图行：49634 → row1551 → 1552 行 0x11。
-	if len(pre) < 1552 {
-		t.Fatalf("Task_Completed 位图应含 final-row 前 1552 行，pre 共 %d 帧", len(pre))
+	// 白板建号无任务门：pre 不带 Task_Completed 位图行（有门档的行推
+	// 覆盖见 TestMountSequenceFrames 注入段）。
+	taskCompleted := clientdata.MustRecordIndexByName("Task_Completed")
+	for _, f := range pre {
+		if f[0] == 0x11 && f[1] == 0 && binary.LittleEndian.Uint16(f[10:]) == taskCompleted {
+			t.Fatal("白板建号 pre 不应带 Task_Completed 位图行")
+		}
 	}
 }
 

@@ -145,6 +145,15 @@ func (s *Server) npcTaskMovieRepush(pl *Player, movie int) {
 		return
 	}
 	spawns = sampleSpawns(applyResourceOverride(spawns), time.Now().UnixMilli())
+	// 先发 0x0E 移除帧再重加：官服整批重发建立在客户端进副本自清对象
+	// 的前提上（官服抓包重发前没有移除帧）；现行 fork 客户端对影像不清
+	// 场景对象——盲重发一轮就在原位置叠一份（2026-11-28 真机「任务接
+	// 取后原位置出现多个 NPC」，54905 抓包：473/474 两轮重发各 18 条同
+	// ID 同坐标 0x28）。先删后加把重发做成幂等：客户端清没清都收敛为
+	// 一份（移除不存在的对象是幂等 no-op）。
+	for _, spawn := range spawns {
+		s.sendToClient(pl, entergen.SceneRemoveObjectFrame(spawn.ObjectID, catalog.ownerOf(spawn.ObjectID)))
+	}
 	frames, err := npcfeed.Frames(spawns, npcForm())
 	if err != nil {
 		s.trace("npc task movie: 视口重发编码失败 client=%d: %v", pl.Conn1, err)
@@ -153,7 +162,7 @@ func (s *Server) npcTaskMovieRepush(pl *Player, movie int) {
 	for _, frame := range frames {
 		s.sendToClient(pl, frame)
 	}
-	s.trace("npc task movie: 影像 %d 后重发视口 NPC %d 条 client=%d", movie, len(spawns), pl.Conn1)
+	s.trace("npc task movie: 影像 %d 后重发视口 NPC %d 条（先删后加）client=%d", movie, len(spawns), pl.Conn1)
 }
 
 // npcTaskMovieEnd 影像收尾：清在途态，标志复位两帧 + m107，接上被压后的

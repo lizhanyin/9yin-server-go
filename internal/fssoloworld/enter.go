@@ -114,9 +114,14 @@ func (s *Server) roleContext(pl *Player) entergen.Context {
 		// 迟到不弹（真机实证）。值=已定档值或待选性别默认。
 		GuideStep: guideEntryStep(pl),
 		// 装备内功 buff 槽串（appearance.go BufferInfo4；215 换书运行时
-		// 同源合成，neigonguse.go equipBuffInfo4）。
+		// 同源合成，neigonguse.go equipBuffInfo4）＋运行内功五行（按
+		// CurNeiGong 目录取，0=缺档降级）。重登血蓝缺省取存档持久值
+		//（enterContext 再用战斗会话态覆盖——切图重入带当前值）。
 		BuffInfo4: equipBuffInfo4(s.neiGongCatalogOf(), pl.entergenIdentity(),
 			equipBookOf(&pl.roleState, pl.roleState.CurNeiGong)),
+		NeiGongWuXing: s.neiGongCatalogOf().WuXingOf(pl.roleState.CurNeiGong),
+		CurHP:         pl.roleState.CurHP,
+		CurMP:         pl.roleState.CurMP,
 		// 待选态补黑幕窗门控属性（FinishFreshmanRecStr 初值——引擎本地
 		// 弹窗条件，缺发＝待选卡死）。guideEntryStep 同判据的无锁形；完整
 		// 引导链核查在 readyTail（guideChoicePending）。
@@ -125,9 +130,9 @@ func (s *Server) roleContext(pl *Player) entergen.Context {
 	}
 }
 
-// enterContext 发帧用的进场生成上下文 = 存档侧输入 + 会话怒气（SP：战斗
-// 会话态的当前值，没进过战斗 = 0）。切场景重入时人物数据大批、基础属性批
-// 与 0x0D 带的都是当前怒气，客户端怒气条不会闪回 0。调用方不得持
+// enterContext 发帧用的进场生成上下文 = 存档侧输入 + 会话怒气/血蓝（SP：
+// 战斗会话态的当前值，没进过战斗 = 0；HP/MP：会话态当前值覆盖存档缺省——
+// 切场景重入带当前血蓝，客户端血条不闪回满值）。调用方不得持
 // combatState.mu（持锁的路径用 roleContext）。materializeNPC 是兼容参数：
 // 物化时机已挪 clientReady 后。
 func (s *Server) enterContext(pl *Player, materializeNPC bool) entergen.Context {
@@ -137,6 +142,10 @@ func (s *Server) enterContext(pl *Player, materializeNPC bool) entergen.Context 
 	st.mu.Lock()
 	if st.live.ready {
 		ctx.SP = st.live.sp
+		ctx.CurHP = st.live.hp
+	}
+	if st.mpReady {
+		ctx.CurMP = st.mp
 	}
 	st.mu.Unlock()
 	return ctx
@@ -188,6 +197,11 @@ func (s *Server) storeLoadEnter(id1 uint32, p []byte) bool {
 			// 怒气是会话值：旧档里存的建号初值（80）不再随档，进场帧下发
 			// 的是战斗会话态（enterContext），没进过战斗 = 0。
 			state.SP = 0
+			// 书 varprop 效果按目录刷新（2433 restoreFaculty →
+			// refreshAllModernEffects 口径）：五维 Add/BuffID 随（StaticData,
+			// Level）档行重取——旧档 StarterSet 兜底值/换书后未重算的加成
+			// 在此对齐，登录 buff 串/BufferInfo4/面板加成即随运行书。
+			refreshNeiGongBooks(s.neiGongCatalogOf(), &state)
 			pl.roleState, pl.haveRoleState = state, true
 			pl.entryReady = false     // 新一次进场：0x09 之前的 107 转储不落库
 			s.normalizeTaskTracks(pl) // 旧流程只记了任务号的已接任务补进度行（taskrecord.go）

@@ -246,9 +246,10 @@ func (s *Server) reentryReady(pl *Player, pending *sceneSwitchState) {
 	} else {
 		s.trace("reentry login buffs failed client=%d: %v", pl.Conn1, err)
 	}
-	// 视图族重建（每帧自带容器声明）：View40 武学 / View43 内功 / View46 轻功。
+	// 视图族重建（每帧自带容器声明）：View40 武学 / View43 内功 / View45
+	// 经脉 / View46 轻功。
 	for _, build := range []func(rolestate.RoleState) ([][]byte, error){
-		entergen.SkillViewFrames, entergen.NeiGongViewFrames, entergen.QingGongViewFrames,
+		entergen.SkillViewFrames, entergen.NeiGongViewFrames, entergen.JingMaiViewFrames, entergen.QingGongViewFrames,
 	} {
 		frames, err := build(pl.roleState)
 		if err != nil {
