@@ -98,4 +98,8 @@ type Context struct {
 	// 链——官服男号 book2 实证 idx129="yanyuzhuang_00"；已入链用存档值）。
 	// 空＝不发。
 	HelpStep string
+	// SwitchSyncIDs 进场下发的功能开关表（m414 ["sync", 开关号×N]，0x0B 之后、
+	// 玩家 0x0D 之前——switchsync.go）。nil＝不发；缺省取官服全表
+	// OfficialSwitchIDs，fssoloworld 按 NINEYIN_SWITCH_SYNC 关停/替换。
+	SwitchSyncIDs []int32
 }

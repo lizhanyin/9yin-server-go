@@ -153,6 +153,20 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 	if curNeiGong == "" && len(state.NeiGong) > 0 {
 		curNeiGong = state.NeiGong[0].ConfigID
 	}
+	// 修炼书（官服引导女 t=546..557：FacultyName 选书＋FacultyState=2
+	// 转换中＋FillSpeed=200——修炼族进度三值跟修炼书而非运行书；FacultyName
+	// 空档回退运行书）。
+	facultyName := state.FacultyName
+	if facultyName == "" {
+		facultyName = curNeiGong
+	}
+	cultivated := book
+	for i := range state.NeiGong {
+		if state.NeiGong[i].ConfigID == facultyName {
+			cultivated = state.NeiGong[i]
+			break
+		}
+	}
 
 	// 五维/资源（官服白板 + 运行书 Add；资源 Add 走五维系数推导
 	// resourceadds.go——2·Str+7·Sta 系官方公式层）。
@@ -282,14 +296,14 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("BufferInfo23", StringValue("")),
 		ap("BufferInfo24", StringValue("")),
 		ap("CurNeiGong", StringValue(curNeiGong)),
-		ap("Faculty", Int32Value(int32(state.FacultySeed))),
-		ap("FacultyState", Int32Value(0)),
-		ap("FacultyStyle", Int32Value(1)),
-		ap("FacultyName", StringValue(curNeiGong)),
-		ap("CurFillValue", Int32Value(0)),
-		ap("TotalFillValue", Int32Value(int32(book.Total))),
-		ap("CurLevel", Int32Value(int32(book.Level))),
-		ap("FillSpeed", Int32Value(0)),
+		ap("Faculty", Int32Value(int32(state.Faculty))),
+		ap("FacultyState", Int32Value(state.FacultyState)),
+		ap("FacultyStyle", Int32Value(state.FacultyStyle)),
+		ap("FacultyName", StringValue(facultyName)),
+		ap("CurFillValue", Int32Value(int32(cultivated.Fill))),
+		ap("TotalFillValue", Int32Value(int32(cultivated.Total))),
+		ap("CurLevel", Int32Value(int32(cultivated.Level))),
+		ap("FillSpeed", Int32Value(state.FacultyFillSpeed)),
 		ap("LiveGroove_1", Int32Value(state.LiveGrooves[1])),
 		ap("LiveGroove_2", Int32Value(state.LiveGrooves[2])),
 		ap("LiveGroove_3", Int32Value(state.LiveGrooves[3])),
@@ -337,7 +351,9 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("MaxParryAdd", Int32Value(adds.MaxParryAdd)),
 		ap("MinMagicDefAdd", Int32Value(adds.MinMagicDefAdd)),
 		ap("MaxLevel", Int32Value(int32(book.MaxLevel))),
-		ap("CurNeiGongWuXing", Int32Value(ctx.NeiGongWuXing)), // 按 CurNeiGong 目录取（0=缺档降级）
+		// 按 CurNeiGong 目录取；目录缺行回退运行书行 WuXing（与
+		// playerdata.go 同口径）。
+		ap("CurNeiGongWuXing", Int32Value(wuXingWithBookFallback(ctx.NeiGongWuXing, book.WuXing))),
 		ap("WuJiPoint", Int32Value(0)),
 		ap("MaxWuJiPoint", Int32Value(0)),
 		ap("CurJingMai", StringValue("")),

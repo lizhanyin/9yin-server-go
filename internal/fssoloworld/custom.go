@@ -431,13 +431,9 @@ func (s *Server) handleNeiGongBind(pl *Player, message entergen.CustomInbound) {
 	s.trace("neigong bind uploaded (%d/%d slots bound) client=%d", bound, neiGongBindSlotCount, pl.Conn1)
 }
 
-// materializeShortcutBaseline 首次编辑时把生效表（含 starter 打坐条目）
-// 落成存档基线——玩家所见即所存；此后内存表是唯一事实源。
+// materializeShortcutBaseline 首次编辑时把基线标记为已编辑——此后内存表
+// 是唯一事实源（删除即删除，不复活任何合成条目）。
 func materializeShortcutBaseline(pl *Player) {
-	if pl.roleState.ShortcutsSet {
-		return
-	}
-	pl.roleState.Shortcuts = pl.roleState.EffectiveShortcuts()
 	pl.roleState.ShortcutsSet = true
 }
 

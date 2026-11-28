@@ -43,6 +43,16 @@ func vitalBook(ctx Context) rolestate.NeiGongBook {
 	return rolestate.NeiGongBook{}
 }
 
+// wuXingWithBookFallback CurNeiGongWuXing 取值：目录合成值优先，缺行
+//（0）回退运行书行 WuXing（官服 ng_jh_001=6 阴柔——面板本地化
+// ui_wuxue_prop_N，0 值查表失败显示原码）。
+func wuXingWithBookFallback(catalogValue int32, bookWuXing int) int32 {
+	if catalogValue != 0 {
+		return catalogValue
+	}
+	return int32(bookWuXing)
+}
+
 // PlayerVitalBatchFrame 登录全量人物数据批（单帧 0x10，n≈150+）。
 // 官方发送位：0x0D 物化 → 0x1F 位置 → 本批 → 物理流单帧族。
 func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
@@ -174,16 +184,30 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 	)
 
 	// ---- progress：内功书域 + 历练/团练 + 五维 + 攻防面板 ----
+	// 修炼族绑定存档（官服引导女 t=546..557：FacultyName 选书＋State=2
+	// 转换中＋FillSpeed=200；FacultyName 空档回退运行书，进度三值跟修炼书
+	//——与 appearance.go 同口径）。
+	facultyName := state.FacultyName
+	if facultyName == "" {
+		facultyName = bookCurNeiGong
+	}
+	cultivated := book
+	for i := range state.NeiGong {
+		if state.NeiGong[i].ConfigID == facultyName {
+			cultivated = state.NeiGong[i]
+			break
+		}
+	}
 	props = append(props,
 		ap("CurNeiGong", StringValue(bookCurNeiGong)),
-		ap("Faculty", Int32Value(int32(state.FacultySeed))),
-		ap("FacultyState", Int32Value(0)),
-		ap("FacultyStyle", Int32Value(1)),
-		ap("FacultyName", StringValue(bookCurNeiGong)),
-		ap("CurFillValue", Int32Value(0)),
-		ap("TotalFillValue", Int32Value(int32(book.Total))),
-		ap("CurLevel", Int32Value(int32(book.Level))),
-		ap("FillSpeed", Int32Value(0)),
+		ap("Faculty", Int32Value(int32(state.Faculty))),
+		ap("FacultyState", Int32Value(state.FacultyState)),
+		ap("FacultyStyle", Int32Value(state.FacultyStyle)),
+		ap("FacultyName", StringValue(facultyName)),
+		ap("CurFillValue", Int32Value(int32(cultivated.Fill))),
+		ap("TotalFillValue", Int32Value(int32(cultivated.Total))),
+		ap("CurLevel", Int32Value(int32(cultivated.Level))),
+		ap("FillSpeed", Int32Value(state.FacultyFillSpeed)),
 		// 历练层 5 条（角色态累计，任务完成奖励累加；建号全零）+ 转化加成
 		// + 潜能存量。
 		ap("LiveGroove_1", Int32Value(state.LiveGrooves[1])),
@@ -236,7 +260,9 @@ func PlayerVitalBatchFrame(ctx Context) ([]byte, error) {
 		ap("MaxParryAdd", Int32Value(adds.MaxParryAdd)),
 		ap("MinMagicDefAdd", Int32Value(adds.MinMagicDefAdd)),
 		ap("MaxLevel", Int32Value(int32(book.MaxLevel))),
-		ap("CurNeiGongWuXing", Int32Value(ctx.NeiGongWuXing)), // 按 CurNeiGong 目录取（0=缺档降级）
+		// 按 CurNeiGong 目录取；目录缺行回退运行书行 WuXing
+		//（refreshNeiGongBooks 已随目录补进书档——两处都空才是真 0）。
+		ap("CurNeiGongWuXing", Int32Value(wuXingWithBookFallback(ctx.NeiGongWuXing, book.WuXing))),
 		ap("WuJiPoint", Int32Value(0)),
 		ap("MaxWuJiPoint", Int32Value(0)),
 	)

@@ -151,6 +151,13 @@ func (s *Server) transferPlayer(pl *Player, dest sceneDestination, source string
 		}
 		s.sendToClient(pl, entry)      // 0x0B
 		s.sendToClient(pl, appearance) // 0x0D（0x1F 推迟到 0x09 后）
+		// 0x0D 后补推引导属性（HelpStepID 等）：重入同样重建玩家对象，0x0B 前
+		// 单发的 0x10 到不了场内对象（entergen.GuideMaterializeFrames）。
+		if guide, gerr := entergen.GuideMaterializeFrames(ctx); gerr == nil {
+			for _, frame := range guide {
+				s.sendToClient(pl, frame)
+			}
+		}
 		pl.sceneSwitchMu.Lock()
 		state.awaitReady = true
 		pl.sceneSwitchMu.Unlock()

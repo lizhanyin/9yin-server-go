@@ -272,10 +272,19 @@ func (s *Server) planLearnSkill(pl *Player, targets []string) (itemUsePlan, bool
 }
 
 // applyItemUse 效果落账 + 效果帧（官服武学书帧序：View40 追加行 →
-// MaxLevel → CanUse → m141 → m1）。
+// MaxLevel → CanUse → m141 → m1）。引导链武学学完紧跟引导提示
+// m98 860 → m371（官服 #2447..#2452；内功的 gong_help 在学会簇之前，
+// taskhint.go）。
 func (s *Server) applyItemUse(pl *Player, plan *itemUsePlan, b *frameBuilder) {
 	st := &pl.roleState
+	single := pl.haveRoleState && pl.roleState.GameStep == guideStepSingle
 	for _, skill := range plan.learn {
+		hint, before, hinted := npcTaskLearnedHint(skill.ConfigID, single)
+		if hinted && before {
+			if frame, err := hint.frame(); err == nil {
+				b.frames = append(b.frames, frame)
+			}
+		}
 		index := len(st.Skills)
 		row, err := entergen.SkillRowFrame(index, skill)
 		if err != nil {
@@ -295,6 +304,11 @@ func (s *Server) applyItemUse(pl *Player, plan *itemUsePlan, b *frameBuilder) {
 		}
 		b.custom(141, entergen.CustomString(skill.ConfigID), entergen.CustomString("Skill"))
 		b.custom(1, entergen.CustomInt(2), entergen.CustomString(tipsLearnedSkill), entergen.CustomString(skill.ConfigID))
+		if hinted && !before {
+			b.custom(98, entergen.CustomInt(860))
+			b.add(hint.frame())
+			s.trace("npc task hint: 学会 %s 提示 %s（%s）client=%d", skill.ConfigID, hint.helper, hint.param, pl.Conn1)
+		}
 	}
 	if plan.capital > 0 {
 		st.Money += plan.capital

@@ -31,6 +31,11 @@ package fssoloworld
 // 行级增量帧（0x10 isView=1 view=43）见 entergen.BookUpdateFrame。
 
 import (
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lizhanyin/9yin-server-go/internal/entergen"
@@ -65,12 +70,31 @@ const (
 	activeFacultyCardReward    int32 = 20_000
 	facultyNaturalTotalStep    int32 = 200 // 曲线缺行时每级 +200 自然曲线
 
-	livepointPrice       int32 = 500 // 潜能赎回价：N 黄金 → N×500 潜能转修为
-	livepointStepSeconds       = 100
-	livepointAccrueMillis int32 = 1_000
-	grooveCount                  = 5
-	grooveCap             int32 = 999_000
+	livepointPriceDefault int32 = 500 // 潜能赎回价缺省：N 黄金 → N×500 潜能转修为
+	livepointStepSeconds        = 100
+	livepointAccrueMillis  int32 = 1_000
+	grooveCount                 = 5
 )
+
+// grooveCap 历练槽上限（毫历练 999 点——rolestate.LiveGrooveCap 单一源）。
+const grooveCap = rolestate.LiveGrooveCap
+
+// livepointPriceOf 潜能赎回价（NINEYIN_LIVEPOINT_PRICE 覆盖，缺省 500
+//——2433 线 -livepoint-price 对应物）。
+func livepointPriceOf() int32 {
+	if v := strings.TrimSpace(os.Getenv("NINEYIN_LIVEPOINT_PRICE")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return int32(n)
+		}
+	}
+	return livepointPriceDefault
+}
+
+// livepointVip NINEYIN_LIVEPOINT_VIP=true → 全员名俊：转化无损（缺省
+// false=普通档 70% 进修为 30% 进潜能——2433 线 -livepoint-vip 对应物）。
+func livepointVip() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("NINEYIN_LIVEPOINT_VIP")), "true")
+}
 
 // grooveBaseSpeed 各槽基础转化速度（毫/步）。
 var grooveBaseSpeed = [grooveCount]int32{10, 20, 50, 100, 200}
@@ -196,10 +220,11 @@ func (s *Server) handleLivepoint(pl *Player, message entergen.CustomInbound) {
 		return
 	}
 	st := &pl.roleState
+	price := livepointPriceOf()
 	switch message.Values[1].Int32 {
 	case livepointSubGetInfo: // 1 询价
 		if frame, err := entergen.CustomMessageFrame(clientCustomLivepoint,
-			entergen.CustomInt(livepointSubGetInfo), entergen.CustomInt(livepointPrice)); err == nil {
+			entergen.CustomInt(livepointSubGetInfo), entergen.CustomInt(price)); err == nil {
 			s.sendToClient(pl, frame)
 		}
 	case livepointSubBuy: // 2 赎回：N 黄金 → N×price 潜能转修为
@@ -208,12 +233,12 @@ func (s *Server) handleLivepoint(pl *Player, message entergen.CustomInbound) {
 		}
 		count := message.Values[2].Int32
 		// 越界静默（count≤0/黄金不足/潜能不足；客户端同校验双保险）。
-		if count <= 0 || st.Gold < int64(count) || st.HoldFaculty < count*livepointPrice {
+		if count <= 0 || st.Gold < int64(count) || st.HoldFaculty < count*price {
 			return
 		}
 		st.Gold -= int64(count)
-		st.HoldFaculty -= count * livepointPrice
-		st.Faculty += count * livepointPrice
+		st.HoldFaculty -= count * price
+		st.Faculty += count * price
 		if frame, err := playerPropertyFrame(pl,
 			entergen.NamedProperty("CapitalType0", entergen.Int64Value(st.Gold))); err == nil {
 			s.sendToClient(pl, frame)
@@ -435,9 +460,12 @@ func accrueLivepoint(st *rolestate.RoleState) bool {
 }
 
 // convertLivepoint 转化：每槽按官方公式扣毫历练产修为；普通档 70% 进
-// 修为、30% 进潜能。
+// 修为、30% 进潜能；名俊（NINEYIN_LIVEPOINT_VIP=true）无损全进修为
+//（form_faculty.lua：if not is_vip then speed = int(speed*0.7)——
+// 2433 线 -livepoint-vip 对应物）。
 func convertLivepoint(st *rolestate.RoleState) bool {
 	changed := false
+	vip := livepointVip()
 	for i := 1; i <= grooveCount; i++ {
 		if st.LiveGrooves[i] <= 0 {
 			continue
@@ -445,9 +473,13 @@ func convertLivepoint(st *rolestate.RoleState) bool {
 		full := int64(grooveBaseSpeed[i-1]) * int64(100+st.LiveSpeedPower) / 100
 		actual := int32(min(int64(st.LiveGrooves[i]), full))
 		st.LiveGrooves[i] -= actual
-		gain := actual * 7 / 10
-		st.Faculty += gain
-		st.HoldFaculty += actual - gain
+		if vip {
+			st.Faculty += actual
+		} else {
+			gain := actual * 7 / 10
+			st.Faculty += gain
+			st.HoldFaculty += actual - gain
+		}
 		changed = true
 	}
 	return changed
@@ -512,4 +544,77 @@ func boolToInt(v bool) int32 {
 		return 1
 	}
 	return 0
+}
+
+// ---- GM 动作（2433 线 livepoint-conversion.md：add_livepoint /
+// set_hold_faculty / set_live_speed_power）----
+
+// gmLivepointCommand gm livepoint <who> [points]：发 N 点历练（×1000 毫
+// 按序填槽，1..999，溢出丢弃）；无参读当前五槽/修为/潜能/转化加成。
+func (s *Server) gmLivepointCommand(nc net.Conn, pl *Player, who string, fields []string) {
+	const usage = ">usage: gm livepoint <who> [points 1-999]\r"
+	st := &pl.roleState
+	if len(fields) == 2 {
+		fmt.Fprintf(nc, ">gm livepoint %s: grooves=%d/%d/%d/%d/%d faculty=%d hold=%d speedPower=%d%% vip=%v price=%d\r",
+			who, st.LiveGrooves[1], st.LiveGrooves[2], st.LiveGrooves[3], st.LiveGrooves[4], st.LiveGrooves[5],
+			st.Faculty, st.HoldFaculty, st.LiveSpeedPower, livepointVip(), livepointPriceOf())
+		return
+	}
+	points, err := strconv.Atoi(fields[2])
+	if err != nil || points < 1 || points > 999 {
+		fmt.Fprint(nc, usage)
+		return
+	}
+	added := st.AddLivePoints(int32(points))
+	id := pl.entergenIdentity()
+	for index := 1; index <= grooveCount; index++ {
+		if frame, ferr := entergen.TaskLiveGrooveFrame(id, index, st.LiveGrooves[index]); ferr == nil {
+			s.sendToClient(pl, frame)
+		}
+	}
+	s.sendFacultyState(pl)
+	s.sendRoleSave(pl)
+	fmt.Fprintf(nc, ">gm livepoint %s: +%d 点历练入槽（%d 毫），grooves=%d/%d/%d/%d/%d\r",
+		who, added/1000, added, st.LiveGrooves[1], st.LiveGrooves[2], st.LiveGrooves[3], st.LiveGrooves[4], st.LiveGrooves[5])
+}
+
+// gmHoldFacultyCommand gm holdfaculty <who> <value>：潜能修为直设（≥0）。
+func (s *Server) gmHoldFacultyCommand(nc net.Conn, pl *Player, who string, fields []string) {
+	const usage = ">usage: gm holdfaculty <who> <value >=0>\r"
+	if len(fields) < 3 {
+		fmt.Fprint(nc, usage)
+		return
+	}
+	value, err := strconv.ParseInt(fields[2], 10, 32)
+	if err != nil || value < 0 {
+		fmt.Fprint(nc, usage)
+		return
+	}
+	pl.roleState.HoldFaculty = int32(value)
+	s.sendFacultyState(pl)
+	s.sendRoleSave(pl)
+	fmt.Fprintf(nc, ">gm holdfaculty %s: holdFaculty=%d\r", who, pl.roleState.HoldFaculty)
+}
+
+// gmLiveSpeedCommand gm livespeed <who> <value>：转化速度加成 %（0..1000
+//——卦象效果等价物；转化公式 full=base×(100+power)/100）。
+func (s *Server) gmLiveSpeedCommand(nc net.Conn, pl *Player, who string, fields []string) {
+	const usage = ">usage: gm livespeed <who> <value 0-1000>\r"
+	if len(fields) < 3 {
+		fmt.Fprint(nc, usage)
+		return
+	}
+	value, err := strconv.ParseInt(fields[2], 10, 32)
+	if err != nil || value < 0 || value > 1000 {
+		fmt.Fprint(nc, usage)
+		return
+	}
+	pl.roleState.LiveSpeedPower = int32(value)
+	if frame, ferr := playerPropertyFrame(pl,
+		entergen.NamedProperty("LiveSpeedPower", entergen.Int32Value(pl.roleState.LiveSpeedPower))); ferr == nil {
+		s.sendToClient(pl, frame)
+	}
+	s.sendFacultyState(pl)
+	s.sendRoleSave(pl)
+	fmt.Fprintf(nc, ">gm livespeed %s: liveSpeedPower=%d%%\r", who, pl.roleState.LiveSpeedPower)
 }

@@ -91,7 +91,9 @@ func bookViewRow(book rolestate.NeiGongBook) []ViewProperty {
 		{playerIdx("TotalFillValue"), Int32Value(int32(book.Total))},
 		{playerIdx("PowerValue"), Int32Value(int32(book.Power))},
 		{playerIdx("MaxPowerValue"), Int32Value(int32(book.MaxPower))},
-		{playerIdx("WuXing"), Int32Value(0)},
+		// 五行真值（官服 ng_jh_001 行=6 阴柔；0=未取——内修面板按书行
+		// QueryProp("WuXing") 本地化 ui_wuxue_prop_N，0 值查表失败显示原码）。
+		{playerIdx("WuXing"), Int32Value(int32(book.WuXing))},
 	}
 	// varprop 档族（StarterSet 建号档已带五维 Add/buff——无目录时的
 	// 官方形状来源）。

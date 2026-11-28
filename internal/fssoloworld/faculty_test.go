@@ -6,6 +6,9 @@ package fssoloworld
 
 import (
 	"encoding/binary"
+	"io"
+	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -189,5 +192,62 @@ func TestLivepointPrice(t *testing.T) {
 	s.dispatchCustom(pl, customMsg(235, customInt(2), customInt(2)))
 	if extra := *frames; len(extra) != 0 || st.Faculty != 0 || st.HoldFaculty != 1000 {
 		t.Fatalf("无黄金赎回应静默: frames=%d faculty=%d hold=%d", len(extra), st.Faculty, st.HoldFaculty)
+	}
+}
+
+// TestLivepointVipConvert 名俊无损（NINEYIN_LIVEPOINT_VIP=true → 全额
+// 进修为，不进潜能——2433 -livepoint-vip 对应物）。
+func TestLivepointVipConvert(t *testing.T) {
+	t.Setenv("NINEYIN_LIVEPOINT_VIP", "true")
+	st := &rolestate.RoleState{}
+	st.LiveGrooves[1] = 1000
+	convertLivepoint(st)
+	if st.Faculty != 10 || st.HoldFaculty != 0 {
+		t.Fatalf("名俊转化 Faculty=%d Hold=%d, want 10/0", st.Faculty, st.HoldFaculty)
+	}
+}
+
+// TestGMLivepointCommands gm livepoint/holdfaculty/livespeed 三动作
+//（2433 GM add_livepoint/set_hold_faculty/set_live_speed_power 对应物）。
+func TestGMLivepointCommands(t *testing.T) {
+	s, pl := newFacultyFixture(t)
+	ask := func(fn func(net.Conn, *Player, string, []string), fields ...string) string {
+		t.Helper()
+		nc, peer := net.Pipe()
+		defer peer.Close()
+		go func() {
+			fn(nc, pl, "测试侠", fields)
+			nc.Close()
+		}()
+		var sb strings.Builder
+		go func() { io.Copy(&sb, peer) }()
+		time.Sleep(30 * time.Millisecond)
+		nc.Close()
+		time.Sleep(10 * time.Millisecond)
+		return sb.String()
+	}
+	if out := ask(s.gmLivepointCommand, "livepoint", "测试侠", "100"); !strings.Contains(out, "grooves=100000") {
+		t.Fatalf("gm livepoint 100 落槽异常: %q", out)
+	}
+	if pl.roleState.LiveGrooves[1] != 100_000 {
+		t.Fatalf("槽 1 = %d, want 100000", pl.roleState.LiveGrooves[1])
+	}
+	if out := ask(s.gmHoldFacultyCommand, "holdfaculty", "测试侠", "12345"); !strings.Contains(out, "holdFaculty=12345") {
+		t.Fatalf("gm holdfaculty 异常: %q", out)
+	}
+	if pl.roleState.HoldFaculty != 12345 {
+		t.Fatalf("HoldFaculty = %d", pl.roleState.HoldFaculty)
+	}
+	if out := ask(s.gmLiveSpeedCommand, "livespeed", "测试侠", "50"); !strings.Contains(out, "liveSpeedPower=50%") {
+		t.Fatalf("gm livespeed 异常: %q", out)
+	}
+	if pl.roleState.LiveSpeedPower != 50 {
+		t.Fatalf("LiveSpeedPower = %d", pl.roleState.LiveSpeedPower)
+	}
+	// 越界：点数 0 拒收。
+	pl.roleState.LiveGrooves = [6]int32{}
+	ask(s.gmLivepointCommand, "livepoint", "测试侠", "0")
+	if pl.roleState.LiveGrooves[1] != 0 {
+		t.Fatalf("0 点不应入槽: %d", pl.roleState.LiveGrooves[1])
 	}
 }

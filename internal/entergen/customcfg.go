@@ -10,8 +10,8 @@ package entergen
 //	    NeiGongBind（内功栏主窗体打开时快照）；
 //	快捷栏 shortcut_rec 0x11 逐行（schema [3,7,7]：栏位索引/kind/
 //	    config ID）；行集 = 档内基线（建号时由 StarterSet 的
-//	    ShortcutPos 预置，栏位索引 = 位置 - 1，rolestate.BuildRoleState）
-//	    + 无编辑基线补的 starter 打坐条目（EffectiveShortcuts）。
+//	    ShortcutPos 预置，栏位索引 = 位置 - 1，rolestate.BuildRoleState；
+//	    打坐条目由再战江湖跳线追加，不再无条件合成）。
 //
 // 无档零帧（客户端保持本地默认并自行上传基线）。键位域挂玩家对象
 // 属性视图、快捷栏行挂玩家对象记录——Ready 段与 0x0C 切图清对象后
@@ -102,7 +102,7 @@ func PlayerObjectConfigFrames(ctx Context) ([][]byte, error) {
 	}
 
 	// 快捷栏行（0x11 逐行重放；schema 走 0x0A 全表自足，无需挂载帧）。
-	shortcutFrames, err := ShortcutRowFrames(ctx.Identity.ObjectID, ctx.Identity.OwnerID, state.EffectiveShortcuts())
+	shortcutFrames, err := ShortcutRowFrames(ctx.Identity.ObjectID, ctx.Identity.OwnerID, state.Shortcuts)
 	if err != nil {
 		return nil, err
 	}

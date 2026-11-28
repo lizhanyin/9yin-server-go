@@ -63,6 +63,13 @@ const (
 	guideZuoWangGong = "ng_jh_001"
 )
 
+// guideSitcrossShortcut 打坐调息快捷栏条目（下方数字栏第 10 格=索引 9，
+// 避开初始战斗两槽）：客户端把已学的 zs_default_01 识别为原生坐下/起立
+// 切换（sitcross.go，C2S 240 而非 211 战斗路线）。官服抓包（建号.pcapng
+// 男线再战江湖全流程）不推该行——此为本服跳线的默认授予；建号基线不
+// 合成（rolestate 不再无条件补打坐条目）。
+var guideSitcrossShortcut = rolestate.ShortcutRow{Index: 9, Kind: "skill", ID: sitcrossSkillID}
+
 // guideHelpStepOf 出生地 resource → freshmanhelp 帮助链名（归纳文档 §5
 // 表 + 官服抓包：男号鸡鸣驿 jimingyi_00 / 女号成都线 chengdu_00）。
 // 未收录出生地（洛阳/悟明坡等）→ Freshman_End 直接结链。
@@ -378,8 +385,11 @@ func (s *Server) guideSkipFrames(pl *Player, place rolestate.Birthplace) {
 	//     （View45 行 → 0x10 MaxLevel=180 → m98 860 → m141 → m1）。
 	//     运行内功静默切到坐忘功——官服不在簇内发 CurNeiGong/资源帧，由
 	//     随后 0x0B 切出副本的整批属性重建携带。
-	s.guideLearnZuoWangGong(pl, out)
+	s.guideLearnZuoWangGong(pl, out, id)
 	s.guideOpenMeridians(pl, out)
+	// 4.6 默认添加打坐调息快捷栏条目（本服跳线方言，官服不推；随随后
+	//     0x0B 切出副本的整批重建下发，簇内不发帧）。
+	s.guideGrantSitcross(pl)
 	// 5. 入江湖：帮助链切到出生地对应 freshmanhelp 链 → PowerLevel/
 	//    YinLevel → 解锁输入（#1946..#1948；官服男号=鸡鸣驿 jimingyi_00，
 	//    链名按出生地 resource 映射，未收录的出生地直接结链 Freshman_End
@@ -398,7 +408,7 @@ func (s *Server) guideSkipFrames(pl *Player, place rolestate.Birthplace) {
 // MaxLevel=36/Total=750），五维 Add 随 neigongdata 目录档行重取（档缺保
 // 兜底 2/3/2/2/2——官服抓包原值）。已学（重复点选/gm 补发）只重发学会
 // 簇，不再入档。调用方持 taskMu。
-func (s *Server) guideLearnZuoWangGong(pl *Player, out *taskFrames) {
+func (s *Server) guideLearnZuoWangGong(pl *Player, out *taskFrames, id entergen.Identity) {
 	st := &pl.roleState
 	if equipBookOf(st, guideZuoWangGong) == nil {
 		st.NeiGong = append(st.NeiGong, rolestate.NeiGongBook{
@@ -415,12 +425,29 @@ func (s *Server) guideLearnZuoWangGong(pl *Player, out *taskFrames) {
 			DexAdd:     2,
 			IngAdd:     2,
 			SpiAdd:     2,
+			WuXing:     6, // 官服 ng_jh_001 行值（阴柔；目录刷新只在 0 时补）
 		})
 		refreshNeiGongBooks(s.neiGongCatalogOf(), st)
 		out.add(entergen.NeiGongRowFrame(len(st.NeiGong)-1, st.NeiGong[len(st.NeiGong)-1]))
 	}
 	if st.CurNeiGong == "" {
 		st.CurNeiGong = guideZuoWangGong
+	}
+	// 修习（练功）：官服引导女 t=546..557 实证——学书后 FacultyName 选书、
+	// FacultyState=2（转换中）+ FacultyStyle=1（普通内修），CurFillValue 从
+	// 0 起步逐分钟累积（facultyTick 按 FillSpeed=200/min 结算）。
+	if st.FacultyName == "" {
+		st.FacultyName = guideZuoWangGong
+		st.FacultyState = facultyStateConvert
+		st.FacultyStyle = facultyStyleNormal
+		st.FacultyFillSpeed = normalFacultyFillPerMinute
+		st.FacultyLastAdvance = time.Now()
+		// 修为种子：建号档修为 0，首分钟结算即「修为耗尽自动停修」。跳线
+		// 压缩了引导期的历练转化（同簇已授 5 槽历练 67000 毫：100s 后每步
+		// 补 ~266 修为 > 消耗 100/min，可自持）——垫 200 桥接首个 100s。
+		if st.Faculty <= 0 {
+			st.Faculty = 200
+		}
 	}
 	// 面板/生存态跟新书（215 换书同口径）：白板→坐忘功上限只增不减，钳制
 	// 无损；官方簇不发资源帧，重进整批（0x0B）带新 CurNeiGong/上限。
@@ -443,8 +470,34 @@ func (s *Server) guideLearnZuoWangGong(pl *Player, out *taskFrames) {
 		entergen.CustomString(guideZuoWangGong), entergen.CustomString("NeiGong")))
 	out.add(entergen.CustomMessageFrame(1,
 		entergen.CustomInt(2), entergen.CustomString("9491"), entergen.CustomString(guideZuoWangGong)))
-	s.trace("npc task guide: 再战江湖学坐忘功 %s（运行 %s）client=%d",
-		guideZuoWangGong, st.CurNeiGong, pl.Conn1)
+	// 修炼资源批（sendFacultyState 同款＋FillSpeed；0x10 多属性帧不进
+	// 测试摘要序列）。
+	out.add(entergen.ObjectPropertyFrame(id.ObjectID, id.OwnerID, 0, []entergen.IndexedProperty{
+		entergen.NamedProperty("FacultyName", entergen.StringValue(st.FacultyName)),
+		entergen.NamedProperty("Faculty", entergen.Int32Value(st.Faculty)),
+		entergen.NamedProperty("FacultyState", entergen.Int32Value(st.FacultyState)),
+		entergen.NamedProperty("FacultyStyle", entergen.Int32Value(st.FacultyStyle)),
+		entergen.NamedProperty("FillSpeed", entergen.Int32Value(st.FacultyFillSpeed)),
+	}))
+	s.trace("npc task guide: 再战江湖学坐忘功 %s（运行 %s 修炼 %s）client=%d",
+		guideZuoWangGong, st.CurNeiGong, st.FacultyName, pl.Conn1)
+}
+
+// guideGrantSitcross 再战江湖默认添加打坐调息（zs_default_01）快捷栏条目：
+// 技能本身建号已学（StarterSet），缺的只是上栏。索引 9 已被玩家占用或
+// zs_default_01 已在栏上时不动（本服方言，建号基线不再无条件合成）。
+// 调用方持 taskMu；帧由随后 0x0B 切出副本的整批重建携带
+//（PlayerObjectConfigFrames 重放 shortcut_rec 行）。
+func (s *Server) guideGrantSitcross(pl *Player) {
+	st := &pl.roleState
+	for _, row := range st.Shortcuts {
+		if row.Index == guideSitcrossShortcut.Index || row.ID == guideSitcrossShortcut.ID {
+			return
+		}
+	}
+	st.Shortcuts = append(st.Shortcuts, guideSitcrossShortcut)
+	s.trace("npc task guide: 再战江湖默认添加打坐调息快捷栏条目 %s client=%d",
+		guideSitcrossShortcut.ID, pl.Conn1)
 }
 
 // guideOpenMeridians 再战江湖开通十六经脉（官服建号-04 #468..#679：每脉

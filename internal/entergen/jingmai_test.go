@@ -166,9 +166,10 @@ func TestJingMaiMaxLevelFrame(t *testing.T) {
 	}
 }
 
-// TestNeiGongRowFrame 学书追加行（View43 行号 = 下标+1，官服 #455 idx=1）。
+// TestNeiGongRowFrame 学书追加行（View43 行号 = 下标+1，官服 #455 idx=1；
+// WuXing 真值入行——内修面板属性列的显示源，0 值查表失败显示原码）。
 func TestNeiGongRowFrame(t *testing.T) {
-	book := rolestate.NeiGongBook{ConfigID: "ng_jh_001", ItemType: 1002, StaticData: 1, Level: 1, MaxLevel: 36, Total: 750}
+	book := rolestate.NeiGongBook{ConfigID: "ng_jh_001", ItemType: 1002, StaticData: 1, Level: 1, MaxLevel: 36, Total: 750, WuXing: 6}
 	frame, err := NeiGongRowFrame(0, book)
 	if err != nil {
 		t.Fatal(err)
@@ -182,5 +183,8 @@ func TestNeiGongRowFrame(t *testing.T) {
 	}
 	if row["School"] != "ng_jh" {
 		t.Errorf("School 派系串 = %q, want ng_jh", row["School"])
+	}
+	if row["WuXing"] != "6" {
+		t.Errorf("WuXing = %q, want 6（阴柔——官服 ng_jh_001 行值）", row["WuXing"])
 	}
 }

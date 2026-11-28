@@ -21,6 +21,8 @@
 | [外服方言B线路线收束](official/外服方言B线路线收束.md) | B 线（外服家族客户端）渲染全链收束：16 轮真机、idx1468 MaxVisuals 注册闸、当前 NINEYIN_REPLAY_* 生产布局 | 现行权威 |
 | [外服模式NPC渲染收束](official/外服模式NPC渲染收束.md) | A 线（fork 客户端）NPC 渲染五环因果链 + 官方表终局（尾追 61 行方案） | 现行权威（演进史含自勘误） |
 | [外服登录帧对照与缺口清单](official/外服登录帧对照与缺口清单.md) | 登录帧逐帧对照总账（§一~§15）：缺口/差异/未应答台账，逐轮追加 | 现行权威（总账） |
+| [功能开关表m414sync与引导属性物化后补推定版](official/功能开关表m414sync与引导属性物化后补推定版.md) | 客户端引擎 SwitchManager 只吃 m414（`gamestep`/`sync`/`reset` 同一原生 handler）：本服缺 `["sync", 开关表]` 致 NPC 对话语音闸门 `CheckSwitchEnable(0x5e5)` 恒假——补官服 CN 2026 全表 641 项（客户端 fxnet2 真解码器解出）；`HelpStepID` 只在 0x0B 前单发被进场重建冲掉致客户端不发 m950——0x0D/0x1F 后补推（进场＋切图） | 语音、m950 链真机已验证（2026-11-28） |
+| [新手引导提示m371帮助窗定版](official/新手引导提示m371帮助窗定版.md) | 现行客户端的引导提示＝帮助窗（箭头指向控件＋`desc_xsyd_*` 文案），只认 S2C **m371**（`on_new_player_guid` → `open_helper_form`）；`freshmanhelp.ini` 的 tip 键在现行客户端零引用已死。官服整场 23 条逐条建成提示表（发书 → `wuxue_help`＋书 id、学会 → `skill_help`、对话步/接取 → `voice_*`/`gong_help_xiu_1`/…），位次＝记录格之后、NPC 标记之前 | 已换装未真机（2026-11-28） |
 | [fxnet2-op-dispatch-table](official/fxnet2-op-dispatch-table.md) | fxnet2.dll 引擎 op 分发器静态解码定版（0x00-0x37 主表 + 0x27-0x30 压缩族二级表） | 现行权威 |
 | [fxgamelogic-s2c-custommsg-table](official/fxgamelogic-s2c-custommsg-table.txt) | fxgamelogic 722 槽 custommsg ID→handler 原始提取表 | 数据附录 |
 | [fxgamelogic格挡门与CustomSend双路架构](official/fxgamelogic格挡门与CustomSend双路架构.md) | 格挡门逆向定版：CustomSend lua 白名单闸（54 不在名单）vs 原生无闸路、m292 发送器+RoleStateIndex、InParry/fightparry/ClaspParryLockTime 生态、m54 链定位 VMP 区、下一步三选 | 历史（「格挡门」实为客户端配置 fightparry，见下行） |

@@ -6,12 +6,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"github.com/lizhanyin/9yin-server-go/internal/rolestate"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf16"
 
 	"github.com/lizhanyin/9yin-server-go/internal/reactor"
+	"github.com/lizhanyin/9yin-server-go/internal/rolestate"
 )
 
 // Options 是进程装配参数（官方 main.lua 属性赋值 → ini/旗标投影）。
@@ -517,11 +520,18 @@ func newRoleUID() string {
 const (
 	birthSceneID       = 300
 	birthSceneLocation = rolestate.GuideScenePath
-
-	// defaultFacultySeed 建号修为种子（b-line facultySeed 口径：外服私服
-	// 修为由历练转化供给，新角色种子可配）。
-	defaultFacultySeed = 0
 )
+
+// defaultFacultySeed 建号修为种子（2433 线 -faculty-seed 缺省 10000：新
+// 角色垫种子等历练转化补给；NINEYIN_FACULTY_SEED 覆盖，存量档按快照保留）。
+var defaultFacultySeed = func() int64 {
+	if v := strings.TrimSpace(os.Getenv("NINEYIN_FACULTY_SEED")); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n >= 0 {
+			return n
+		}
+	}
+	return 10_000
+}()
 
 // dispatch 官方 CAccess::ProcessMsg 67 型分发（Go 单 Backend 并发执行）。
 // 已建模命令做完整互操作编解码；其余走 Backend.Generic（回执 {u32 result}）。

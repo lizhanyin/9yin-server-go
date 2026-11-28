@@ -157,10 +157,11 @@ func TestParseCustomRoundTrip(t *testing.T) {
 	}
 }
 
-// TestReadyFramesIncludesCustomCluster 就绪段集成：fresh 状态必含
-// starter 打坐 0x11 行（缺发即「快捷栏空」表象）。
+// TestReadyFramesIncludesCustomCluster 就绪段集成：fresh 状态重放建号
+// 预置 0x11 行；打坐条目不无条件合成（再战江湖跳线才授予，fssoloworld
+// guide.go——「快捷栏空」表象的旧补丁已撤，勿再回合成）。
 // 705 已自就绪簇撤下（5633d54；真服对照=登录段单发、上传零回应），
-// 簇内只断言 starter 快捷栏行。
+// 簇内只断言快捷栏行。
 func TestReadyFramesIncludesCustomCluster(t *testing.T) {
 	frames, err := ReadyFrames(testContext(t), time.Now())
 	if err != nil {
@@ -169,8 +170,11 @@ func TestReadyFramesIncludesCustomCluster(t *testing.T) {
 	found := false
 	for _, frame := range frames {
 		if frame[0] == 0x11 && binary.LittleEndian.Uint16(frame[10:]) == 93 &&
-			bytes.Contains(frame, []byte("zs_default_01\x00")) {
+			bytes.Contains(frame, []byte("CS_jh_cqgf01\x00")) {
 			found = true
+		}
+		if bytes.Contains(frame, []byte("zs_default_01\x00")) {
+			t.Fatal("fresh ready cluster carries unconditional sitcross row")
 		}
 	}
 	if !found {

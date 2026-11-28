@@ -25,16 +25,12 @@ func TestStarterShortcutPosSeedsShortcutBar(t *testing.T) {
 		t.Fatalf("建号快捷栏基线 = %+v，want %+v", state.Shortcuts, want)
 	}
 	if state.ShortcutsSet {
-		t.Fatal("建号基线不得标记已编辑——未编辑基线才合成 starter 打坐条目")
+		t.Fatal("建号基线不得标记已编辑——Set 留给玩家首次编辑")
 	}
-	// 生效表 = 预置行 + starter 打坐条目（栏位 9 空缺）。
-	effective := state.EffectiveShortcuts()
-	if len(effective) != 5 || effective[4] != StarterSitcrossShortcut {
-		t.Fatalf("生效表 = %+v（预置 4 行 + 打坐条目）", effective)
-	}
-	for _, row := range effective {
-		if row.ID == "hw_normal_fd" {
-			t.Fatalf("无位置的武学不得上栏： %+v", effective)
+	// 建号基线不合成打坐条目（再战江湖跳线才授予，fssoloworld guide.go）。
+	for _, row := range state.Shortcuts {
+		if row.ID == "zs_default_01" || row.ID == "hw_normal_fd" {
+			t.Fatalf("打坐条目/无位置的武学不得上栏： %+v", state.Shortcuts)
 		}
 	}
 
@@ -50,14 +46,13 @@ func TestStarterShortcutPosSeedsShortcutBar(t *testing.T) {
 	if !slices.Equal(back.Shortcuts, want) || back.ShortcutsSet {
 		t.Fatalf("回读不一致： %+v set=%t", back.Shortcuts, back.ShortcutsSet)
 	}
-	// 首次编辑物化后以档为准：删掉的行（预置行也好、打坐条目也好）不复活。
-	back.Shortcuts = back.EffectiveShortcuts()
+	// 首次编辑物化后以档为准：删掉的预置行不复活（无合成条目可复活）。
 	back.ShortcutsSet = true
 	back.Shortcuts = slices.DeleteFunc(back.Shortcuts, func(row ShortcutRow) bool {
-		return row.Index == 0 || row.Index == StarterSitcrossShortcut.Index
+		return row.Index == 0
 	})
-	if got := back.EffectiveShortcuts(); len(got) != 3 || got[0].ID != "CS_jh_cqgf01" {
-		t.Fatalf("已编辑基线应原样生效： %+v", got)
+	if len(back.Shortcuts) != 3 || back.Shortcuts[0].ID != "CS_jh_cqgf01" {
+		t.Fatalf("已编辑基线应原样生效： %+v", back.Shortcuts)
 	}
 }
 
@@ -158,7 +153,7 @@ func TestBuildRoleStateRejectsBadShortcutPos(t *testing.T) {
 }
 
 // TestLegacyArchiveShortcutsUntouched 存量档（建号早于 ShortcutPos 预置）：
-// 不回填——生效表照旧只有 starter 打坐条目。
+// 不回填——快捷栏照旧为空（打坐条目不再无条件合成）。
 func TestLegacyArchiveShortcutsUntouched(t *testing.T) {
 	legacy, err := UnmarshalRoleState(`{"sex":1,"scene":"s","resource":"r","position":[0,0,0,1]}`)
 	if err != nil {
@@ -166,8 +161,5 @@ func TestLegacyArchiveShortcutsUntouched(t *testing.T) {
 	}
 	if legacy.Shortcuts != nil || legacy.ShortcutsSet {
 		t.Fatalf("旧档不应凭空出现快捷栏行： %+v set=%t", legacy.Shortcuts, legacy.ShortcutsSet)
-	}
-	if got := legacy.EffectiveShortcuts(); !slices.Equal(got, []ShortcutRow{StarterSitcrossShortcut}) {
-		t.Fatalf("旧档生效表应只有打坐条目： %+v", got)
 	}
 }

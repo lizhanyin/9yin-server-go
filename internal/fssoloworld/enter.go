@@ -126,7 +126,9 @@ func (s *Server) roleContext(pl *Player) entergen.Context {
 		// 弹窗条件，缺发＝待选卡死）。guideEntryStep 同判据的无锁形；完整
 		// 引导链核查在 readyTail（guideChoicePending）。
 		GuideChoicePending: guideEntryChoicePending(pl),
-		HelpStep:          guideEntryHelpStep(pl),
+		HelpStep:           guideEntryHelpStep(pl),
+		// 功能开关表（m414 ["sync", …]，0x0B 后下发——switchsync.go）。
+		SwitchSyncIDs: switchSyncIDs(),
 	}
 }
 

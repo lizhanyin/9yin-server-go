@@ -589,13 +589,27 @@ func TestGuideChoiceSkipOfficialOrder(t *testing.T) {
 		t.Errorf("坐忘功未入内功书表: %+v", st.NeiGong)
 	} else if book.Level != 1 || book.StaticData != 1 || book.MaxLevel != 36 || book.Total != 750 {
 		t.Errorf("坐忘功书行异常: %+v", *book)
+	} else if book.WuXing != 6 {
+		t.Errorf("坐忘功五行 = %d, want 6（阴柔——官服行值，内修面板显示源）", book.WuXing)
 	}
 	if st.CurNeiGong != guideZuoWangGong {
 		t.Errorf("运行内功 = %q, want %q", st.CurNeiGong, guideZuoWangGong)
 	}
+	// 修习（练功）：官服引导女 t=546..557——选书 + 转换中 + 普通内修 200/min。
+	if st.FacultyName != guideZuoWangGong {
+		t.Errorf("修炼书 = %q, want %q", st.FacultyName, guideZuoWangGong)
+	}
+	if st.FacultyState != facultyStateConvert || st.FacultyStyle != facultyStyleNormal || st.FacultyFillSpeed != normalFacultyFillPerMinute {
+		t.Errorf("修炼态 = %d/%d/%d, want 2/1/200", st.FacultyState, st.FacultyStyle, st.FacultyFillSpeed)
+	}
 	// 开通十六经脉：状态与官服照抄表逐行相等。
 	if len(st.JingMai) != len(rolestate.GuideMeridians) {
 		t.Fatalf("经脉数 = %d, want %d", len(st.JingMai), len(rolestate.GuideMeridians))
+	}
+	// 默认添加打坐调息快捷栏条目（本服跳线方言；帧由随后 0x0B 整批重建
+	// 携带——簇内零 0x11 行，断言帧序不收）。
+	if got := shortcutRowOf(st.Shortcuts, 9); got != guideSitcrossShortcut {
+		t.Errorf("打坐调息条目 = %+v, want %+v（完整表: %+v）", got, guideSitcrossShortcut, st.Shortcuts)
 	}
 	for i, m := range rolestate.GuideMeridians {
 		if st.JingMai[i] != m {

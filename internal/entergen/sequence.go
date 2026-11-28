@@ -4,7 +4,7 @@ package entergen
 //
 //	PreReady（表后 → ClientReady 前）：
 //	  S2C 705 个性配置（有档；官服登录段位——先于客户端登录期 107 转储）
-//	  → 0x0B 进场 → 0x0D 玩家物化（外观/身体模型集）→ 0x14/0x11 记录对
+//	  → 0x0B 进场 → m414 sync 开关表 → 0x0D 玩家物化（外观/身体模型集）→ 0x14/0x11 记录对
 //	  （挂载→纯数字列行）→ 0x29 批量（字符串列记录，0x47 字面量包装）
 //	  → 0x28 化身 → 0x10 物理流 ×36 → 0x10 基础属性批（五维/资源）
 //	  → 开图双记录（MapMaskRec 迷雾行 + OpenMapRec 位图）→ NPC 物化 ×N
@@ -61,6 +61,17 @@ func PreReadyFrames(ctx Context, now time.Time) ([][]byte, error) {
 	}
 	frames = append(frames, entry)
 
+	// m414 ["sync", 开关号×N]（官服位：0x0B → 0x14 → 0x27 压缩批，再下一帧才
+	// 是玩家 0x0D）：整批置开客户端引擎功能开关树（switchsync.go）。缺它
+	// CheckSwitchEnable 恒假——NPC 对话语音等门控功能全灭。表空＝不发。
+	sync, err := SwitchSyncFrame(ctx.SwitchSyncIDs)
+	if err != nil {
+		return nil, err
+	}
+	if sync != nil {
+		frames = append(frames, sync)
+	}
+
 	// 0x0D 玩家物化帧（52626 实证序 0x0B→0x0D→0x1F；身体渲染模型集：
 	// 布衣三件 + Hat=Hair + 档内外观自定义，定版文档全表序）。
 	appearance, err := AppearanceFrame(ctx)
@@ -75,6 +86,14 @@ func PreReadyFrames(ctx Context, now time.Time) ([][]byte, error) {
 	pos0 := ctx.State.Position
 	frames = append(frames, LocationFrame(ctx.Identity.ObjectID, ctx.Identity.OwnerID,
 		float32(pos0[0]), float32(pos0[1]), float32(pos0[2]), float32(pos0[3])))
+	// 0x1F 之后补推引导属性（HelpStepID 等）：场内玩家对象只认 0x0D 属性区，
+	// 0x0B 前单发的 0x10 被进场重建冲掉（guide.go GuideMaterializeFrames）。
+	// 不入链的角色零帧。
+	guideAfter, err := GuideMaterializeFrames(ctx)
+	if err != nil {
+		return nil, err
+	}
+	frames = append(frames, guideAfter...)
 	vital, err := PlayerVitalBatchFrame(ctx)
 	if err != nil {
 		return nil, err
@@ -223,9 +242,8 @@ func ReadyFrames(ctx Context, now time.Time) ([][]byte, error) {
 	frames = append(frames, combat...)
 
 	// 玩家对象域配置：键位域 0x10（198/199/200/223/201）→ 快捷栏
-	// shortcut_rec 0x11 行（视图簇之后；无档零帧，starter 打坐条目由
-	// EffectiveShortcuts 推导）。fork 客户端本地不落盘，缺发即「快捷
-	// 键重登全丢」。
+	// shortcut_rec 0x11 行（视图簇之后；无档零帧，行集以档内基线为准）。
+	// fork 客户端本地不落盘，缺发即「快捷键重登全丢」。
 	// 705 不在本段：2026-11-23 线路抓包 48 会话实证客户端在 0x09 之前
 	// 已上传 107 共 2–4 次，ClientReady 位的 705 赶不上登录转储；现行
 	// 下行位 = 进场段首帧（PreReadyFrames / 切图 0x0B 前），上传零应答

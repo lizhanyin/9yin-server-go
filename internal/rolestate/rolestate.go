@@ -122,8 +122,9 @@ type RoleState struct {
 	// NeiGongBind 内功栏绑定串（C2S 199 → 属性 201；25 格 "v;"+尾分号）。
 	NeiGongBind string `json:"neiGongBind,omitempty"`
 	// Shortcuts 快捷栏基线（C2S 200/201 编辑 → shortcut_rec 0x11 行重放）。
-	// 建号时由 StarterSet 的 ShortcutPos 预置（Set=false 的未编辑基线）。
-	// Set=true 即玩家已编辑（空表也是基线）：starter 打坐条目不复活。
+	// 建号时由 StarterSet 的 ShortcutPos 预置（Set=false 的未编辑基线）；
+	// Set=true 即玩家已编辑（空表也是基线）。打坐调息条目由再战江湖
+	// 跳线追加（guideSkipFrames），不走建号合成。
 	Shortcuts    []ShortcutRow `json:"shortcuts,omitempty"`
 	ShortcutsSet bool          `json:"shortcutsSet,omitempty"`
 
@@ -326,27 +327,9 @@ type ShortcutRow struct {
 	ID    string `json:"id"`
 }
 
-// StarterSitcrossShortcut starter 打坐条目（Ctrl+0 槽位=索引 9，避开
-// 初始战斗两槽）：客户端把 zs_default_01 识别为原生坐下/起立切换，
-// 走 CustomSend 240 而非 211 战斗路线——不是 FuncManager 记录。
-var StarterSitcrossShortcut = ShortcutRow{Index: 9, Kind: "skill", ID: "zs_default_01"}
-
-// EffectiveShortcuts 快捷栏生效表：无玩家编辑基线（ShortcutsSet=false）
-// 时在档内行（含建号预置行）之上、索引 9 空缺时补 starter 打坐条目；
-// 有基线以编辑结果为准（删除即删除，不复活）。帧生成与编辑应答（整表
-// 重建方言）共用本口径。
-func (s RoleState) EffectiveShortcuts() []ShortcutRow {
-	rows := append([]ShortcutRow(nil), s.Shortcuts...)
-	if s.ShortcutsSet {
-		return rows
-	}
-	for _, row := range rows {
-		if row.Index == StarterSitcrossShortcut.Index {
-			return rows
-		}
-	}
-	return append(rows, StarterSitcrossShortcut)
-}
+// 建号基线不无条件合成打坐快捷键（zs_default_01 条目已随 StarterSitcrossShortcut
+// 撤销）：打坐调息只在再战江湖跳线授予（fssoloworld guide.go
+// guideGrantSitcross），未跳线的档以 Shortcuts 原样为准。
 
 // StarterSkill 初始武学行（View40 技能行 + 0x28 档案技能区共用）。
 type StarterSkill struct {
@@ -436,6 +419,10 @@ type NeiGongBook struct {
 	MaxMPAdd       int    `json:"maxMPAdd,omitempty"`
 	MaxParryAdd    int    `json:"maxParryAdd,omitempty"`
 	MinMagicDefAdd int    `json:"minMagicDefAdd,omitempty"`
+	// WuXing 五行（wuxuebaseinfo nWuXing：内功 5=太极/6=阴柔/7=阳刚——
+	// View43 书行与内修面板 form_wuxue_faculty 属性列的显示源；0=未取
+	//（refreshNeiGongBooks 随目录补，档缺保持）。
+	WuXing int `json:"wuXing,omitempty"`
 }
 
 // starterMoney 建号碎银初值（2433 线 flag starter-silver 默认 99999 的
@@ -1158,8 +1145,8 @@ func BuildRoleState(book string, sex int, para string, facultySeed int64) (RoleS
 		})
 	}
 	// 快捷栏建号基线：带 ShortcutPos 的武学预置上栏（栏位口径见
-	// parseShortcutPos）。ShortcutsSet 保持 false——未编辑基线照旧由
-	// EffectiveShortcuts 合成 starter 打坐条目，玩家首次编辑才物化。
+	// parseShortcutPos）。ShortcutsSet 保持 false（未编辑基线；打坐条目
+	// 不在其中——再战江湖跳线才授予，见文件头注）。
 	shortcuts, err := starterShortcutRows(starter.Skills.Skill)
 	if err != nil {
 		return RoleState{}, err

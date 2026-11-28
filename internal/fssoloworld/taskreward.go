@@ -27,6 +27,12 @@ import (
 // "10012,…|"] 清单（官服完成奖励有、步骤奖励没有）。返回是否发出了东西。
 // 调用方持 taskMu。
 func (s *Server) npcTaskGrantItems(pl *Player, out *taskFrames, items []taskdata.PrizeItem, what string, list bool) bool {
+	return len(s.npcTaskGrantItemsList(pl, out, items, what, list)) > 0
+}
+
+// npcTaskGrantItemsList 同 npcTaskGrantItems，返回实际入包的清单（引导提示
+// 按它查表，taskhint.go）。调用方持 taskMu。
+func (s *Server) npcTaskGrantItemsList(pl *Player, out *taskFrames, items []taskdata.PrizeItem, what string, list bool) []taskdata.PrizeItem {
 	granted := make([]taskdata.PrizeItem, 0, len(items))
 	for _, item := range items {
 		frames := make([][]byte, 0, 2)
@@ -45,13 +51,13 @@ func (s *Server) npcTaskGrantItems(pl *Player, out *taskFrames, items []taskdata
 		granted = append(granted, item)
 	}
 	if len(granted) == 0 {
-		return false
+		return granted
 	}
 	if list {
 		out.add(entergen.TaskItemListNotice(granted))
 	}
 	s.trace("%s: 发放物品 %v client=%d", what, granted, pl.Conn1)
-	return true
+	return granted
 }
 
 // npcTaskTakeItems 扣除物品清单：背包里同 configID 的行逐行扣减（清行发
@@ -85,15 +91,22 @@ func (s *Server) npcTaskTakeItems(pl *Player, out *taskFrames, items []taskdata.
 	}
 }
 
-// npcTaskStepReward 步骤奖励（InteractiveList GetItems / LostItems）。调用方
-// 持 taskMu。
-func (s *Server) npcTaskStepReward(pl *Player, out *taskFrames, step taskdata.Step) {
+// npcTaskStepReward 步骤奖励（InteractiveList GetItems / LostItems）。返回实际
+// 发放的清单——引导链任务记满时的提示按它查表（taskhint.go）；guide＝引导链
+// 任务时先发该步的发放前提示（官服 1342 步骤 562：m371 add_item_yu_helper
+// 早于 m1 9645，#5080/#5081）。调用方持 taskMu。
+func (s *Server) npcTaskStepReward(pl *Player, out *taskFrames, step taskdata.Step, guide bool) []taskdata.PrizeItem {
+	if guide && taskHintsEnabled() {
+		addTaskHint(out, hintOf(taskHintStepPre[step.Scene], ""))
+	}
+	var granted []taskdata.PrizeItem
 	if items := taskdata.ParseItemSpec(step.GetItems); len(items) > 0 {
-		s.npcTaskGrantItems(pl, out, items, "npc task: 步骤奖励 "+step.TrackInfo, false)
+		granted = s.npcTaskGrantItemsList(pl, out, items, "npc task: 步骤奖励 "+step.TrackInfo, false)
 	}
 	if items := taskdata.ParseItemSpec(step.LostItems); len(items) > 0 {
 		s.npcTaskTakeItems(pl, out, items)
 	}
+	return granted
 }
 
 // npcTaskCompleteReward 完成奖励（Prize 域奖励串）：物品 → 碎银 → 声望 →

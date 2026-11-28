@@ -98,6 +98,13 @@ func refreshNeiGongBooks(catalog *neigongdata.Catalog, st *rolestate.RoleState) 
 	changed := false
 	for i := range st.NeiGong {
 		book := &st.NeiGong[i]
+		// 五行随目录补（内修面板按 FacultyName QueryProp("WuXing")——
+		// 0 值查表失败面板整列退原始键显示；不依赖 varprop 档行）。
+		if book.WuXing == 0 {
+			if w := catalog.WuXingOf(book.ConfigID); w != 0 {
+				book.WuXing, changed = int(w), true
+			}
+		}
 		row, ok := catalog.VarPropRow(int32(book.StaticData), int32(book.Level))
 		if !ok {
 			continue

@@ -264,10 +264,10 @@ func TestSitRecoveryPerSecond(t *testing.T) {
 	}
 }
 
-// 飘字来源位与 starter 快捷栏条目是同一个原生打坐技能。
+// 飘字来源位与再战江湖授予的快捷栏条目是同一个原生打坐技能。
 func TestSitcrossSkillIDMatchesStarterShortcut(t *testing.T) {
-	if sitcrossSkillID != rolestate.StarterSitcrossShortcut.ID {
-		t.Fatalf("sitcrossSkillID=%q，starter 条目=%q", sitcrossSkillID, rolestate.StarterSitcrossShortcut.ID)
+	if sitcrossSkillID != guideSitcrossShortcut.ID {
+		t.Fatalf("sitcrossSkillID=%q，跳线条目=%q", sitcrossSkillID, guideSitcrossShortcut.ID)
 	}
 }
 

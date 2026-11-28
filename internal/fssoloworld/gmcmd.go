@@ -78,7 +78,7 @@ func moneyFrame(pl *Player) ([]byte, error) {
 func (e *EchoConsole) gmCommand(nc net.Conn, fields []string) {
 	s := e.srv
 	if len(fields) < 2 {
-		fmt.Fprint(nc, ">usage: gm <state|set|money|tp|msg|view|flush|item|items|mail|dummy|scene|rage|move|save> <who> [args]\r>end\r")
+		fmt.Fprint(nc, ">usage: gm <state|set|money|tp|msg|view|flush|item|items|mail|dummy|scene|guide|rage|move|livepoint|holdfaculty|livespeed|save> <who> [args]\r>end\r")
 		return
 	}
 	sub, who := fields[0], fields[1]
@@ -350,6 +350,16 @@ func (e *EchoConsole) gmCommand(nc net.Conn, fields []string) {
 		// gm move <who> [speed|gravity <值> | reset]：移动速度 / 下落重力
 		//（gmdebug.go）。
 		s.gmMoveCommand(nc, pl, who, fields)
+	case "livepoint":
+		// gm livepoint <who> [points 1-999]：发 N 点历练／读五槽状态
+		//（faculty.go；2433 GM add_livepoint 对应物）。
+		s.gmLivepointCommand(nc, pl, who, fields)
+	case "holdfaculty":
+		// gm holdfaculty <who> <值>：潜能修为直设（faculty.go）。
+		s.gmHoldFacultyCommand(nc, pl, who, fields)
+	case "livespeed":
+		// gm livespeed <who> <0-1000>：历练转化速度加成 %（faculty.go）。
+		s.gmLiveSpeedCommand(nc, pl, who, fields)
 	case "save":
 		if !s.sendRoleSave(pl) {
 			fmt.Fprint(nc, ">gm save: store not connected, save not sent\r")

@@ -339,6 +339,11 @@ func (s *Server) npcTaskAcceptFrames(pl *Player, out *taskFrames, taskID int) bo
 	id := pl.entergenIdentity()
 	start, _, _ := npcTaskRecordRows(pl, catalog, tid)
 	stamp := time.Now().UnixNano()
+	// 引导链任务的接取提示在簇首，早于全部记录行（官服 1343 接取：
+	// m371 anqi_help_jq01_4 → …，完整引导-女 #5602；taskhint.go）。
+	if task.IsGuide && taskHintsEnabled() {
+		s.npcTaskHintEmit(pl, out, hintOf(taskHintAccept[taskID], ""), "接取")
+	}
 	// 新接任务的目标行是零进度行（官服加行 flags/curnum 皆 0，「杀怪步成为
 	// 当前步」的 flags=1 随后由逐格写置位）；重登簇才按进度回填。
 	for i, step := range task.Steps {
@@ -467,10 +472,11 @@ func (s *Server) npcTaskAdvanceStep(pl *Player, taskID uint32, tail npcTaskStepT
 	id := pl.entergenIdentity()
 	out := s.taskFrameSink(pl)
 	full := track.Cur[k] >= npcTaskStepMax(step)
+	var granted []taskdata.PrizeItem
 	if full {
 		// 一步记满：步骤奖励（InteractiveList GetItems/LostItems）在目标行
 		// 写入之前发放（官服 1347 步骤 558：入包帧 + m1 9645 → 0x13 curnum）。
-		s.npcTaskStepReward(pl, out, step)
+		granted = s.npcTaskStepReward(pl, out, step, task.IsGuide)
 	}
 	out.add(entergen.TaskRecordGridFrame(id.ObjectID, id.OwnerID, start+uint16(k),
 		entergen.GridInt(entergen.RecordColCurNum, uint32(track.Cur[k]))))
@@ -479,6 +485,7 @@ func (s *Server) npcTaskAdvanceStep(pl *Player, taskID uint32, tail npcTaskStepT
 		return true
 	}
 	if k == len(task.Steps)-1 && task.AutoSubmit {
+		s.npcTaskStepHint(pl, out, task.ID, step, granted)
 		s.sendTaskFrames(pl, out)
 		return s.npcTaskCompleteFrames(pl, taskID, npcTaskCompleteTail{closeTalk: tail.closeTalk})
 	}
@@ -501,6 +508,7 @@ func (s *Server) npcTaskAdvanceStep(pl *Player, taskID uint32, tail npcTaskStepT
 		out.add(entergen.TaskRecordGridFrame(id.ObjectID, id.OwnerID, start+uint16(k+1),
 			entergen.GridInt(entergen.RecordColFlags, entergen.TaskRecordFlagHunterActive)))
 	}
+	s.npcTaskStepHint(pl, out, task.ID, step, granted)
 	s.npcTaskMarkFrames(pl, out)
 	out.add(entergen.TaskStepOkActionFrame(id))
 	if tail.npc.ObjectID != 0 {

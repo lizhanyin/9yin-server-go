@@ -16,7 +16,8 @@ import (
 
 // TestReadyFramesCarryStarterShortcutRows 就绪簇的 shortcut_rec 行 =
 // StarterSet 预置行（栏位索引 = ShortcutPos - 1、kind=skill、id=ConfigID）
-// + starter 打坐条目；行帧挂玩家对象、行号恒 0（追加语义）。
+// ；行帧挂玩家对象、行号恒 0（追加语义）。打坐条目不合成（再战江湖
+// 跳线才授予，fssoloworld guide.go）。
 func TestReadyFramesCarryStarterShortcutRows(t *testing.T) {
 	ctx := testContext(t)
 	want := []rolestate.ShortcutRow{
@@ -24,7 +25,6 @@ func TestReadyFramesCarryStarterShortcutRows(t *testing.T) {
 		{Index: 1, Kind: "skill", ID: "CS_jh_cqgf01"},
 		{Index: 2, Kind: "skill", ID: "CS_jh_cqgf04"},
 		{Index: 3, Kind: "skill", ID: "CS_jh_cqgf06"},
-		rolestate.StarterSitcrossShortcut,
 	}
 	ready, err := ReadyFrames(ctx, time.Now())
 	if err != nil {

@@ -135,6 +135,38 @@ func HelpStepFrame(player Identity, step string) ([]byte, error) {
 		[]IndexedProperty{NamedProperty("HelpStepID", StringValue(step))})
 }
 
+// GuideMaterializeFrames 0x0D 之后补推的引导属性：HelpStepID → FinishFreshmanRecStr
+// 初值（仅待选态）→ BornServerGameStep，与 GuideEntryFrames 同值同判据。
+//
+// 进场簇那三条 0x10 在 0x0B 之前发，到不了场内玩家对象——进场会重建玩家对象，
+// 只认 0x0D 属性区（官服 CN 2026 实证：0x0B 前单发过的属性在 0x0D 属性区整批
+// 重发，HelpStepID/FinishFreshmanRecStr/BornServerGameStep 均在其列，完整引导-
+// 女 #487 的 0x28 批内层）；m414 gamestep 是引擎全局态，留在 0x0B 前不动。本服
+// 0x0D 沿 fork 样本属性集（187 项）不含这三项，故物化后补推。
+//
+// 缺 HelpStepID 的症状：客户端 freshman_help.movie_end_callback 首段查
+// HelpStepID 为空即返回——接取影像播完客户端不发 m950，引导步骤链不推进
+// （2026-11-28 五个真机会话零 m950 定案）。
+func GuideMaterializeFrames(ctx Context) ([][]byte, error) {
+	var builders []func() ([]byte, error)
+	if ctx.HelpStep != "" {
+		builders = append(builders, func() ([]byte, error) {
+			return HelpStepFrame(ctx.Identity, ctx.HelpStep)
+		})
+	}
+	if ctx.GuideChoicePending {
+		builders = append(builders, func() ([]byte, error) {
+			return FreshmanRecFrame(ctx.Identity)
+		})
+	}
+	if ctx.GuideStep != 0 {
+		builders = append(builders, func() ([]byte, error) {
+			return BornGameStepFrame(ctx.Identity, int32(ctx.GuideStep)*10+guideStepSubOfficial)
+		})
+	}
+	return buildFrames(builders...)
+}
+
 // InputLockFrame 输入锁 0x10 CanntOperator=1/0。
 func InputLockFrame(player Identity, locked bool) ([]byte, error) {
 	value := int32(0)
