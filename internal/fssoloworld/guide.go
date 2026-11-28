@@ -12,9 +12,14 @@ package fssoloworld
 //	      → m390 [5, 0]（所有角色：之后追踪栏才显示）
 //	C2S [972, 4]（初出茅庐）  0x10 CanntOperator=0 → 约 1 秒后自动接取引导链根
 //	                          （1340 接取簇 + 接取影像，taskrecord/taskmovie）
+//	                          → 开场剧情演出（影像 473）结束收尾后发操作模式
+//	                          引导 m704（官服在选择窗那一拍发，本服按产品口径
+//	                          挪到演出后）
 //	C2S [972, 5]（再战江湖）   跳过簇（男号 #1612..#1989）：后续任务接取 → 复活点
 //	                          → 引导链逐个置完成位 → 奖励（item_skipsp_001、
 //	                          历练、江湖声望 700）→ 解锁 → 切出副本进鸡鸣驿
+//	                          → 落位后的就绪收尾发操作模式引导 m704（该线没有
+//	                          剧情演出）
 //	C2S [950, 0, 步骤]        新手帮助步骤链推进：回写 0x10 HelpStepID
 //
 // 待选态只认「身在新手副本 + 引导阶段未定 + 引导链未开始」的角色；其余角色
@@ -200,8 +205,9 @@ func (s *Server) guideChoicePending(pl *Player) bool {
 // readyTail 就绪簇收尾（首次进场与切图重入共用）：引导阶段簇（m414/
 // BornServerGameStep/HelpStepID）已在进场簇下发（entergen.GuideEntryFrames，
 // m655 后、0x0B 前），此处是待选态弹窗帧＋锁输入（官服客户端 op09 后 40ms：
-// m346 [2,0] → m427 → idx249=1，NPC 物化之后的就绪簇）+ 所有角色 m390
-// （追踪栏窗体进场预载后是隐藏的，只在它之后显示；官服 50.24s）。
+// m346 [2,0] → m427 → idx249=1，NPC 物化之后的就绪簇）+ 再战江湖线落位后的
+// 操作模式引导 m704（该线没有剧情演出；每角色一次）+ 所有角色 m390（追踪栏
+// 窗体进场预载后是隐藏的，只在它之后显示；官服 50.24s）。
 func (s *Server) readyTail(pl *Player) {
 	defer func() {
 		if frame, err := entergen.TaskTrackRefreshFrame(); err != nil {
@@ -214,17 +220,22 @@ func (s *Server) readyTail(pl *Player) {
 	if !pl.haveRoleState {
 		return
 	}
-	pending := false
+	pending, operateGuide := false, false
 	s.npcTaskLocked(pl, func() {
-		if guideSceneOf(pl) && pl.roleState.GameStep == guideStepNone {
+		inGuide := guideSceneOf(pl)
+		if inGuide && pl.roleState.GameStep == guideStepNone {
 			pending = s.guideChoicePending(pl)
 			if pending && pl.roleState.HelpStepID == "" {
 				pl.roleState.HelpStepID = guideHelpStepOf(pl.roleState.BirthResource)
 			}
 		}
 		pl.guidePending = pending
+		operateGuide = !pending && pl.roleState.GameStep == guideStepSkip && !pl.roleState.OperateGuideShown
 	})
 	if !pending {
+		if operateGuide {
+			s.npcTaskLocked(pl, func() { s.npcOperateModeGuide(pl, "再战江湖落位") })
+		}
 		return
 	}
 	// 黑幕窗弹出帧先于锁输入：427 上客户端 lua on_query_fresh_man 对
@@ -244,6 +255,43 @@ func (s *Server) readyTail(pl *Player) {
 	// 传送出新手副本——官服也没有兜底，一直等 [972, 4]/[972, 5]。
 	s.trace("npc task guide: 待选态 client=%d scene=%s（已发黑幕窗 m427 并锁输入，等 [972, 4]/[972, 5]，无兜底）",
 		pl.Conn1, pl.roleState.Resource)
+}
+
+// npcOperateModeGuideDue 初出茅庐线的操作模式引导是否还没发：身在新手副本、
+// 引导线已定初出茅庐、档内未发过。调用方持 taskMu。
+func (s *Server) npcOperateModeGuideDue(pl *Player) bool {
+	return pl.haveRoleState && !pl.roleState.OperateGuideShown && guideSceneOf(pl) && pl.roleState.GameStep == guideStepSingle
+}
+
+// npcOperateModeGuide 操作模式引导 m704（每角色一次，档内 OperateGuideShown）：
+// 客户端 on_open_freshman_help → form_system_interface_guide，
+// 「九阴特色模式和按键设置／传统3D操作模式和按键设置」两个单选项加说明——
+// 只提醒有这个设置，不开设置窗本体。
+//
+// 官服位是就绪簇里 m427 之后（完整引导-女 #1419、跳过引导-男 #1560、建号
+// #1374、建号-01 #1332），即选择窗弹出的那一拍。本服按产品口径挪到选择之后
+// 的剧情演出结束（2026-11-28 真机反馈「移到剧情演出后，选择再战江湖的也要
+// 发」）：
+//
+//	初出茅庐  新手副本里第一场任务影像（1340 接取影像 473，开场剧情演出）的
+//	          收尾簇之后（taskmovie.go npcTaskMovieEnd）；影像关停时随接取直接发
+//	再战江湖  切出副本落到出生地后的第一次就绪收尾（readyTail）——官服两份
+//	          跳线抓包里该线选择后没有影像，直接 0x0B 切出
+//
+// 调用方持 taskMu。
+func (s *Server) npcOperateModeGuide(pl *Player, why string) {
+	if !pl.haveRoleState || pl.roleState.OperateGuideShown {
+		return
+	}
+	frame, err := entergen.OperateModeGuideFrame()
+	if err != nil {
+		s.trace("npc task guide: 操作模式引导帧编码失败 client=%d: %v", pl.Conn1, err)
+		return
+	}
+	pl.roleState.OperateGuideShown = true
+	s.sendToClient(pl, frame)
+	s.sendRoleSave(pl)
+	s.trace("npc task guide: 操作模式引导 m704（%s，step=%d）client=%d", why, pl.roleState.GameStep, pl.Conn1)
 }
 
 // guideChoose 引导选择（C2S m972 与 gm guide 共用入口）：4＝初出茅庐，

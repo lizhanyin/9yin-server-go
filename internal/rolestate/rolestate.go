@@ -151,6 +151,11 @@ type RoleState struct {
 	// HelpStepID 新手帮助步骤链（freshmanhelp.ini 节名：客户端 C2S m950 上报
 	// 下一步，服务端回写同名属性）。空＝未入链（档案取外服常量）。
 	HelpStepID string `json:"helpStepID,omitempty"`
+	// OperateGuideShown 操作模式引导（S2C m704：九阴特色／传统 3D 模式提示
+	// 窗）已发过——每角色一次。初出茅庐线在开场剧情演出（引导链根接取
+	// 影像）结束时发，再战江湖线在落到出生地后的第一次就绪收尾发
+	//（fssoloworld/guide.go npcOperateModeGuide）。
+	OperateGuideShown bool `json:"operateGuideShown,omitempty"`
 	// RelivePositon 复活点串（"<场景>,<x>,<y>,<z>,<朝向>,<键>"；跳过引导
 	// 进江湖时落到鸡鸣驿）。空＝未设（档案取外服常量）。
 	RelivePositon string `json:"relivePositon,omitempty"`

@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/lizhanyin/9yin-server-go/internal/npcfeed"
 	"github.com/lizhanyin/9yin-server-go/internal/reactor"
@@ -15,8 +16,9 @@ import (
 
 func newNpcTestServer(t *testing.T) *Server {
 	t.Helper()
-	// 用例结束后丢弃迟到的日志：选靶看门狗（5s 后发 m26 解锁）这类定时器
-	// 会比用例活得久，整套用例跑过 5 秒后回调再 t.Logf 即 panic。
+	// 用例结束后丢弃迟到的日志：各类定时器会比用例活得久，整套用例跑过
+	// 数秒后回调再 t.Logf 即 panic（选靶看门狗另在 newNpcTestServerLogf
+	// 里调长，免得迟到的 m26 落进别的用例）。
 	var mu sync.Mutex
 	done := false
 	t.Cleanup(func() {
@@ -36,6 +38,11 @@ func newNpcTestServer(t *testing.T) *Server {
 // newNpcTestServerLogf 同 newNpcTestServer，trace 输出自定（断言日志用）。
 func newNpcTestServerLogf(t *testing.T, logf func(format string, args ...any)) *Server {
 	t.Helper()
+	// 选靶看门狗调长：见 npcSelectWatchdog（迟到的 m26 不能记到后面的用例
+	// 名下；要测看门狗的用例自己调短）。
+	watchdog := npcSelectWatchdog
+	npcSelectWatchdog = time.Hour
+	t.Cleanup(func() { npcSelectWatchdog = watchdog })
 	cfg := DefaultConfig()
 	cfg.InnerAddr = "127.0.0.1"
 	cfg.InnerPort = 0

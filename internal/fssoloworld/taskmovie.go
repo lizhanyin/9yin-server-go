@@ -17,6 +17,7 @@ package fssoloworld
 //	  T+0.5    m8 → m104 [0/0, 影像号, 4]
 //	  T+1.1    m98 145 → 视口 NPC 物化帧重发
 //	  影像结束  C2S m806 [影像号] → CantBeAttack=0 → CantMove=0 → m107
+//	            →（初出茅庐线首场）操作模式引导 m704
 //
 // 本服差异：接取时不冻结（客户端不上报结束也不会把玩家卡住；影像期间的
 // 位移上报不收编，等价于官服冻结时的服务端口径）；影像在途态有超时兜底，
@@ -55,6 +56,9 @@ type taskMovieState struct {
 	movie      int
 	started    time.Time
 	resumeTask uint32 // 影像期间被压后的自动步所属任务（0＝无）
+	// operateGuide 这场影像结束时要发操作模式引导（初出茅庐线的新手副本
+	// 里、档内还没发过——第一场就是开场剧情演出 473）。
+	operateGuide bool
 }
 
 // npcTaskMovieEnabled NINEYIN_TASK_MOVIE=off 关停任务影像。
@@ -88,7 +92,8 @@ func (s *Server) npcTaskStartMovie(pl *Player, task taskdata.Task) {
 	if task.AcceptMovie <= 0 || pl.taskMovie != nil {
 		return
 	}
-	pl.taskMovie = &taskMovieState{movie: task.AcceptMovie, started: time.Now()}
+	pl.taskMovie = &taskMovieState{movie: task.AcceptMovie, started: time.Now(),
+		operateGuide: s.npcOperateModeGuideDue(pl)}
 	if closeTalk, err := entergen.TalkCloseFrame(); err == nil {
 		s.sendToClient(pl, closeTalk)
 	}
@@ -166,7 +171,8 @@ func (s *Server) npcTaskMovieRepush(pl *Player, movie int) {
 }
 
 // npcTaskMovieEnd 影像收尾：清在途态，标志复位两帧 + m107，接上被压后的
-// 自动步。调用方持 taskMu。
+// 自动步；初出茅庐线的首场影像（开场剧情演出）在这里发操作模式引导。调用
+// 方持 taskMu。
 func (s *Server) npcTaskMovieEnd(pl *Player, how string) {
 	st := pl.taskMovie
 	if st == nil {
@@ -183,6 +189,11 @@ func (s *Server) npcTaskMovieEnd(pl *Player, how string) {
 		s.sendToClient(pl, frame)
 	}
 	s.trace("npc task movie: 影像 %d 结束（%s，历时 %s）client=%d", st.movie, how, time.Since(st.started).Round(time.Second), pl.Conn1)
+	if st.operateGuide {
+		// 开场剧情演出结束 → 操作模式引导 m704（guide.go；官服在选择窗那一
+		// 拍发，本服挪到这里）。超时／位移收尾同样算演出结束。
+		s.npcOperateModeGuide(pl, "剧情演出结束")
+	}
 	if st.resumeTask != 0 {
 		s.npcTaskAutoSteps(pl, st.resumeTask)
 	}

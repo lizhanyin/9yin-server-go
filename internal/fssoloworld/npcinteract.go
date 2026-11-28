@@ -577,6 +577,12 @@ func npcServerMenu(objectID, ownerID uint32, services []npcService) ([]byte, err
 
 const clientCustomSelectTarget int32 = 431
 
+// npcSelectWatchdog 选靶授权（m25 skill_pause）之后到解锁看门狗 m26 的时长：
+// 官服 m25 恒 0.4~4.6s 内配对 m26，裸 m25 锁输入 30s。测试服构造时调长
+// （newNpcTestServerLogf）：定时器比用例活得久，5 秒后的 m26 会落进当时正在
+// 跑的别的用例的帧收集器（包级观察器）。
+var npcSelectWatchdog = 5 * time.Second
+
 // handleNPCSelectTarget msg431 [431, obj(packed)]：回 LastObject+
 // AutoSelectObject 双 0x10 属性帧 + m25[30000] 选靶授权；5s 后 m26 解锁
 // 看门狗（官服 m25 恒 0.4~4.6s 内配对 m26，裸 m25 锁输入 30s）。
@@ -617,7 +623,7 @@ func (s *Server) handleNPCSelectTarget(pl *Player, message entergen.CustomInboun
 		// m26 看门狗：5s 后解锁（官服 m25 恒 0.4~4.6s 配对；经 entry 转发，
 		// 玩家离线由 entry 丢弃，安全）。冲锋暂存中不发——暂停归暂存链
 		// 所有，由落地/取消/超时解除；此处抢发会让客户端提前脱离暂存。
-		time.AfterFunc(5*time.Second, func() {
+		time.AfterFunc(npcSelectWatchdog, func() {
 			pl.combat.mu.Lock()
 			staged := pl.combat.staged != nil
 			pl.combat.mu.Unlock()

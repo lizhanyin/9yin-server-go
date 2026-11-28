@@ -54,7 +54,7 @@ const appearanceShortcutKey = "1,87;2,83;3,81;4,69;5,65;6,68;7,32;8,90;9,144;10,
 // bufferListString 登录 buff 串（#25 建号态回放形）：新手组标志 + 报伤
 // + 装备内功可见 buff。第三段按 CurNeiGong 书动态合成（旧版写死
 // buf_ng_wd_001——换书重登被两仪护心功覆盖的病灶之一）；书无 buff
-//（BuffID 空）时省略。条形 "名,local-槽,级,obj-own,unix毫秒,1,0|"，
+// （BuffID 空）时省略。条形 "名,local-槽,级,obj-own,unix毫秒,1,0|"，
 // 时间戳取 ctx.Stamp（0=当前，测试面注入定值）。
 func bufferListString(ctx Context) string {
 	objOwn := fmt.Sprintf("%d-%d", ctx.Identity.ObjectID, ctx.Identity.OwnerID)
@@ -168,7 +168,7 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		}
 	}
 
-	// 五维/资源（官服白板 + 运行书 Add；资源 Add 走五维系数推导
+	// 五维/资源（官服白板 + 运行书 + 装备（还没加入） Add；资源 Add 走五维系数推导
 	// resourceadds.go——2·Str+7·Sta 系官方公式层）。
 	str := state.Str + book.StrAdd
 	sta := state.Sta + book.StaAdd
@@ -322,28 +322,30 @@ func AppearanceFrame(ctx Context) ([]byte, error) {
 		ap("Dex", Int32Value(int32(dex))),
 		ap("Ing", Int32Value(int32(ing))),
 		ap("Spi", Int32Value(int32(spi))),
-		ap("MeleePower", Int32Value(80)),
-		ap("ShotPower", Int32Value(80)),
-		ap("MagicPower", Int32Value(80)),
-		ap("MeleePowerAdd", Int32Value(int32(str))),
-		ap("ShotPowerAdd", Int32Value(int32(dex))),
-		ap("MagicPowerAdd", Int32Value(int32(ing))),
-		ap("PhyHit", Int32Value(50)),
-		ap("PhyHitAdd", Int32Value(int32(dex))),
-		ap("MagicHit", Int32Value(50)),
-		ap("MagicHitAdd", Int32Value(int32(dex))),
-		ap("Dodge", Int32Value(35)),
-		ap("DodgeAdd", Int32Value(int32(dex))),
-		ap("PhyVa", Int32Value(16)),
-		ap("PhyVaAdd", Int32Value(int32(str))),
-		ap("MagicVa", Int32Value(16)),
-		ap("MagicVaAdd", Int32Value(int32(dex))),
+		// 白板属性（黄字）走属性派生，add 走宝物、娃娃等加成， 尚未接入
+		ap("MeleePower", Int32Value(int32(str))),
+		ap("ShotPower", Int32Value(int32(dex))),
+		ap("MagicPower", Int32Value(int32(ing))),
+		ap("MeleePowerAdd", Int32Value(0)),
+		ap("ShotPowerAdd", Int32Value(0)),
+		ap("MagicPowerAdd", Int32Value(0)),
+		ap("PhyHit", Int32Value(int32(dex))),
+		ap("PhyHitAdd", Int32Value(0)),
+		ap("MagicHit", Int32Value(int32(dex))),
+		ap("MagicHitAdd", Int32Value(0)),
+		ap("Dodge", Int32Value(int32(dex))),
+		ap("DodgeAdd", Int32Value(0)),
+		ap("PhyVa", Int32Value(int32(str))),
+		ap("PhyVaAdd", Int32Value(0)),
+		ap("MagicVa", Int32Value(int32(dex))),
+		ap("MagicVaAdd", Int32Value(0)),
 		ap("MaxParry", Int32Value(int32(state.Parry))),
 		ap("PhyDef", Int32Value(EquipPhyDef(&state))),
-		ap("StiDef", Int32Value(50)),
-		ap("NegDef", Int32Value(50)),
-		ap("MasDef", Int32Value(50)),
-		ap("JujDef", Int32Value(50)),
+		// 这个不是黄字（罡气），是加算 内功防御 内功 经脉 装备 等
+		ap("StiDef", Int32Value(0)),
+		ap("NegDef", Int32Value(0)),
+		ap("MasDef", Int32Value(0)),
+		ap("JujDef", Int32Value(0)),
 		ap("MinMeleeDamage", Int32Value(20)),
 		ap("MaxMeleeDamage", Int32Value(35)),
 		ap("MaxHPAdd", Int32Value(adds.MaxHPAdd)),

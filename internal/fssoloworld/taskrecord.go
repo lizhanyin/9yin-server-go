@@ -418,7 +418,15 @@ func (s *Server) npcTaskAccept(pl *Player, taskID int, how string) bool {
 // 客户端剧情副本，开始后的视口重发与结束收尾见 taskmovie.go。调用方持
 // taskMu。
 func (s *Server) npcTaskScheduleMovie(pl *Player, task taskdata.Task) {
-	if task.AcceptMovie <= 0 || !npcTaskMovieEnabled() {
+	if task.AcceptMovie <= 0 {
+		return
+	}
+	if !npcTaskMovieEnabled() {
+		// 影像关停＝没有剧情演出可等：初出茅庐线的操作模式引导随接取直接发
+		// （判据同影像路径：新手副本里、已定初出茅庐、未发过）。
+		if s.npcOperateModeGuideDue(pl) {
+			s.npcOperateModeGuide(pl, "影像关停，接取即发")
+		}
 		return
 	}
 	movie, taskID := task.AcceptMovie, uint32(task.ID)

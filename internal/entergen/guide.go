@@ -37,6 +37,7 @@ const (
 	serverCustomSingleMark       int32 = 543 // on_addbtn_lead_info_open：跳过簇里 1346 置位后的空参消息（#1683）
 	serverCustomProcessSingle    int32 = 346 // process_single_msg [子型, 值]：2＝form_single_check.custom_single_set_form
 	serverCustomQueryFreshMan    int32 = 427 // on_query_fresh_man：弹「初出茅庐/再战江湖」黑幕窗，零参
+	serverCustomOpenFreshmanHelp int32 = 704 // on_open_freshman_help：开操作模式引导窗（九阴特色／传统3D），零参
 )
 
 var recordGiveItem = clientdata.MustRecordIndexByName("GiveItemRec")
@@ -106,6 +107,17 @@ func FreshmanQueryFrames() ([][]byte, error) {
 		},
 		func() ([]byte, error) { return CustomMessageFrame(serverCustomQueryFreshMan) },
 	)
+}
+
+// OperateModeGuideFrame 操作模式引导 m704（零参）：客户端 on_open_freshman_help →
+// form_system_interface_guide.auto_show_hide_guide——「九阴特色模式和按键设置」
+// ／「传统3D操作模式和按键设置」两个单选项加说明的引导窗（只提醒有这个
+// 设置，不是设置窗本体）。原字节 `1e 01 00 02 c0 02 00 00`（完整引导-女
+// #1419、跳过引导-男 #1560、建号 #1374、建号-01 #1332 同一帧）。官服每场
+// 一帧、在选择窗（m427）弹出那一拍发，老号重登会话没有；本服挪到选择之后
+// 的剧情演出结束，下发点见 fssoloworld/guide.go npcOperateModeGuide。
+func OperateModeGuideFrame() ([]byte, error) {
+	return CustomMessageFrame(serverCustomOpenFreshmanHelp)
 }
 
 // freshmanRecInitial 待选新号的 FinishFreshmanRecStr 初值（0x10 idx225，

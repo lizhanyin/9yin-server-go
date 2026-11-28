@@ -350,7 +350,9 @@ func TestGuideReadyTailPendingLocksInput(t *testing.T) {
 	if !strings.Contains(string(avatar), "yanyuzhuang_00\x00") {
 		t.Error("玩家档案 0x28 应带存档的 HelpStepID yanyuzhuang_00")
 	}
-	// 已点选过的角色再进场：就绪收尾不再锁输入。
+	// 已点选过的角色再进场：就绪收尾不再锁输入。操作模式引导不在就绪收尾
+	// 发（初出茅庐线在开场剧情演出结束后、再战江湖线在落位后就绪收尾，
+	// operateguide_test.go）。
 	pl.taskMu.Lock()
 	pl.roleState.GameStep, pl.guidePending = guideStepSingle, false
 	pl.taskMu.Unlock()
